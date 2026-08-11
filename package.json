@@ -1,0 +1,10 @@
+{
+  "name": "youtube-cd-hud",
+  "version": "5.4.0",
+  "private": true,
+  "description": "Governed source and tests for the YouTube CD Album and tracklist HUD userscript.",
+  "scripts": {
+    "check": "node --check src/youtube-cd-hud.user.js",
+    "test": "node --test tests/*.test.mjs"
+  }
+}
