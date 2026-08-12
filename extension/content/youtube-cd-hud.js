@@ -1,15 +1,4 @@
-// ==UserScript==
-// @name         YouTube CD Album & HUD Overlay (with Tracklist + 1001Tracklists) v5.8.0
-// @namespace    http://tampermonkey.net/
-// @version      5.8.0
-// @description  Tampermonkey／Chrome 擴充雙版本、可設定 1001 行為與 HUD 外觀
-// @author       You
-// @match        https://www.youtube.com/*
-// @grant        GM_xmlhttpRequest
-// @connect      1001tracklists.com
-// @connect      www.1001tracklists.com
-// @run-at       document-idle
-// ==/UserScript==
+// Generated from src/youtube-cd-hud.user.js. Run npm run build:extension after source changes.
 
 (function () {
     'use strict';

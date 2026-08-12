@@ -1,10 +1,11 @@
 {
   "name": "youtube-cd-hud",
-  "version": "5.4.0",
+  "version": "5.8.0",
   "private": true,
-  "description": "Governed source and tests for the YouTube CD Album and tracklist HUD userscript.",
+  "description": "Governed source and tests for the YouTube CD HUD userscript and Chrome extension.",
   "scripts": {
-    "check": "node --check src/youtube-cd-hud.user.js",
+    "build:extension": "node scripts/build-extension.mjs",
+    "check": "node scripts/build-extension.mjs --check && node --check src/youtube-cd-hud.user.js && node --check extension/background/service-worker.js && node --check extension/content/gm-xmlhttp-request.js && node --check extension/content/youtube-cd-hud.js && node --check extension/options/options.js && node --check extension/shared/settings.js",
     "test": "node --test tests/*.test.mjs"
   }
 }

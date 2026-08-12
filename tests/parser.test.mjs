@@ -9,12 +9,22 @@ const testDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(testDirectory, '..');
 const sourcePath = path.join(projectRoot, 'src', 'youtube-cd-hud.user.js');
 const source = fs.readFileSync(sourcePath, 'utf8');
+let documentParseHtmlCalls = 0;
 
 const sandbox = {
   URL,
   URLSearchParams,
-  Document: class Document {},
-  DOMParser: class DOMParser {},
+  Document: class Document {
+    static parseHTML() {
+      documentParseHtmlCalls++;
+      return { parser: 'sanitized' };
+    }
+  },
+  DOMParser: class DOMParser {
+    parseFromString(markup, type) {
+      return { markup: String(markup), parser: 'inert', type };
+    }
+  },
   __YT_CD_HUD_TEST_MODE__: true,
   clearInterval,
   clearTimeout,
@@ -28,11 +38,87 @@ vm.createContext(sandbox);
 vm.runInContext(source, sandbox, { filename: sourcePath });
 
 const {
+  angleDeltaToSeconds,
+  calculateHudMinimumSize,
   collectTracklistCandidates,
+  detectBlockPage,
+  getAdjacentTrackTime,
+  getBalancedDiscSize,
+  isSuccessfulHttpStatus,
   normalizeSearchTitle,
+  normalizeAngleDelta,
+  parseRemoteHtml,
   parseTimestampToSeconds,
   parseTracklistDocument,
 } = sandbox.__YT_CD_HUD_TEST_EXPORTS__;
+
+test('accepts successful partial-content responses for normal validation', () => {
+  assert.equal(isSuccessfulHttpStatus(200), true);
+  assert.equal(isSuccessfulHttpStatus(206), true);
+  assert.equal(isSuccessfulHttpStatus(299), true);
+  assert.equal(isSuccessfulHttpStatus(199), false);
+  assert.equal(isSuccessfulHttpStatus(300), false);
+});
+
+test('detects the native 1001Tracklists rate-limit captcha before candidate fallback', () => {
+  const doc = {
+    title: "1001Tracklists - The World's Leading DJ Tracklist Database",
+    querySelector: selector => selector.includes('/info/unblock_ip.html') ? {} : null,
+  };
+  const message = detectBlockPage(
+    doc,
+    'Your IP has sent too many requests. Fill out the captcha to unblock your IP!',
+    206,
+  );
+
+  assert.match(message, /CAPTCHA/);
+  assert.match(message, /限制請求頻率/);
+});
+
+test('maps clockwise disc motion forward and unwraps the angle boundary', () => {
+  assert.ok(angleDeltaToSeconds(Math.PI / 2) > 0);
+  assert.ok(angleDeltaToSeconds(-Math.PI / 2) < 0);
+  assert.ok(normalizeAngleDelta(-Math.PI * 1.5) > 0);
+  assert.ok(normalizeAngleDelta(Math.PI * 1.5) < 0);
+});
+
+test('balances responsive disc size against the selected title size', () => {
+  const defaultSize = getBalancedDiscSize(1920, 1080, 14);
+  const enlargedSize = getBalancedDiscSize(1920, 1080, 20);
+
+  assert.ok(defaultSize > 67 && defaultSize < 68);
+  assert.ok(enlargedSize > defaultSize);
+  assert.equal(getBalancedDiscSize(480, 720, 14), 52.8);
+  assert.ok(enlargedSize <= 92);
+});
+
+test('calculates a complete HUD floor from the disc, text, controls, and padding', () => {
+  const minimum = calculateHudMinimumSize({
+    paddingLeft: 12,
+    paddingRight: 42,
+    paddingTop: 12,
+    paddingBottom: 12,
+    discWidth: 88,
+    discHeight: 88,
+    gap: 14,
+    infoWidth: 260,
+    infoHeight: 102,
+    sideWidth: 26,
+    sideHeight: 81,
+  });
+
+  assert.equal(minimum.width, 418);
+  assert.equal(minimum.height, 128);
+});
+
+test('selects previous and next track targets with restart behavior', () => {
+  const tracks = [{ time: 0 }, { time: 60 }, { time: 120 }];
+
+  assert.equal(getAdjacentTrackTime(tracks, 10, 1), 60);
+  assert.equal(getAdjacentTrackTime(tracks, 65, -1), 60);
+  assert.equal(getAdjacentTrackTime(tracks, 61, -1), 0);
+  assert.equal(getAdjacentTrackTime(tracks, 130, 1), 120);
+});
 
 function fakeLink(href, textContent) {
   return {
@@ -83,6 +169,15 @@ test('ranks the closest tracklist result ahead of generic results', () => {
 
   const candidates = collectTracklistCandidates(doc, 'Hardwell Tomorrowland 2026');
   assert.match(candidates[0], /hardwell-tomorrowland-2026/);
+});
+
+test('prefers the inert parser when Chrome exposes its sanitizing parser', () => {
+  const parsed = parseRemoteHtml('<div class="bItm">track</div>');
+
+  assert.equal(parsed.parser, 'inert');
+  assert.equal(parsed.type, 'text/html');
+  assert.match(parsed.markup, /class="bItm"/);
+  assert.equal(documentParseHtmlCalls, 0);
 });
 
 test('parses visible cues and hidden cue seconds without duplicated test logic', () => {

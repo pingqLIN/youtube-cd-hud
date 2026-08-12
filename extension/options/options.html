@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YouTube CD HUD 控制台</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div class="signal-line" aria-hidden="true"></div>
+    <header class="console-header">
+        <div>
+            <p class="eyebrow">YOUTUBE CD HUD / SETTINGS</p>
+            <p class="header-summary">擴充功能與顯示設定</p>
+        </div>
+        <div class="header-readout" aria-label="擴充版本資訊">
+            <span>BUILD</span>
+            <strong>5.8.0</strong>
+            <span>MODE</span>
+            <strong>LOCAL</strong>
+        </div>
+    </header>
+
+    <main>
+        <form id="settings-form" autocomplete="off">
+            <section class="master-strip" aria-labelledby="master-title">
+                <div>
+                    <p class="section-index">00 / MASTER</p>
+                    <h2 id="master-title">擴充總開關</h2>
+                    <p>所有設定只保存在這個 Chrome 使用者資料中。</p>
+                </div>
+                <label class="power-switch">
+                    <input id="enabled" name="enabled" type="checkbox">
+                    <span aria-hidden="true"></span>
+                    <b>HUD ON</b>
+                </label>
+            </section>
+
+            <div class="control-grid">
+                <div class="settings-rail">
+                    <section class="control-section" aria-labelledby="source-title">
+                        <div class="section-heading">
+                            <p class="section-index">01 / SOURCE</p>
+                            <h2 id="source-title">1001 行為</h2>
+                            <span class="status-lamp" aria-hidden="true"></span>
+                        </div>
+
+                        <div class="switch-list">
+                            <label class="switch-row">
+                                <span><b>啟用 1001</b><small>顯示來源控制並允許遠端查詢</small></span>
+                                <input id="enable1001" name="enable1001" type="checkbox">
+                                <i aria-hidden="true"></i>
+                            </label>
+                            <label class="switch-row">
+                                <span><b>自動搜尋</b><small>影片切換後自動比對 1001Tracklists</small></span>
+                                <input id="autoSearch1001" name="autoSearch1001" type="checkbox">
+                                <i aria-hidden="true"></i>
+                            </label>
+                            <label class="switch-row">
+                                <span><b>優先採用 1001</b><small>搜尋成功後自動切換曲目來源</small></span>
+                                <input id="prefer1001" name="prefer1001" type="checkbox">
+                                <i aria-hidden="true"></i>
+                            </label>
+                        </div>
+
+                        <div class="dial-grid">
+                            <label class="field-block">
+                                <span>逾時秒數</span>
+                                <output id="requestTimeoutMs-output" for="requestTimeoutMs">15s</output>
+                                <input id="requestTimeoutMs" name="requestTimeoutMs" type="range" min="5000" max="30000" step="1000">
+                            </label>
+                            <label class="field-block">
+                                <span>候選頁上限</span>
+                                <output id="maxCandidates-output" for="maxCandidates">5</output>
+                                <input id="maxCandidates" name="maxCandidates" type="range" min="1" max="10" step="1">
+                            </label>
+                        </div>
+                    </section>
+
+                    <section class="control-section" aria-labelledby="visual-title">
+                        <div class="section-heading">
+                            <p class="section-index">02 / VISUAL</p>
+                            <h2 id="visual-title">HUD 外觀</h2>
+                        </div>
+
+                        <div class="switch-list compact">
+                            <label class="switch-row">
+                                <span><b>顯示唱片</b><small>保留封面唱片與拖曳播放</small></span>
+                                <input id="showDisc" name="showDisc" type="checkbox">
+                                <i aria-hidden="true"></i>
+                            </label>
+                            <label class="switch-row">
+                                <span><b>顯示跳曲控制</b><small>顯示 PREV / NEXT 按鈕列</small></span>
+                                <input id="showTransport" name="showTransport" type="checkbox">
+                                <i aria-hidden="true"></i>
+                            </label>
+                        </div>
+
+                        <div class="dial-grid visual-dials">
+                            <label class="field-block">
+                                <span>曲名字級</span>
+                                <output id="titleFontSize-output" for="titleFontSize">14px</output>
+                                <input id="titleFontSize" name="titleFontSize" type="range" min="9" max="28" step="1">
+                            </label>
+                            <label class="field-block">
+                                <span>時間字級</span>
+                                <output id="timeFontSize-output" for="timeFontSize">12px</output>
+                                <input id="timeFontSize" name="timeFontSize" type="range" min="10" max="29" step="1">
+                            </label>
+                            <label class="field-block">
+                                <span>唱片倍率</span>
+                                <output id="discScale-output" for="discScale">100%</output>
+                                <input id="discScale" name="discScale" type="range" min="0.7" max="1.6" step="0.05">
+                            </label>
+                            <label class="field-block">
+                                <span>面板不透明度</span>
+                                <output id="surfaceOpacity-output" for="surfaceOpacity">85%</output>
+                                <input id="surfaceOpacity" name="surfaceOpacity" type="range" min="45" max="100" step="1">
+                            </label>
+                        </div>
+
+                        <label class="color-field">
+                            <span><b>訊號色</b><small>焦點、作用中控制與刻度線</small></span>
+                            <input id="accentColor" name="accentColor" type="color">
+                        </label>
+                    </section>
+
+                    <section class="control-section css-section" aria-labelledby="css-title">
+                        <div class="section-heading">
+                            <p class="section-index">03 / OVERRIDE</p>
+                            <h2 id="css-title">自訂 CSS</h2>
+                        </div>
+                        <p class="field-note">CSS 會直接套用到 YouTube 頁面。建議以 <code>#yt-cd-hud</code> 或 <code>.yt-tracklist-panel</code> 限定範圍。</p>
+                        <label class="css-editor">
+                            <span class="sr-only">自訂 CSS</span>
+                            <textarea id="customCss" name="customCss" spellcheck="false" placeholder="#yt-cd-hud {&#10;  border-width: 2px;&#10;}"></textarea>
+                        </label>
+                    </section>
+                </div>
+
+                <aside class="preview-rail" aria-labelledby="preview-title">
+                    <div class="preview-heading">
+                        <p class="section-index">LIVE MONITOR</p>
+                        <h2 id="preview-title">即時預覽</h2>
+                    </div>
+                    <div class="preview-stage">
+                        <div class="preview-grid" aria-hidden="true"></div>
+                        <div id="hud-preview" class="hud-preview">
+                            <div class="preview-disc"><span></span></div>
+                            <div class="preview-info">
+                                <strong id="preview-title-text">Midnight Transit — Chapter 04</strong>
+                                <time id="preview-time">12:48 / 58:31</time>
+                                <div class="preview-source">
+                                    <span>SRC</span><b>YT</b><b class="source-1001"><i></i>1001⌄</b>
+                                </div>
+                                <div class="preview-transport"><b>◀ PREV</b><b>NEXT ▶</b></div>
+                            </div>
+                            <div class="preview-tools"><b>×</b><b>T−</b><b>T+</b><b>≡</b></div>
+                        </div>
+                        <p class="preview-caption">YOUTUBE PLAYER / 1280×720</p>
+                    </div>
+                    <dl class="scope-list">
+                        <div><dt>資料儲存</dt><dd>Chrome 本機</dd></div>
+                        <div><dt>頁面權限</dt><dd>YouTube</dd></div>
+                        <div><dt>遠端查詢</dt><dd>1001Tracklists</dd></div>
+                    </dl>
+                </aside>
+            </div>
+
+            <footer class="action-bar">
+                <p id="save-status" role="status" aria-live="polite">等待調整</p>
+                <div>
+                    <button id="reset-button" class="secondary-button" type="button">恢復預設</button>
+                    <button class="primary-button" type="submit">儲存並套用</button>
+                </div>
+            </footer>
+        </form>
+    </main>
+
+    <script src="../shared/settings.js"></script>
+    <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube CD HUD",
+  "version": "5.8.0",
+  "description": "Adds a configurable CD-style track HUD and optional 1001Tracklists lookup to YouTube.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://1001tracklists.com/*",
+    "https://www.1001tracklists.com/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "action": {
+    "default_title": "Open YouTube CD HUD controls"
+  },
+  "options_page": "options/options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*"
+      ],
+      "js": [
+        "shared/settings.js",
+        "content/gm-xmlhttp-request.js",
+        "content/youtube-cd-hud.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
