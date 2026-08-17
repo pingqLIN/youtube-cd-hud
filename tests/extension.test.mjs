@@ -13,12 +13,14 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
   const manifest = JSON.parse(read('extension/manifest.json'));
 
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '5.8.3');
+  assert.equal(manifest.version, '5.9.0');
   assert.deepEqual(manifest.permissions, ['storage']);
   assert.deepEqual(manifest.host_permissions, [
     'https://www.youtube.com/*',
     'https://1001tracklists.com/*',
     'https://www.1001tracklists.com/*',
+    'https://www.mixesdb.com/*',
+    'https://trackid.net/*',
   ]);
   assert.equal(manifest.options_page, 'options/options.html');
   assert.equal(manifest.background.service_worker, 'background/service-worker.js');
@@ -61,6 +63,8 @@ test('uses external scripts and exposes the complete control surface', () => {
     'enable1001',
     'autoSearch1001',
     'prefer1001',
+    'enableMixesDb',
+    'enableTrackId',
     'requestTimeoutMs',
     'maxCandidates',
     'titleFontSize',
@@ -76,12 +80,15 @@ test('uses external scripts and exposes the complete control surface', () => {
   }
 });
 
-test('bridges only allowlisted 1001Tracklists requests with the site verification session', () => {
+test('bridges only allowlisted tracklist providers with provider-specific credentials', () => {
   const worker = read('extension/background/service-worker.js');
   const bridge = read('extension/content/gm-xmlhttp-request.js');
 
   assert.match(worker, /\(\?:www\\\.\)\?1001tracklists\\\.com/);
   assert.match(worker, /credentials:\s*'include'/);
+  assert.match(worker, /www\\\.mixesdb\\\.com/);
+  assert.match(worker, /trackid\\\.net/);
+  assert.match(worker, /credentials:\s*'omit'/);
   assert.doesNotMatch(worker, /chrome\.cookies/);
   assert.match(worker, /new AbortController\(\)/);
   assert.match(worker, /cache:\s*'default'/);
@@ -187,6 +194,58 @@ test('keeps the service-worker response channel open through a session-aware 100
   assert.equal(response.ok, true);
   assert.equal(response.status, 200);
   assert.match(response.responseText, /\/tracklist\/example/);
+});
+
+test('uses anonymous read-only requests for supplemental providers', async () => {
+  let messageListener = null;
+  let fetchRequest = null;
+  const context = {
+    AbortController,
+    clearTimeout,
+    console,
+    fetch: async (url, init) => {
+      fetchRequest = { url, init };
+      return {
+        status: 200,
+        statusText: 'OK',
+        url,
+        headers: { entries: () => [['content-type', 'application/json']] },
+        text: async () => '{"result":{}}',
+      };
+    },
+    setTimeout,
+    chrome: {
+      action: { onClicked: { addListener() {} } },
+      runtime: {
+        openOptionsPage: async () => {},
+        onMessage: { addListener(listener) { messageListener = listener; } },
+      },
+    },
+  };
+  vm.runInNewContext(read('extension/background/service-worker.js'), context);
+
+  const request = message => new Promise(resolve => {
+    let keptOpen;
+    keptOpen = messageListener(message, {}, response => {
+      queueMicrotask(() => resolve({ keptOpen, response }));
+    });
+  });
+  const mixesResponse = await request({
+    type: 'YT_CD_HUD_REMOTE_REQUEST',
+    request: { method: 'GET', url: 'https://www.mixesdb.com/w/api.php?action=query' },
+  });
+  assert.equal(mixesResponse.keptOpen, true);
+  assert.equal(mixesResponse.response.ok, true);
+  assert.equal(fetchRequest.init.credentials, 'omit');
+  assert.equal(fetchRequest.init.body, undefined);
+  assert.equal(fetchRequest.init.headers.Accept, 'application/json');
+
+  const rejected = await request({
+    type: 'YT_CD_HUD_REMOTE_REQUEST',
+    request: { method: 'POST', url: 'https://trackid.net/api/public/audiostreams' },
+  });
+  assert.equal(rejected.response.ok, false);
+  assert.equal(rejected.response.phase, 'validation');
 });
 
 test('keeps the settings preview aligned with the half-overhang HUD geometry', () => {

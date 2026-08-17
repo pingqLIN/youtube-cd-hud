@@ -35,7 +35,10 @@
         preview.classList.toggle('off', !settings.enabled);
         preview.classList.toggle('hide-disc', !settings.showDisc);
         preview.classList.toggle('hide-transport', !settings.showTransport);
-        preview.classList.toggle('hide-1001', !settings.enable1001);
+        preview.classList.toggle(
+            'hide-1001',
+            !settings.enable1001 && !settings.enableMixesDb && !settings.enableTrackId
+        );
         preview.style.setProperty('--preview-accent', settings.accentColor);
         preview.style.setProperty('--preview-opacity', String(settings.surfaceOpacity / 100));
         preview.style.setProperty('--preview-disc-size', `${82 * settings.discScale}px`);

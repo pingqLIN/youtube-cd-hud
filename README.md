@@ -4,8 +4,8 @@
 
 [繁體中文](README.zh-tw.md)
 
-YouTube CD HUD searches 1001Tracklists for the current YouTube video, imports
-timestamped tracks, and keeps the active track synchronized with playback. It
+YouTube CD HUD searches selectable tracklist providers for the current YouTube
+video, imports timestamped tracks, and keeps the active track synchronized with playback. It
 also works with YouTube's native chapter title and timestamped tracks parsed
 from the video description, so existing YouTube track information remains the
 default instead of being replaced.
@@ -15,12 +15,14 @@ tracklist panel. The project is available as both a Tampermonkey userscript and
 a Manifest V3 Chrome extension.
 
 The current userscript source is `src/youtube-cd-hud.user.js`. The unpacked
-Chrome extension is in `extension/`. Both variants are version 5.8.3.
+Chrome extension is in `extension/`. Both variants are version 5.9.0.
 
 ## Highlights
 
 - Searches 1001Tracklists with the normalized YouTube video title, ranks matching
   results, and tries timestamped candidate tracklists in order.
+- Offers manual, independent MixesDB and TrackId.net lookups. Exact YouTube IDs
+  are preferred; fallback candidates must also pass title and duration checks.
 - Synchronizes the selected tracklist with the YouTube playback position,
   highlights the current track, and provides previous/next track navigation.
 - Preserves compatibility with YouTube's own chapter title and timestamped video
@@ -40,7 +42,8 @@ Chrome extension is in `extension/`. Both variants are version 5.8.3.
 | YouTube description contains timestamped tracks | Loads them as the `YT` source and uses them by default. |
 | YouTube exposes a native chapter title | Shows that chapter title while the `YT` source is active. |
 | 1001Tracklists finds timestamped tracks | Adds a selectable `1001` source synchronized to the same video time. |
-| Both sources are available | Keeps `YT` active by default; `Prefer 1001` can switch automatically after a successful search. |
+| MixesDB or TrackId.net finds a trusted match | Adds an independent selectable source; it is not merged into another provider's data. |
+| Multiple sources are available | Keeps `YT` active by default; `Prefer 1001` can switch automatically after a successful 1001 search. |
 | 1001Tracklists is blocked or has no usable result | Keeps the available YouTube source and reports the 1001 search state instead of replacing it. |
 
 Changing source updates the visible tracklist, active-track highlight, current
@@ -67,7 +70,7 @@ Store release.
 
 ## Control page
 
-The control page manages the HUD switch, 1001Tracklists behavior, typography,
+The control page manages the HUD switch, enabled tracklist providers, 1001Tracklists behavior, typography,
 disc scale, panel opacity, accent color, visible controls, and custom CSS. Scope
 custom selectors to `#yt-cd-hud` or `.yt-tracklist-panel` where practical.
 
@@ -88,13 +91,15 @@ a live YouTube tab.
 ## Privacy and permissions
 
 - Extension preferences stay in Chrome local storage.
-- The manifest requests `storage` and limits host access to YouTube and
-  1001Tracklists HTTPS pages.
+- The manifest requests `storage` and limits host access to YouTube,
+  1001Tracklists, MixesDB, and TrackId.net HTTPS pages.
 - The extension has no `cookies` permission and does not call `chrome.cookies`,
   read cookie values, or log them.
 - When 1001Tracklists integration is enabled, Chrome may attach that site's own
   verification cookies to allowlisted HTTPS requests. The extension cannot read
   those cookie values.
+- MixesDB and TrackId.net requests are anonymous read-only requests with
+  credentials omitted. The extension does not submit audio or request new recognition.
 - No browsing history, credentials, or analytics are collected by the project.
 
 ## Mascot
@@ -124,6 +129,13 @@ YouTube video test with the userscript or unpacked extension in the operator's
 actual browser profile.
 
 ## Release notes
+
+### 5.9.0
+
+- Adds selectable MixesDB and TrackId.net providers behind independent adapters.
+- Keeps both supplemental lookups manual and read-only. Candidate acceptance uses
+  source URL or YouTube ID evidence plus conservative title, duration, and cue-coverage checks.
+- Keeps provider tracklists separate so the operator explicitly chooses the active source.
 
 ### 5.8.3
 

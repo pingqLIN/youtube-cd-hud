@@ -50,9 +50,41 @@ const {
   normalizeSearchTitle,
   normalizeAngleDelta,
   parseRemoteHtml,
+  parseMixesDbWikitext,
+  parseTrackIdDetail,
   parseTimestampToSeconds,
   parseTracklistDocument,
 } = sandbox.__YT_CD_HUD_TEST_EXPORTS__;
+
+test('parses timestamped MixesDB wikitext without retaining wiki markup', () => {
+  const tracks = parseMixesDbWikitext(`
+# [0:05:23] [[Artist]] - [https://example.test Track Name] [Label]
+# [12:34] Another Artist - Another Track
+# [??] Unknown
+  `);
+
+  assert.deepEqual(JSON.parse(JSON.stringify(tracks)), [
+    { time: 323, title: 'Artist - Track Name [Label]' },
+    { time: 754, title: 'Another Artist - Another Track' },
+  ]);
+});
+
+test('combines and de-duplicates TrackId detection-process tracks', () => {
+  const tracks = parseTrackIdDetail({ result: { detectionProcesses: [
+    { detectionProcessMusicTracks: [
+      { startTime: '00:01:02.5000000', artist: 'Artist', title: 'Track' },
+    ] },
+    { detectionProcessMusicTracks: [
+      { startTime: '00:01:02', artist: 'Artist', title: 'Track' },
+      { startTime: '00:04:00', artist: 'Other', title: 'Next' },
+    ] },
+  ] } });
+
+  assert.deepEqual(JSON.parse(JSON.stringify(tracks)), [
+    { time: 62, title: 'Artist - Track' },
+    { time: 240, title: 'Other - Next' },
+  ]);
+});
 
 test('accepts successful partial-content responses for normal validation', () => {
   assert.equal(isSuccessfulHttpStatus(200), true);

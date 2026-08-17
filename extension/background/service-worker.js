@@ -1,12 +1,37 @@
 'use strict';
 
-const ALLOWED_REMOTE_URL = /^https:\/\/(?:www\.)?1001tracklists\.com\//i;
-const ALLOWED_METHODS = new Set(['GET', 'POST']);
+const REMOTE_PROVIDERS = Object.freeze([
+    {
+        pattern: /^https:\/\/(?:www\.)?1001tracklists\.com\//i,
+        methods: new Set(['GET', 'POST']),
+        defaultAccept: 'text/html,application/xhtml+xml',
+        credentials: 'include',
+        referrer: 'https://www.1001tracklists.com/',
+    },
+    {
+        pattern: /^https:\/\/www\.mixesdb\.com\/w\/api\.php(?:\?|$)/i,
+        methods: new Set(['GET']),
+        defaultAccept: 'application/json',
+        credentials: 'omit',
+        referrer: '',
+    },
+    {
+        pattern: /^https:\/\/trackid\.net\/api\/public\/audiostreams(?:[/?]|$)/i,
+        methods: new Set(['GET']),
+        defaultAccept: 'application/json',
+        credentials: 'omit',
+        referrer: '',
+    },
+]);
 
-function getRequestHeaders(request) {
+function getRemoteProvider(url) {
+    return REMOTE_PROVIDERS.find(provider => provider.pattern.test(url)) || null;
+}
+
+function getRequestHeaders(request, provider) {
     const supplied = request && request.headers || {};
     const headers = {
-        Accept: String(supplied.Accept || supplied.accept || 'text/html,application/xhtml+xml'),
+        Accept: String(supplied.Accept || supplied.accept || provider.defaultAccept),
     };
     if (request.method === 'POST') {
         headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
@@ -27,12 +52,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     (async () => {
         const request = message.request || {};
-        if (!ALLOWED_REMOTE_URL.test(String(request.url || ''))) {
+        const requestUrl = String(request.url || '');
+        const provider = getRemoteProvider(requestUrl);
+        if (!provider) {
             sendResponse({ ok: false, phase: 'validation', error: 'Remote URL is outside the extension allowlist.' });
             return;
         }
         const method = String(request.method || 'GET').toUpperCase();
-        if (!ALLOWED_METHODS.has(method)) {
+        if (!provider.methods.has(method)) {
             sendResponse({ ok: false, phase: 'validation', error: 'Remote method is not supported.' });
             return;
         }
@@ -42,17 +69,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         try {
             const timeout = Math.min(Math.max(Number(request.timeout) || 15000, 5000), 30000);
             timeoutTimer = setTimeout(() => controller.abort('timeout'), timeout);
-            const response = await fetch(request.url, {
+            const fetchOptions = {
                 method,
-                headers: getRequestHeaders({ ...request, method }),
+                headers: getRequestHeaders({ ...request, method }, provider),
                 body: method === 'POST' ? String(request.data || '') : undefined,
-                credentials: 'include',
+                credentials: provider.credentials,
                 redirect: 'follow',
                 cache: 'default',
-                referrer: 'https://www.1001tracklists.com/',
                 referrerPolicy: 'strict-origin-when-cross-origin',
                 signal: controller.signal,
-            });
+            };
+            if (provider.referrer) fetchOptions.referrer = provider.referrer;
+            const response = await fetch(request.url, fetchOptions);
             const responseText = await response.text();
             const responseHeaders = Array.from(response.headers.entries())
                 .map(([name, value]) => `${name}: ${value}`)

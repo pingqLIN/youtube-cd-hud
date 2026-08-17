@@ -85,6 +85,10 @@ test('shows the tracklist explicitly and uses the redesigned compound controls',
   assert.match(source, /createControlButton\('T\+'/);
   assert.match(source, /className\s*=\s*'hud-1001-menu'/);
   assert.match(source, /createControlButton\('USE 1001'/);
+  assert.match(source, /createControlButton\('USE MIXESDB'/);
+  assert.match(source, /createControlButton\('USE TRACKID'/);
+  assert.match(source, /createControlButton\('SEARCH MIXESDB'/);
+  assert.match(source, /createControlButton\('SEARCH TRACKID'/);
   assert.match(source, /createControlButton\('OPEN 1001 ↗'/);
   assert.match(source, /createControlButton\('≡'/);
   assert.match(source, /createControlButton\('◀ PREV'/);

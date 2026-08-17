@@ -4,7 +4,7 @@
 
 [English](README.md)
 
-YouTube CD HUD 的核心功能是依目前 YouTube 影片搜尋 1001Tracklists、匯入
+YouTube CD HUD 的核心功能是依目前 YouTube 影片搜尋可選的曲目資料來源、匯入
 帶時間戳的曲目，並讓目前曲目隨播放時間同步更新。同時相容 YouTube 原生章節
 標題與影片說明欄內的時間戳曲目；既有 YouTube 曲目資訊會維持為預設來源，
 不會因 1001Tracklists 搜尋而被強制取代。
@@ -13,12 +13,14 @@ YouTube CD HUD 的核心功能是依目前 YouTube 影片搜尋 1001Tracklists�
 Tampermonkey Userscript 與 Manifest V3 Chrome 擴充版。
 
 Userscript 原始檔位於 `src/youtube-cd-hud.user.js`，可載入的 Chrome 擴充位於
-`extension/`；兩個版本目前皆為 v5.8.3。
+`extension/`；兩個版本目前皆為 v5.9.0。
 
 ## 功能亮點
 
 - 以正規化後的 YouTube 影片標題搜尋 1001Tracklists、排列相符結果，並依序
   嘗試含時間戳的候選曲目頁。
+- 提供互相獨立的 MixesDB 與 TrackId.net 手動查詢。優先採用完全相同的
+  YouTube ID；備援候選仍須通過標題與錄音長度檢查。
 - 將選定曲目來源與 YouTube 播放位置同步：自動高亮目前曲目，並提供上一曲／
   下一曲跳轉。
 - 相容 YouTube 原生章節標題與影片說明欄的時間戳曲目。可在 `YT` 與 `1001`
@@ -35,7 +37,8 @@ Userscript 原始檔位於 `src/youtube-cd-hud.user.js`，可載入的 Chrome �
 | YouTube 說明欄含時間戳曲目 | 載入為 `YT` 來源，並預設使用這份曲目。 |
 | YouTube 顯示原生章節標題 | 使用 `YT` 來源時同步顯示該章節標題。 |
 | 1001Tracklists 找到含時間戳的曲目 | 新增可切換的 `1001` 來源，並依同一影片播放時間同步。 |
-| 兩個來源都有資料 | 預設保持 `YT`；啟用「優先採用 1001」後，可在搜尋成功時自動切換。 |
+| MixesDB 或 TrackId.net 找到可信結果 | 新增獨立的可切換來源，不與其他供應者資料自動合併。 |
+| 多個來源都有資料 | 預設保持 `YT`；啟用「優先採用 1001」後，可在 1001 搜尋成功時自動切換。 |
 | 1001Tracklists 遭阻擋或沒有可用結果 | 保留現有 YouTube 來源，顯示 1001 搜尋狀態，不會覆蓋原有曲目。 |
 
 切換來源時，曲目清單、目前曲目高亮、HUD 曲名與上一曲／下一曲目標會一起
@@ -60,7 +63,7 @@ Userscript 原始檔位於 `src/youtube-cd-hud.user.js`，可載入的 Chrome �
 
 ## 控制頁
 
-控制頁可調整 HUD 總開關、1001Tracklists 行為、字級、唱片倍率、面板透明度、
+控制頁可調整 HUD 總開關、啟用的曲目資料來源、1001Tracklists 行為、字級、唱片倍率、面板透明度、
 訊號色、顯示控制與自訂 CSS；建議使用 `#yt-cd-hud` 或
 `.yt-tracklist-panel` 自行限定選擇器範圍。
 
@@ -79,12 +82,14 @@ Chrome 設定檔或瀏覽資料。因此它能驗證控制頁互動，但不能�
 ## 隱私與權限
 
 - 擴充偏好只保存在 Chrome 本機儲存空間。
-- Manifest 僅要求 `storage`，主機存取範圍限制於 YouTube 與
-  1001Tracklists 的 HTTPS 頁面。
+- Manifest 僅要求 `storage`，主機存取範圍限制於 YouTube、1001Tracklists、
+  MixesDB 與 TrackId.net 的 HTTPS 頁面。
 - 擴充沒有 `cookies` 權限，不呼叫 `chrome.cookies`，也不讀取或輸出 Cookie
   值。
 - 啟用 1001Tracklists 整合後，Chrome 可在 allowlist HTTPS 請求附帶該網站
   自己的驗證 Cookie；擴充本身無法讀取這些 Cookie 值。
+- MixesDB 與 TrackId.net 僅使用不帶憑證的匿名唯讀請求；擴充不會上傳音訊，
+  也不會提交新的辨識工作。
 - 專案不收集瀏覽紀錄、帳密或分析資料。
 
 ## 吉祥物
@@ -112,6 +117,13 @@ npm test
 影片驗收。
 
 ## 版本紀錄
+
+### v5.9.0
+
+- 以獨立 adapter 新增可選的 MixesDB 與 TrackId.net 曲目來源。
+- 兩個補充來源都維持手動、唯讀查詢；候選結果會依來源 URL／YouTube ID，並以
+  標題、錄音長度與時間戳覆蓋範圍作保守驗證。
+- 各供應者曲目維持分離，由操作者明確選擇目前來源，不自動合併。
 
 ### v5.8.3
 

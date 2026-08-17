@@ -1,13 +1,15 @@
 // ==UserScript==
-// @name         YouTube CD Album & HUD Overlay (with Tracklist + 1001Tracklists) v5.8.3
+// @name         YouTube CD Album & HUD Overlay (with selectable tracklist providers) v5.9.0
 // @namespace    http://tampermonkey.net/
-// @version      5.8.3
-// @description  Tampermonkey／Chrome 擴充雙版本、可設定 1001 行為與 HUD 外觀
+// @version      5.9.0
+// @description  Tampermonkey／Chrome 擴充雙版本、可選 1001Tracklists、MixesDB、TrackId.net 與 HUD 外觀
 // @author       You
 // @match        https://www.youtube.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      1001tracklists.com
 // @connect      www.1001tracklists.com
+// @connect      www.mixesdb.com
+// @connect      trackid.net
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -35,6 +37,8 @@
         enable1001: true,
         autoSearch1001: true,
         prefer1001: false,
+        enableMixesDb: true,
+        enableTrackId: true,
         requestTimeoutMs: 15000,
         maxCandidates: 5,
         titleFontSize: DEFAULT_TITLE_SIZE,
@@ -61,10 +65,14 @@
     let parsedTracks = [];
     let tracksFromYouTube = [];
     let tracksFrom1001 = [];
+    let tracksFromMixesDb = [];
+    let tracksFromTrackId = [];
     let currentSource = 'youtube';
     let searchState = 'idle';
     let searchStateDetail = '';
     let tracklistUrl1001 = '';
+    let tracklistUrlMixesDb = '';
+    let tracklistUrlTrackId = '';
     let lastVideoIdFor1001 = '';
     let lastSearchTitle = '';
 
@@ -74,6 +82,7 @@
     let activeSearchRequest = null;
     let activeTracklistRequest = null;
     let activeCandidateTimer = null;
+    const activeSupplementalRequests = new Set();
     let automaticSearchBlockedUntil = 0;
     let hudScale = 1.0;
     let hudTitleFontSize = DEFAULT_TITLE_SIZE;
@@ -86,9 +95,15 @@
     let statusBtn = null;
     let youtubeSourceBtn = null;
     let tracklistSource1001Btn = null;
+    let tracklistSourceMixesDbBtn = null;
+    let tracklistSourceTrackIdBtn = null;
     let oneThousandMenu = null;
     let oneThousandChevron = null;
     let linkBtn = null;
+    let mixesDbLinkBtn = null;
+    let trackIdLinkBtn = null;
+    let mixesDbSearchBtn = null;
+    let trackIdSearchBtn = null;
     let tracklistBtn = null;
     let retryBtn = null;
     let previousTrackBtn = null;
@@ -139,7 +154,10 @@
         if (hud) {
             hud.classList.toggle('ytcd-hide-disc', !runtimeSettings.showDisc);
             hud.classList.toggle('ytcd-hide-transport', !runtimeSettings.showTransport);
-            hud.classList.toggle('ytcd-hide-1001', !runtimeSettings.enable1001);
+            hud.classList.toggle(
+                'ytcd-hide-1001',
+                !runtimeSettings.enable1001 && !runtimeSettings.enableMixesDb && !runtimeSettings.enableTrackId
+            );
             hud.style.display = runtimeSettings.enabled ? '' : 'none';
         }
         if (tracklistPanel && !runtimeSettings.enabled) tracklistPanel.style.display = 'none';
@@ -172,6 +190,16 @@
             lastSearchTitle = '';
             if (currentSource === '1001') setActiveSource(tracksFromYouTube.length ? 'youtube' : 'none');
         }
+        if (!runtimeSettings.enableMixesDb) {
+            tracksFromMixesDb = [];
+            tracklistUrlMixesDb = '';
+            if (currentSource === 'mixesdb') setActiveSource('none');
+        }
+        if (!runtimeSettings.enableTrackId) {
+            tracksFromTrackId = [];
+            tracklistUrlTrackId = '';
+            if (currentSource === 'trackid') setActiveSource('none');
+        }
 
         applyRuntimeAppearance();
         updateStatusLight();
@@ -181,7 +209,9 @@
         if (reschedule && runtimeSettings.enabled && (
             !previous.enabled ||
             previous.enable1001 !== runtimeSettings.enable1001 ||
-            previous.autoSearch1001 !== runtimeSettings.autoSearch1001
+            previous.autoSearch1001 !== runtimeSettings.autoSearch1001 ||
+            previous.enableMixesDb !== runtimeSettings.enableMixesDb ||
+            previous.enableTrackId !== runtimeSettings.enableTrackId
         )) {
             scheduleInitialization();
         }
@@ -406,6 +436,109 @@
         return '';
     }
 
+    function requestJson(url) {
+        return new Promise((resolve, reject) => {
+            let rawRequest = null;
+            let trackedRequest = null;
+            let settled = false;
+            const finish = (callback, value) => {
+                if (settled) return;
+                settled = true;
+                if (trackedRequest) activeSupplementalRequests.delete(trackedRequest);
+                callback(value);
+            };
+            rawRequest = GM_xmlhttpRequest({
+                method: 'GET',
+                url,
+                headers: { Accept: 'application/json' },
+                timeout: runtimeSettings.requestTimeoutMs,
+                onload: response => {
+                    if (!isSuccessfulHttpStatus(response.status)) {
+                        finish(reject, new Error(`HTTP ${response.status}`));
+                        return;
+                    }
+                    try {
+                        finish(resolve, JSON.parse(getResponseText(response)));
+                    } catch (error) {
+                        finish(reject, new Error('遠端回應不是有效 JSON。'));
+                    }
+                },
+                onerror: error => finish(
+                    reject,
+                    error instanceof Error ? error : new Error(error && error.error || '網路請求失敗。')
+                ),
+                ontimeout: () => finish(reject, new Error('遠端請求逾時。')),
+            });
+            if (rawRequest && typeof rawRequest.abort === 'function') {
+                trackedRequest = {
+                    abort() {
+                        rawRequest.abort();
+                        finish(reject, new Error('遠端請求已取消。'));
+                    },
+                };
+                activeSupplementalRequests.add(trackedRequest);
+            }
+        });
+    }
+
+    function getTitleMatchScore(queryTitle, candidateTitle) {
+        const queryTokens = [...new Set(getTitleTokens(queryTitle))];
+        if (!queryTokens.length) return 0;
+        const candidateTokens = new Set(getTitleTokens(candidateTitle));
+        return queryTokens.filter(token => candidateTokens.has(token)).length / queryTokens.length;
+    }
+
+    function getDurationDifferenceSeconds(durationText, videoDuration) {
+        const candidateDuration = parseTimestampToSeconds(String(durationText || '').split('.')[0]);
+        if (!Number.isFinite(candidateDuration) || !Number.isFinite(videoDuration) || videoDuration <= 0) return Infinity;
+        return Math.abs(candidateDuration - videoDuration);
+    }
+
+    function stripWikiMarkup(value) {
+        return trim(String(value || '')
+            .replace(/<!--[^]*?-->/g, ' ')
+            .replace(/\[\[(?:[^\]|]+\|)?([^\]]+)]]/g, '$1')
+            .replace(/\[(?:https?:\/\/\S+)\s+([^\]]+)]/g, '$1')
+            .replace(/\{\{[^{}]*}}/g, ' ')
+            .replace(/'{2,}/g, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' '));
+    }
+
+    function parseMixesDbWikitext(wikitext) {
+        const tracks = [];
+        const seen = new Set();
+        String(wikitext || '').split(/\r?\n/).forEach(line => {
+            if (!/^\s*[#*]/.test(line)) return;
+            const match = line.match(/\[\s*(\d{1,3}:[0-5]\d(?::[0-5]\d)?)\s*]/);
+            if (!match) return;
+            const time = parseTimestampToSeconds(match[1]);
+            const title = stripWikiMarkup(line.slice((match.index || 0) + match[0].length).replace(/^\s*[-–—:]?\s*/, ''));
+            const key = `${time}\u0000${title}`;
+            if (!Number.isFinite(time) || !title || seen.has(key)) return;
+            seen.add(key);
+            tracks.push({ time, title });
+        });
+        return tracks.sort((left, right) => left.time - right.time);
+    }
+
+    function parseTrackIdDetail(payload) {
+        const result = payload && payload.result || {};
+        const tracks = [];
+        const seen = new Set();
+        (result.detectionProcesses || []).forEach(process => {
+            (process.detectionProcessMusicTracks || []).forEach(track => {
+                const time = parseTimestampToSeconds(String(track.startTime || '').split('.')[0]);
+                const title = trim([track.artist, track.title].filter(Boolean).join(' - '));
+                const key = `${time}\u0000${title}`;
+                if (!Number.isFinite(time) || !title || seen.has(key)) return;
+                seen.add(key);
+                tracks.push({ time, title });
+            });
+        });
+        return tracks.sort((left, right) => left.time - right.time);
+    }
+
     function isHtmlResponse(response, responseText) {
         const contentType = getResponseHeader(response, 'content-type').toLowerCase();
         if (contentType) {
@@ -460,6 +593,14 @@
         });
         activeSearchRequest = null;
         activeTracklistRequest = null;
+        activeSupplementalRequests.forEach(request => {
+            try {
+                request.abort();
+            } catch (error) {
+                console.warn('[CD HUD] Could not abort a stale supplemental request.', error);
+            }
+        });
+        activeSupplementalRequests.clear();
         if (activeCandidateTimer !== null) {
             clearTimeout(activeCandidateTimer);
             activeCandidateTimer = null;
@@ -496,9 +637,16 @@
         }
         tracksFromYouTube.sort((a, b) => a.time - b.time);
         console.log(`[CD HUD] Parsed ${found} tracks from description.`);
-        if (currentSource === 'youtube' || !tracksFrom1001.length) {
+        if (currentSource === 'youtube' || !getAvailableRemoteSource()) {
             setActiveSource('youtube');
         }
+    }
+
+    function getAvailableRemoteSource() {
+        if (tracksFrom1001.length) return '1001';
+        if (tracksFromMixesDb.length) return 'mixesdb';
+        if (tracksFromTrackId.length) return 'trackid';
+        return '';
     }
 
     function setActiveSource(source) {
@@ -508,6 +656,12 @@
         } else if (source === '1001' && tracksFrom1001.length) {
             parsedTracks = tracksFrom1001;
             currentSource = '1001';
+        } else if (source === 'mixesdb' && tracksFromMixesDb.length) {
+            parsedTracks = tracksFromMixesDb;
+            currentSource = 'mixesdb';
+        } else if (source === 'trackid' && tracksFromTrackId.length) {
+            parsedTracks = tracksFromTrackId;
+            currentSource = 'trackid';
         } else {
             if (tracksFromYouTube.length) {
                 parsedTracks = tracksFromYouTube;
@@ -515,6 +669,12 @@
             } else if (tracksFrom1001.length) {
                 parsedTracks = tracksFrom1001;
                 currentSource = '1001';
+            } else if (tracksFromMixesDb.length) {
+                parsedTracks = tracksFromMixesDb;
+                currentSource = 'mixesdb';
+            } else if (tracksFromTrackId.length) {
+                parsedTracks = tracksFromTrackId;
+                currentSource = 'trackid';
             } else {
                 parsedTracks = [];
                 currentSource = 'none';
@@ -767,6 +927,147 @@
                 markSearchError('1001Tracklists 搜尋請求逾時。');
             },
         });
+    }
+
+    async function fetchTracklistFromMixesDb(title, videoId) {
+        if (!runtimeSettings.enableMixesDb || !title || !videoId) return;
+        searchState = 'searching';
+        searchStateDetail = '正在搜尋 MixesDB…';
+        updateStatusLight();
+        const searchTitle = normalizeSearchTitle(title) || title;
+        const apiUrl = new URL('https://www.mixesdb.com/w/api.php');
+        apiUrl.search = new URLSearchParams({
+            action: 'query',
+            list: 'search',
+            srsearch: searchTitle,
+            srnamespace: '0',
+            srlimit: String(runtimeSettings.maxCandidates),
+            format: 'json',
+            formatversion: '2',
+        }).toString();
+
+        try {
+            const searchPayload = await requestJson(apiUrl.href);
+            if (getVideoId() !== videoId) return;
+            const candidates = (searchPayload.query && searchPayload.query.search || [])
+                .map(candidate => ({
+                    title: candidate.title,
+                    score: getTitleMatchScore(searchTitle, candidate.title),
+                }))
+                .filter(candidate => candidate.score >= 0.35)
+                .sort((left, right) => right.score - left.score)
+                .slice(0, runtimeSettings.maxCandidates);
+
+            for (const candidate of candidates) {
+                const detailUrl = new URL('https://www.mixesdb.com/w/api.php');
+                detailUrl.search = new URLSearchParams({
+                    action: 'query',
+                    prop: 'revisions|extlinks',
+                    titles: candidate.title,
+                    rvprop: 'content',
+                    rvslots: 'main',
+                    ellimit: 'max',
+                    format: 'json',
+                    formatversion: '2',
+                }).toString();
+                const detailPayload = await requestJson(detailUrl.href);
+                if (getVideoId() !== videoId) return;
+                const page = detailPayload.query && detailPayload.query.pages && detailPayload.query.pages[0];
+                const revision = page && page.revisions && page.revisions[0];
+                const wikitext = revision && revision.slots && revision.slots.main && revision.slots.main.content || '';
+                const tracks = parseMixesDbWikitext(wikitext);
+                const externalUrls = (page && page.extlinks || []).map(link => link.url || link['*'] || '');
+                const exactSource = externalUrls.some(url => String(url).includes(videoId));
+                const lastCue = tracks.length ? tracks[tracks.length - 1].time : 0;
+                const duration = Number(currentVideo && currentVideo.duration) || 0;
+                const plausibleCoverage = !duration || (lastCue <= duration + 300 && lastCue >= duration * 0.45);
+                if (!tracks.length || (!exactSource && (candidate.score < 0.55 || !plausibleCoverage))) continue;
+
+                tracksFromMixesDb = tracks;
+                tracklistUrlMixesDb = `https://www.mixesdb.com/w/${encodeURIComponent(candidate.title.replace(/ /g, '_'))}`;
+                searchState = 'success';
+                searchStateDetail = `MixesDB：${tracks.length} 首`;
+                if (!tracksFromYouTube.length && !tracksFrom1001.length) setActiveSource('mixesdb');
+                updateSourceButtons();
+                updateLinkButton();
+                updateStatusLight();
+                return;
+            }
+            throw new Error('找不到標題與錄音長度均可信的曲目頁。');
+        } catch (error) {
+            if (getVideoId() !== videoId) return;
+            searchState = 'error';
+            searchStateDetail = `MixesDB 搜尋失敗：${error && error.message || error}`;
+            updateStatusLight();
+            updateLinkButton();
+        }
+    }
+
+    async function fetchTracklistFromTrackId(title, videoId) {
+        if (!runtimeSettings.enableTrackId || !title || !videoId) return;
+        searchState = 'searching';
+        searchStateDetail = '正在搜尋 TrackId.net…';
+        updateStatusLight();
+        const searchTitle = normalizeSearchTitle(title) || title;
+        const query = new URLSearchParams({
+            keywords: searchTitle,
+            pageSize: String(runtimeSettings.maxCandidates),
+            currentPage: '0',
+            sortField: '',
+            sortDirection: '',
+            audioStreamType: '',
+            status: '3',
+            styles: '',
+            minAddedOn: '',
+            maxAddedOn: '',
+            username: '',
+            channel: '',
+        });
+
+        try {
+            const payload = await requestJson(`https://trackid.net/api/public/audiostreams?${query}`);
+            if (getVideoId() !== videoId) return;
+            const duration = Number(currentVideo && currentVideo.duration) || 0;
+            const candidates = (payload.result && payload.result.audiostreams || [])
+                .map(candidate => {
+                    const exactSource = candidate.externalId === videoId || String(candidate.url || '').includes(videoId);
+                    const titleScore = getTitleMatchScore(searchTitle, candidate.title);
+                    const durationDifference = getDurationDifferenceSeconds(candidate.duration, duration);
+                    const durationTolerance = Math.max(120, duration * 0.1);
+                    return { ...candidate, exactSource, titleScore, durationDifference, durationTolerance };
+                })
+                .filter(candidate => candidate.exactSource || (
+                    candidate.titleScore >= 0.6 && candidate.durationDifference <= candidate.durationTolerance
+                ))
+                .sort((left, right) => (
+                    Number(right.exactSource) - Number(left.exactSource) ||
+                    right.titleScore - left.titleScore ||
+                    left.durationDifference - right.durationDifference
+                ));
+            const candidate = candidates[0];
+            if (!candidate || !candidate.slug) throw new Error('找不到影片 ID，或標題與錄音長度均可信的結果。');
+
+            const detailPayload = await requestJson(`https://trackid.net/api/public/audiostreams/${encodeURIComponent(candidate.slug)}`);
+            if (getVideoId() !== videoId) return;
+            const tracks = parseTrackIdDetail(detailPayload);
+            if (!tracks.length) throw new Error('候選頁沒有可用的時間戳曲目。');
+            tracksFromTrackId = tracks;
+            tracklistUrlTrackId = `https://trackid.net/audiostreams/${encodeURIComponent(candidate.slug)}`;
+            searchState = 'success';
+            searchStateDetail = `TrackId.net：${tracks.length} 首`;
+            if (!tracksFromYouTube.length && !tracksFrom1001.length && !tracksFromMixesDb.length) {
+                setActiveSource('trackid');
+            }
+            updateSourceButtons();
+            updateLinkButton();
+            updateStatusLight();
+        } catch (error) {
+            if (getVideoId() !== videoId) return;
+            searchState = 'error';
+            searchStateDetail = `TrackId.net 搜尋失敗：${error && error.message || error}`;
+            updateStatusLight();
+            updateLinkButton();
+        }
     }
 
     function parseTracklistDocument(doc) {
@@ -2184,34 +2485,48 @@
             success: '已獲取曲目',
             error: '搜尋失敗'
         };
-        const statusTitle = searchState === 'error' && searchStateDetail
-            ? searchStateDetail
-            : (titles[searchState] || '');
+        const statusTitle = searchStateDetail || titles[searchState] || '';
         statusBtn = statusBtn || statusLight.closest('.hud-status-button');
         if (statusBtn) {
             statusBtn.title = statusTitle;
-            statusBtn.setAttribute('aria-label', `${statusTitle}；展開 1001Tracklists 控制`);
+            statusBtn.setAttribute('aria-label', `${statusTitle}；展開曲目資料來源控制`);
             statusBtn.classList.toggle('has-error', searchState === 'error');
         }
     }
 
     function updateSourceButtons() {
-        if (!youtubeSourceBtn || !tracklistSource1001Btn) return;
+        if (!youtubeSourceBtn || !tracklistSource1001Btn || !tracklistSourceMixesDbBtn || !tracklistSourceTrackIdBtn) return;
         const hasYouTube = tracksFromYouTube.length > 0;
         const has1001 = tracksFrom1001.length > 0;
+        const hasMixesDb = tracksFromMixesDb.length > 0;
+        const hasTrackId = tracksFromTrackId.length > 0;
         youtubeSourceBtn.disabled = !hasYouTube;
         tracklistSource1001Btn.disabled = !has1001;
+        tracklistSourceMixesDbBtn.disabled = !hasMixesDb;
+        tracklistSourceTrackIdBtn.disabled = !hasTrackId;
+        tracklistSource1001Btn.style.display = runtimeSettings.enable1001 ? '' : 'none';
+        tracklistSourceMixesDbBtn.style.display = runtimeSettings.enableMixesDb ? '' : 'none';
+        tracklistSourceTrackIdBtn.style.display = runtimeSettings.enableTrackId ? '' : 'none';
         youtubeSourceBtn.classList.toggle('active', currentSource === 'youtube' && hasYouTube);
         tracklistSource1001Btn.classList.toggle('active', currentSource === '1001' && has1001);
-        if (statusBtn) statusBtn.classList.toggle('active', currentSource === '1001' && has1001);
+        tracklistSourceMixesDbBtn.classList.toggle('active', currentSource === 'mixesdb' && hasMixesDb);
+        tracklistSourceTrackIdBtn.classList.toggle('active', currentSource === 'trackid' && hasTrackId);
+        if (statusBtn) statusBtn.classList.toggle('active', currentSource !== 'youtube' && currentSource !== 'none');
         youtubeSourceBtn.setAttribute('aria-pressed', String(currentSource === 'youtube' && hasYouTube));
         tracklistSource1001Btn.setAttribute('aria-pressed', String(currentSource === '1001' && has1001));
+        tracklistSourceMixesDbBtn.setAttribute('aria-pressed', String(currentSource === 'mixesdb' && hasMixesDb));
+        tracklistSourceTrackIdBtn.setAttribute('aria-pressed', String(currentSource === 'trackid' && hasTrackId));
         youtubeSourceBtn.title = hasYouTube ? '使用 YouTube 章節曲目' : '目前沒有 YouTube 章節曲目';
         tracklistSource1001Btn.title = has1001 ? '使用 1001Tracklists 曲目' : '目前沒有可用的 1001Tracklists 曲目';
+        tracklistSourceMixesDbBtn.title = hasMixesDb ? '使用 MixesDB 曲目' : '目前沒有可用的 MixesDB 曲目';
+        tracklistSourceTrackIdBtn.title = hasTrackId ? '使用 TrackId.net 曲目' : '目前沒有可用的 TrackId.net 曲目';
+        if (mixesDbSearchBtn) mixesDbSearchBtn.style.display = runtimeSettings.enableMixesDb ? '' : 'none';
+        if (trackIdSearchBtn) trackIdSearchBtn.style.display = runtimeSettings.enableTrackId ? '' : 'none';
+        if (retryBtn) retryBtn.style.display = runtimeSettings.enable1001 ? '' : 'none';
     }
 
     function updateLinkButton() {
-        if (!linkBtn) return;
+        if (!linkBtn || !mixesDbLinkBtn || !trackIdLinkBtn) return;
         if (tracklistUrl1001 && (tracksFrom1001.length > 0 || searchState === 'error')) {
             linkBtn.style.display = 'flex';
             linkBtn.title = tracksFrom1001.length > 0
@@ -2220,6 +2535,8 @@
         } else {
             linkBtn.style.display = 'none';
         }
+        mixesDbLinkBtn.style.display = tracklistUrlMixesDb && tracksFromMixesDb.length ? 'flex' : 'none';
+        trackIdLinkBtn.style.display = tracklistUrlTrackId && tracksFromTrackId.length ? 'flex' : 'none';
     }
 
     function updateTransportButtons() {
@@ -2420,7 +2737,7 @@
             statusLight.setAttribute('aria-hidden', 'true');
             const statusLabel = document.createElement('span');
             statusLabel.className = 'hud-status-label';
-            statusLabel.textContent = '1001';
+            statusLabel.textContent = 'DB';
             oneThousandChevron = document.createElement('span');
             oneThousandChevron.className = 'hud-1001-chevron';
             oneThousandChevron.textContent = '▼';
@@ -2441,6 +2758,16 @@
                 set1001MenuExpanded(false);
             });
             tracklistSource1001Btn.classList.add('hud-source-1001');
+            tracklistSourceMixesDbBtn = createControlButton('USE MIXESDB', '使用 MixesDB 曲目', () => {
+                setActiveSource('mixesdb');
+                set1001MenuExpanded(false);
+            });
+            tracklistSourceMixesDbBtn.classList.add('hud-source-mixesdb');
+            tracklistSourceTrackIdBtn = createControlButton('USE TRACKID', '使用 TrackId.net 曲目', () => {
+                setActiveSource('trackid');
+                set1001MenuExpanded(false);
+            });
+            tracklistSourceTrackIdBtn.classList.add('hud-source-trackid');
             retryBtn = createControlButton('RETRY SEARCH', '重新搜尋 1001Tracklists', () => {
                 set1001MenuExpanded(false);
                 retrySearch();
@@ -2453,9 +2780,37 @@
             });
             linkBtn.classList.add('hud-1001-link');
             linkBtn.style.display = 'none';
+            mixesDbSearchBtn = createControlButton('SEARCH MIXESDB', '搜尋 MixesDB', () => {
+                set1001MenuExpanded(false);
+                void fetchTracklistFromMixesDb(getVideoTitle(), getVideoId());
+            });
+            mixesDbSearchBtn.classList.add('hud-search-mixesdb');
+            trackIdSearchBtn = createControlButton('SEARCH TRACKID', '搜尋 TrackId.net 既有曲目', () => {
+                set1001MenuExpanded(false);
+                void fetchTracklistFromTrackId(getVideoTitle(), getVideoId());
+            });
+            trackIdSearchBtn.classList.add('hud-search-trackid');
+            mixesDbLinkBtn = createControlButton('OPEN MIXESDB ↗', '開啟 MixesDB 頁面', () => {
+                set1001MenuExpanded(false);
+                if (tracklistUrlMixesDb) window.open(tracklistUrlMixesDb, '_blank', 'noopener,noreferrer');
+            });
+            mixesDbLinkBtn.classList.add('hud-mixesdb-link');
+            mixesDbLinkBtn.style.display = 'none';
+            trackIdLinkBtn = createControlButton('OPEN TRACKID ↗', '開啟 TrackId.net 頁面', () => {
+                set1001MenuExpanded(false);
+                if (tracklistUrlTrackId) window.open(tracklistUrlTrackId, '_blank', 'noopener,noreferrer');
+            });
+            trackIdLinkBtn.classList.add('hud-trackid-link');
+            trackIdLinkBtn.style.display = 'none';
             oneThousandMenu.appendChild(tracklistSource1001Btn);
+            oneThousandMenu.appendChild(tracklistSourceMixesDbBtn);
+            oneThousandMenu.appendChild(tracklistSourceTrackIdBtn);
             oneThousandMenu.appendChild(retryBtn);
             oneThousandMenu.appendChild(linkBtn);
+            oneThousandMenu.appendChild(mixesDbSearchBtn);
+            oneThousandMenu.appendChild(mixesDbLinkBtn);
+            oneThousandMenu.appendChild(trackIdSearchBtn);
+            oneThousandMenu.appendChild(trackIdLinkBtn);
             sourceSelector.appendChild(oneThousandMenu);
             sourceActions.appendChild(sourceSelector);
 
@@ -2537,9 +2892,15 @@
         if (!statusBtn) statusBtn = document.querySelector('#yt-cd-hud .hud-status-button');
         if (!youtubeSourceBtn) youtubeSourceBtn = document.querySelector('#yt-cd-hud .hud-source-youtube');
         if (!tracklistSource1001Btn) tracklistSource1001Btn = document.querySelector('#yt-cd-hud .hud-source-1001');
+        if (!tracklistSourceMixesDbBtn) tracklistSourceMixesDbBtn = document.querySelector('#yt-cd-hud .hud-source-mixesdb');
+        if (!tracklistSourceTrackIdBtn) tracklistSourceTrackIdBtn = document.querySelector('#yt-cd-hud .hud-source-trackid');
         if (!oneThousandMenu) oneThousandMenu = document.querySelector('#yt-cd-hud .hud-1001-menu');
         if (!oneThousandChevron) oneThousandChevron = document.querySelector('#yt-cd-hud .hud-1001-chevron');
         if (!linkBtn) linkBtn = document.querySelector('#yt-cd-hud .hud-1001-link');
+        if (!mixesDbLinkBtn) mixesDbLinkBtn = document.querySelector('#yt-cd-hud .hud-mixesdb-link');
+        if (!trackIdLinkBtn) trackIdLinkBtn = document.querySelector('#yt-cd-hud .hud-trackid-link');
+        if (!mixesDbSearchBtn) mixesDbSearchBtn = document.querySelector('#yt-cd-hud .hud-search-mixesdb');
+        if (!trackIdSearchBtn) trackIdSearchBtn = document.querySelector('#yt-cd-hud .hud-search-trackid');
         if (!retryBtn) retryBtn = document.querySelector('#yt-cd-hud [title*="重新搜尋 1001"]');
         if (!tracklistBtn) tracklistBtn = document.querySelector('#yt-cd-hud .hud-tracklist-button');
         if (!previousTrackBtn) previousTrackBtn = document.querySelector('#yt-cd-hud .hud-previous-track');
@@ -2571,11 +2932,15 @@
             cancelActiveRequests();
             tracksFromYouTube = [];
             tracksFrom1001 = [];
+            tracksFromMixesDb = [];
+            tracksFromTrackId = [];
             parsedTracks = [];
             currentSource = 'none';
             searchState = 'idle';
             searchStateDetail = '';
             tracklistUrl1001 = '';
+            tracklistUrlMixesDb = '';
+            tracklistUrlTrackId = '';
             lastVideoIdFor1001 = videoId;
             lastSearchTitle = '';
         }
@@ -2679,6 +3044,8 @@
             normalizeSearchTitle,
             normalizeAngleDelta,
             parseRemoteHtml,
+            parseMixesDbWikitext,
+            parseTrackIdDetail,
             parseTimestampToSeconds,
             parseTracklistDocument,
         };

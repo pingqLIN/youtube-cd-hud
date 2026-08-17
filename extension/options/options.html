@@ -15,7 +15,7 @@
         </div>
         <div class="header-readout" aria-label="擴充版本資訊">
             <span>BUILD</span>
-            <strong>5.8.3</strong>
+            <strong>5.9.0</strong>
             <span>MODE</span>
             <strong>LOCAL</strong>
         </div>
@@ -41,7 +41,7 @@
                     <section class="control-section" aria-labelledby="source-title">
                         <div class="section-heading">
                             <p class="section-index">01 / SOURCE</p>
-                            <h2 id="source-title">1001 行為</h2>
+                            <h2 id="source-title">曲目資料來源</h2>
                             <span class="status-lamp" aria-hidden="true"></span>
                         </div>
 
@@ -59,6 +59,16 @@
                             <label class="switch-row">
                                 <span><b>優先採用 1001</b><small>搜尋成功後自動切換曲目來源</small></span>
                                 <input id="prefer1001" name="prefer1001" type="checkbox">
+                                <i aria-hidden="true"></i>
+                            </label>
+                            <label class="switch-row">
+                                <span><b>啟用 MixesDB</b><small>允許手動搜尋 MediaWiki 曲目資料</small></span>
+                                <input id="enableMixesDb" name="enableMixesDb" type="checkbox">
+                                <i aria-hidden="true"></i>
+                            </label>
+                            <label class="switch-row">
+                                <span><b>啟用 TrackId.net</b><small>允許手動搜尋既有公開 tracklist</small></span>
+                                <input id="enableTrackId" name="enableTrackId" type="checkbox">
                                 <i aria-hidden="true"></i>
                             </label>
                         </div>
@@ -151,7 +161,7 @@
                                 <strong id="preview-title-text">Midnight Transit — Chapter 04</strong>
                                 <time id="preview-time">12:48 / 58:31</time>
                                 <div class="preview-source">
-                                    <span>SRC</span><b>YT</b><b class="source-1001"><i></i>1001⌄</b>
+                                    <span>SRC</span><b>YT</b><b class="source-1001"><i></i>DB⌄</b>
                                     <div class="preview-transport"><b>◀ PREV</b><b>NEXT ▶</b></div>
                                 </div>
                             </div>
@@ -162,7 +172,7 @@
                     <dl class="scope-list">
                         <div><dt>資料儲存</dt><dd>Chrome 本機</dd></div>
                         <div><dt>頁面權限</dt><dd>YouTube</dd></div>
-                        <div><dt>遠端查詢</dt><dd>1001Tracklists</dd></div>
+                        <div><dt>遠端查詢</dt><dd>1001Tracklists / MixesDB / TrackId.net</dd></div>
                     </dl>
                 </aside>
             </div>
