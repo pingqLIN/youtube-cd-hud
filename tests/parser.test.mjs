@@ -40,10 +40,12 @@ vm.runInContext(source, sandbox, { filename: sourcePath });
 const {
   angleDeltaToSeconds,
   calculateHudMinimumSize,
+  chooseHudTitle,
   collectTracklistCandidates,
   detectBlockPage,
   getAdjacentTrackTime,
   getBalancedDiscSize,
+  getContentBalancedDiscSize,
   isSuccessfulHttpStatus,
   normalizeSearchTitle,
   normalizeAngleDelta,
@@ -92,6 +94,20 @@ test('balances responsive disc size against the selected title size', () => {
   assert.ok(enlargedSize <= 92);
 });
 
+test('keeps the disc slightly taller than the adjacent content by default', () => {
+  assert.equal(getContentBalancedDiscSize(1280, 800, 14, 72, 1), 82);
+  assert.ok(Math.abs(getContentBalancedDiscSize(1280, 800, 14, 72, 1.2) - 98.4) < 1e-9);
+});
+
+test('uses the active 1001 track instead of a YouTube system chapter label', () => {
+  assert.equal(
+    chooseHudTitle('1001', 'Ross Quinn & Punctual - Omen', '影片相關資訊'),
+    'Ross Quinn & Punctual - Omen',
+  );
+  assert.equal(chooseHudTitle('1001', '', '影片相關資訊'), '1001 Tracklist');
+  assert.equal(chooseHudTitle('youtube', 'Fallback track', 'Official chapter'), 'Official chapter');
+});
+
 test('calculates a complete HUD floor from the disc, text, controls, and padding', () => {
   const minimum = calculateHudMinimumSize({
     paddingLeft: 12,
@@ -108,7 +124,7 @@ test('calculates a complete HUD floor from the disc, text, controls, and padding
   });
 
   assert.equal(minimum.width, 418);
-  assert.equal(minimum.height, 128);
+  assert.equal(minimum.height, 126);
 });
 
 test('selects previous and next track targets with restart behavior', () => {

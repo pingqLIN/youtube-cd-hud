@@ -40,6 +40,8 @@
     const MAX_SCALE = 2.5;
     const DISC_SCRUB_SECONDS_PER_REVOLUTION = 24;
     const DISC_SAMPLE_SECONDS = 0.08;
+    const CANDIDATE_REQUEST_DELAY_MS = 1200;
+    const AUTOMATIC_SEARCH_BLOCK_COOLDOWN_MS = 5 * 60 * 1000;
     let runtimeSettings = SETTINGS_API
         ? SETTINGS_API.normalize(SETTINGS_API.DEFAULTS)
         : { ...RUNTIME_DEFAULTS };
@@ -60,6 +62,8 @@
     let activeSearchToken = 0;
     let activeSearchRequest = null;
     let activeTracklistRequest = null;
+    let activeCandidateTimer = null;
+    let automaticSearchBlockedUntil = 0;
     let hudScale = 1.0;
     let hudTitleFontSize = DEFAULT_TITLE_SIZE;
     let hudTimeFontSize = DEFAULT_TIME_SIZE;
@@ -209,6 +213,18 @@
         return clamp(responsiveBase * 1.2 * typeScale, 42, 92);
     }
 
+    function getContentBalancedDiscSize(viewportWidth, viewportHeight, titleSize, contentHeight, scale = 1) {
+        const responsiveSize = getBalancedDiscSize(viewportWidth, viewportHeight, titleSize);
+        const balancedSize = Math.max(responsiveSize, Math.max(0, Number(contentHeight) || 0) + 10);
+        return clamp(balancedSize * (Number(scale) || 1), 42, 148);
+    }
+
+    function chooseHudTitle(source, currentTrack, officialChapter) {
+        const trackTitle = trim(currentTrack);
+        if (source === '1001') return trackTitle || '1001 Tracklist';
+        return trim(officialChapter) || trackTitle || 'Full Track Set';
+    }
+
     function calculateHudMinimumSize(metrics) {
         const paddingLeft = Math.max(0, Number(metrics.paddingLeft) || 0);
         const paddingRight = Math.max(0, Number(metrics.paddingRight) || 0);
@@ -233,8 +249,7 @@
                     Math.max(0, Number(metrics.infoHeight) || 0),
                     sideHeight + 8
                 ) +
-                paddingBottom +
-                2
+                paddingBottom
             ),
         };
     }
@@ -434,6 +449,10 @@
         });
         activeSearchRequest = null;
         activeTracklistRequest = null;
+        if (activeCandidateTimer !== null) {
+            clearTimeout(activeCandidateTimer);
+            activeCandidateTimer = null;
+        }
     }
 
     function parseDescriptionTracks() {
@@ -502,11 +521,19 @@
         updateTransportButtons();
     }
 
-    function fetchTracklistFrom1001(title, videoId, force = false) {
+    function fetchTracklistFrom1001(title, videoId, force = false, manual = false) {
         if (!title || !videoId) return;
         if (!runtimeSettings.enable1001) return;
         if (!force && !runtimeSettings.autoSearch1001) return;
         if (!force && (videoId === lastVideoIdFor1001 && title === lastSearchTitle)) return;
+        if (!manual && Date.now() < automaticSearchBlockedUntil) {
+            searchState = 'error';
+            searchStateDetail = '1001Tracklists 自動查詢已暫停 5 分鐘，避免持續觸發 IP 限制；完成 CAPTCHA 後可按 RETRY SEARCH。';
+            if (!tracklistUrl1001) tracklistUrl1001 = 'https://www.1001tracklists.com/search/';
+            updateStatusLight();
+            updateLinkButton();
+            return;
+        }
         lastVideoIdFor1001 = videoId;
         lastSearchTitle = title;
         const searchToken = ++activeSearchToken;
@@ -522,10 +549,11 @@
         const isCurrentSearch = () => (
             searchToken === activeSearchToken && getVideoId() === videoId
         );
-        const markSearchError = (message, details) => {
+        const markSearchError = (message, details, blocked = false) => {
             if (!isCurrentSearch()) return;
             if (details) console.warn(`[CD HUD] ${message}`, details);
             else console.warn(`[CD HUD] ${message}`);
+            if (blocked) automaticSearchBlockedUntil = Date.now() + AUTOMATIC_SEARCH_BLOCK_COOLDOWN_MS;
             searchState = 'error';
             searchStateDetail = message;
             if (!tracklistUrl1001) tracklistUrl1001 = searchPageUrl;
@@ -565,7 +593,16 @@
                         : null;
                     const blockReason = detectBlockPage(errorDocument, responseText, resp.status);
                     if (blockReason) tracklistUrl1001 = searchPageUrl;
-                    markSearchError(blockReason || `1001Tracklists 搜尋失敗（HTTP ${resp.status}，${contentType}）。`);
+                    markSearchError(
+                        blockReason || `1001Tracklists 搜尋失敗（HTTP ${resp.status}，${contentType}）。`,
+                        blockReason ? {
+                            phase: 'search',
+                            status: resp.status,
+                            finalUrl,
+                            contentType,
+                        } : undefined,
+                        Boolean(blockReason)
+                    );
                     return;
                 }
                 if (!isHtmlResponse(resp, responseText)) {
@@ -580,7 +617,12 @@
                 const blockReason = detectBlockPage(doc, responseText, resp.status);
                 if (blockReason) {
                     tracklistUrl1001 = searchPageUrl;
-                    markSearchError(blockReason);
+                    markSearchError(blockReason, {
+                        phase: 'search',
+                        status: resp.status,
+                        finalUrl,
+                        contentType,
+                    }, true);
                     return;
                 }
                 const candidates = collectTracklistCandidates(doc, searchTitle)
@@ -628,7 +670,15 @@
                                 const pageBlockReason = detectBlockPage(errorDocument, tracklistText, resp2.status);
                                 markSearchError(
                                     pageBlockReason ||
-                                    `曲目頁載入失敗（HTTP ${resp2.status}，${tracklistContentType}）。`
+                                    `曲目頁載入失敗（HTTP ${resp2.status}，${tracklistContentType}）。`,
+                                    pageBlockReason ? {
+                                        phase: 'tracklist',
+                                        candidate: candidateIndex + 1,
+                                        status: resp2.status,
+                                        finalUrl: finalTracklistUrl,
+                                        contentType: tracklistContentType,
+                                    } : undefined,
+                                    Boolean(pageBlockReason)
                                 );
                                 return;
                             }
@@ -643,13 +693,19 @@
                             }
                             const pageBlockReason = detectBlockPage(tracklistDocument, tracklistText, resp2.status);
                             if (pageBlockReason) {
-                                markSearchError(pageBlockReason);
+                                markSearchError(pageBlockReason, {
+                                    phase: 'tracklist',
+                                    candidate: candidateIndex + 1,
+                                    status: resp2.status,
+                                    finalUrl: finalTracklistUrl,
+                                    contentType: tracklistContentType,
+                                }, true);
                                 return;
                             }
                             const tracks = parseTracklistDocument(tracklistDocument);
                             if (!tracks.length) {
                                 console.warn(`[CD HUD] Candidate has no timestamped tracks: ${href}`);
-                                loadCandidate(candidateIndex + 1);
+                                scheduleCandidate(candidateIndex + 1);
                                 return;
                             }
 
@@ -658,6 +714,7 @@
                             tracklistUrl1001 = finalTracklistUrl;
                             searchState = 'success';
                             searchStateDetail = '';
+                            automaticSearchBlockedUntil = 0;
                             if (runtimeSettings.prefer1001 || !tracksFromYouTube.length) {
                                 setActiveSource('1001');
                             } else if (currentSource === '1001') {
@@ -679,7 +736,16 @@
                     });
                 };
 
-                loadCandidate(0);
+                const scheduleCandidate = candidateIndex => {
+                    if (!isCurrentSearch()) return;
+                    if (activeCandidateTimer !== null) clearTimeout(activeCandidateTimer);
+                    activeCandidateTimer = setTimeout(() => {
+                        activeCandidateTimer = null;
+                        loadCandidate(candidateIndex);
+                    }, CANDIDATE_REQUEST_DELAY_MS);
+                };
+
+                scheduleCandidate(0);
             },
             onerror: function (err) {
                 activeSearchRequest = null;
@@ -892,23 +958,18 @@
                 top: 20px;
                 left: 20px;
                 z-index: 60;
-                background:
-                    linear-gradient(180deg, rgba(45, 55, 72, .3), transparent 42%),
-                    var(--hud-surface);
-                backdrop-filter: blur(8px) saturate(.86);
-                -webkit-backdrop-filter: blur(8px) saturate(.86);
-                border: 1px solid var(--hud-border);
-                border-radius: 2px;
-                padding: 12px 42px 12px 12px;
+                background: transparent;
+                border: 0;
+                padding: 0 42px 0 0;
                 display: flex;
                 align-items: center;
                 gap: 14px;
                 min-width: 300px;
                 min-height: 118px;
                 font-family: var(--hud-font);
-                box-shadow: var(--hud-shadow), inset 3px 0 0 rgba(99, 179, 237, .72), inset 0 1px 0 rgba(247, 250, 252, .04);
-                pointer-events: auto;
-                cursor: grab;
+                box-shadow: none;
+                pointer-events: none;
+                cursor: default;
                 user-select: none;
                 -webkit-user-select: none;
                 touch-action: none;
@@ -916,12 +977,32 @@
                 transform-origin: top left;
                 will-change: transform;
             }
-            #yt-cd-hud.yt-cd-hud-dragging { cursor: grabbing; }
+            .hud-panel-surface {
+                position: absolute;
+                inset: 0 0 0 calc(var(--hud-balanced-disc-size, var(--hud-disc-size)) / 2);
+                z-index: 0;
+                overflow: hidden;
+                background:
+                    linear-gradient(180deg, rgba(45, 55, 72, .3), transparent 42%),
+                    var(--hud-surface);
+                backdrop-filter: blur(8px) saturate(.86);
+                -webkit-backdrop-filter: blur(8px) saturate(.86);
+                border: 1px solid var(--hud-border);
+                border-radius: 2px;
+                box-shadow: var(--hud-shadow), inset 3px 0 0 rgba(99, 179, 237, .72), inset 0 1px 0 rgba(247, 250, 252, .04);
+                pointer-events: auto;
+                cursor: grab;
+                transition: opacity .2s ease, border-color .15s ease;
+            }
+            #yt-cd-hud.yt-cd-hud-dragging .hud-panel-surface { cursor: grabbing; }
             #yt-cd-hud.resizing { cursor: nwse-resize; }
-            #yt-cd-hud.ytcd-hide-disc .cd-disc-wrapper { display: none; }
+            #yt-cd-hud.ytcd-hide-disc .cd-disc-wrapper {
+                visibility: hidden;
+                pointer-events: none;
+            }
             #yt-cd-hud.ytcd-hide-transport .hud-transport-controls { display: none; }
             #yt-cd-hud.ytcd-hide-1001 .hud-status-button { display: none; }
-            #yt-cd-hud:after {
+            .hud-panel-surface:after {
                 content: "";
                 position: absolute;
                 left: 10px;
@@ -933,6 +1014,7 @@
             }
             .cd-disc-wrapper {
                 position: relative;
+                z-index: 2;
                 width: var(--hud-disc-size);
                 height: var(--hud-disc-size);
                 flex-shrink: 0;
@@ -940,7 +1022,8 @@
                 filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .5));
                 cursor: grab;
                 touch-action: none;
-                margin: 6px 10px;
+                margin: 0 10px 0 0;
+                pointer-events: auto;
             }
             .cd-disc {
                 position: absolute;
@@ -951,9 +1034,32 @@
                 background: #111827;
                 box-shadow: 0 0 0 1px rgba(15, 23, 42, .86), 0 0 8px var(--hud-cover-glow);
             }
+            .cd-disc:before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                z-index: 3;
+                border-radius: 50%;
+                background:
+                    radial-gradient(circle at var(--cd-reflection-x, 34%) var(--cd-reflection-y, 24%),
+                        rgba(255, 255, 255, .72) 0 3%,
+                        rgba(226, 232, 240, .3) 7%,
+                        rgba(99, 179, 237, .12) 15%,
+                        transparent 29%),
+                    linear-gradient(var(--cd-reflection-angle, 135deg),
+                        transparent 24%,
+                        rgba(255, 255, 255, .18) 43%,
+                        rgba(160, 174, 192, .06) 52%,
+                        transparent 70%);
+                mix-blend-mode: screen;
+                opacity: var(--cd-reflection-opacity, 0);
+                transition: opacity .18s ease;
+                pointer-events: none;
+            }
             .cd-art {
                 position: absolute;
                 inset: 0;
+                z-index: 1;
                 border-radius: 50%;
                 clip-path: circle(50% at 50% 50%);
                 background-color: #111827;
@@ -969,6 +1075,7 @@
                 content: "";
                 position: absolute;
                 inset: 0;
+                z-index: 2;
                 border-radius: 50%;
                 background:
                     radial-gradient(circle at center,
@@ -1004,12 +1111,16 @@
             @keyframes cd-spin { 100% { transform: rotate(360deg); } }
 
             .hud-info {
+                position: relative;
+                z-index: 1;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
+                align-items: flex-start;
                 min-width: 0;
                 overflow: visible;
                 padding: 2px 0;
+                pointer-events: auto;
             }
             .hud-chapter {
                 font-size: ${DEFAULT_TITLE_SIZE}px;
@@ -1077,6 +1188,8 @@
                 gap: 3px;
                 padding-left: 4px;
                 border-left: 1px solid rgba(74, 85, 104, .72);
+                z-index: 2;
+                pointer-events: auto;
             }
             .hud-side-controls .hud-control-button {
                 width: 26px;
@@ -1121,8 +1234,10 @@
             .hud-source-actions {
                 display: flex;
                 align-items: center;
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
                 gap: 3px;
+                width: max-content;
+                max-width: 100%;
                 margin-top: 6px;
                 padding-top: 5px;
                 border-top: 1px solid rgba(74, 85, 104, .62);
@@ -1216,12 +1331,18 @@
                 text-align: left;
             }
             .hud-transport-controls {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 4px;
-                margin-top: 5px;
+                display: inline-flex;
+                align-items: center;
+                flex: 0 0 auto;
+                gap: 3px;
+                margin-left: 6px;
+                padding-left: 7px;
+                border-left: 1px solid rgba(113, 128, 150, .72);
             }
             .hud-transport-controls .hud-control-button {
+                flex: 0 0 auto;
+                width: 58px;
+                min-width: 58px;
                 height: 22px;
                 color: var(--hud-secondary);
                 font-size: 9px;
@@ -1334,7 +1455,7 @@
                     top: 10px;
                     left: 10px;
                     gap: 10px;
-                    padding: 10px 40px 10px 10px;
+                    padding: 0 40px 0 0;
                 }
                 .yt-tracklist-panel { max-width: calc(100% - 20px); }
             }
@@ -1348,6 +1469,7 @@
                 .status-light.searching {
                     animation: none;
                 }
+                .cd-disc:before { transition: none; }
             }
         `;
         style.textContent = css;
@@ -1362,7 +1484,11 @@
         timeEl.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
         const officialChapter = document.querySelector('.ytp-chapter-title-content');
         const chapterText = officialChapter ? trim(officialChapter.textContent) : '';
-        chapterEl.textContent = chapterText || getCurrentTrack(video.currentTime) || 'Full Track Set';
+        chapterEl.textContent = chooseHudTitle(
+            currentSource,
+            getCurrentTrack(video.currentTime),
+            chapterText
+        );
         updateTracklistHighlight(video.currentTime);
         syncHudContentBounds();
     }
@@ -1380,6 +1506,35 @@
                 console.warn('[CD HUD] 無法恢復影片播放。', error);
             });
         }
+    }
+
+    function bindDiscReflection(wrapper) {
+        if (!wrapper || wrapper._ytCdReflectionBound) return;
+        wrapper._ytCdReflectionBound = true;
+
+        const hideReflection = () => {
+            wrapper.style.setProperty('--cd-reflection-opacity', '0');
+        };
+        const updateReflection = event => {
+            if (wrapper.classList.contains('scrubbing')) {
+                hideReflection();
+                return;
+            }
+            const rect = wrapper.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            const x = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+            const y = clamp((event.clientY - rect.top) / rect.height, 0, 1);
+            const angle = Math.atan2(y - 0.5, x - 0.5) * 180 / Math.PI + 90;
+            wrapper.style.setProperty('--cd-reflection-x', `${(x * 100).toFixed(1)}%`);
+            wrapper.style.setProperty('--cd-reflection-y', `${(y * 100).toFixed(1)}%`);
+            wrapper.style.setProperty('--cd-reflection-angle', `${angle.toFixed(1)}deg`);
+            wrapper.style.setProperty('--cd-reflection-opacity', '.92');
+        };
+
+        wrapper.addEventListener('pointerenter', updateReflection, true);
+        wrapper.addEventListener('pointermove', updateReflection, true);
+        wrapper.addEventListener('pointerleave', hideReflection, true);
+        wrapper.addEventListener('pointerdown', hideReflection, true);
     }
 
     function bindDiscScrubbing(wrapper) {
@@ -1602,19 +1757,25 @@
             chapter.style.fontSize,
             time.style.fontSize,
             time.textContent.length,
-            disc.style.width,
+            runtimeSettings.discScale,
+            runtimeSettings.showDisc,
+            runtimeSettings.showTransport,
+            runtimeSettings.enable1001,
             player.clientWidth,
             player.clientHeight,
         ].join('|');
         if (!force && hud._ytCdContentSignature === signature) {
+            const lockedWidth = parseFloat(hud.style.minWidth) || 300;
+            const lockedHeight = parseFloat(hud.style.minHeight) || 118;
+            hud.style.width = `${lockedWidth}px`;
+            hud.style.height = `${lockedHeight}px`;
             return {
-                width: parseFloat(hud.style.minWidth) || 300,
-                height: parseFloat(hud.style.minHeight) || 118,
+                width: lockedWidth,
+                height: lockedHeight,
             };
         }
 
         const hudStyle = getComputedStyle(hud);
-        const discSize = getElementOuterSize(disc);
         const sideSize = getElementOuterSize(sideControls);
         const paddingLeft = parseFloat(hudStyle.paddingLeft) || 0;
         const paddingRight = parseFloat(hudStyle.paddingRight) || 0;
@@ -1625,6 +1786,18 @@
         const maximumWidth = Math.max(300, (player.clientWidth - hud.offsetLeft) / scale);
         const maximumHeight = Math.max(118, (player.clientHeight - hud.offsetTop) / scale);
         const rightRailReserve = Math.max(paddingRight, sideSize.width + 8);
+        const infoHeight = getContentHeight(info);
+        const balancedDiscSize = getContentBalancedDiscSize(
+            window.innerWidth,
+            window.innerHeight,
+            hudTitleFontSize,
+            Math.max(infoHeight, sideSize.height),
+            runtimeSettings.discScale
+        );
+        hud.style.setProperty('--hud-balanced-disc-size', `${balancedDiscSize}px`);
+        disc.style.width = `${balancedDiscSize}px`;
+        disc.style.height = `${balancedDiscSize}px`;
+        const discSize = getElementOuterSize(disc);
         const fixedWidth = paddingLeft + discSize.width + gap + rightRailReserve + 2;
         const availableInfoWidth = Math.max(120, maximumWidth - fixedWidth);
 
@@ -1649,16 +1822,18 @@
             discHeight: discSize.height,
             gap,
             infoWidth,
-            infoHeight: getContentHeight(info),
+            infoHeight,
             sideWidth: sideSize.width,
             sideHeight: sideSize.height,
         });
         minimum.width = Math.min(minimum.width, maximumWidth);
         minimum.height = Math.min(minimum.height, maximumHeight);
         hud.style.minWidth = `${minimum.width}px`;
+        hud.style.maxWidth = `${minimum.width}px`;
         hud.style.minHeight = `${minimum.height}px`;
-        if (hud.offsetWidth < minimum.width) hud.style.width = `${minimum.width}px`;
-        if (hud.offsetHeight < minimum.height) hud.style.height = `${minimum.height}px`;
+        hud.style.maxHeight = `${minimum.height}px`;
+        hud.style.width = `${minimum.width}px`;
+        hud.style.height = `${minimum.height}px`;
         hud._ytCdContentSignature = signature;
         return minimum;
     }
@@ -1666,14 +1841,8 @@
     function applySizing() {
         const titleEl = document.getElementById('hud-chapter');
         const timeEl = document.getElementById('hud-time');
-        const wrapper = document.querySelector('#yt-cd-hud .cd-disc-wrapper');
         if (titleEl) titleEl.style.fontSize = hudTitleFontSize + 'px';
         if (timeEl) timeEl.style.fontSize = hudTimeFontSize + 'px';
-        if (wrapper) {
-            const discSize = getBalancedDiscSize(window.innerWidth, window.innerHeight, hudTitleFontSize) * runtimeSettings.discScale;
-            wrapper.style.width = `${discSize}px`;
-            wrapper.style.height = `${discSize}px`;
-        }
         syncHudContentBounds(true);
     }
 
@@ -1825,6 +1994,59 @@
         handle.addEventListener('pointerup', finishResize, true);
         handle.addEventListener('pointercancel', finishResize, true);
         handle.addEventListener('lostpointercapture', finishResize, true);
+    }
+
+    function bindHudScaling(hud, container) {
+        if (!hud || !container || hud._ytCdScaleBound) return;
+        const handle = Array.from(hud.children).find(child => child.classList.contains('hud-resize-handle'));
+        if (!handle) return;
+        hud._ytCdScaleBound = true;
+        let scaleState = null;
+
+        const finishScaling = event => {
+            if (!scaleState || (event && event.pointerId !== scaleState.pointerId)) return;
+            scaleState = null;
+            hud.classList.remove('resizing');
+        };
+
+        handle.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || event.isPrimary === false) return;
+            event.preventDefault();
+            event.stopPropagation();
+            syncHudContentBounds(true);
+            scaleState = {
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                startScale: hudScale,
+                startWidth: Math.max(1, hud.offsetWidth),
+                startHeight: Math.max(1, hud.offsetHeight),
+            };
+            hud.classList.add('resizing');
+            if (typeof handle.setPointerCapture === 'function') handle.setPointerCapture(event.pointerId);
+        }, true);
+
+        handle.addEventListener('pointermove', event => {
+            if (!scaleState || event.pointerId !== scaleState.pointerId) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const widthDelta = (event.clientX - scaleState.startX) / scaleState.startWidth;
+            const heightDelta = (event.clientY - scaleState.startY) / scaleState.startHeight;
+            const requestedScale = scaleState.startScale * (1 + (widthDelta + heightDelta) / 2);
+            const availableWidth = Math.max(1, container.clientWidth - hud.offsetLeft);
+            const availableHeight = Math.max(1, container.clientHeight - hud.offsetTop);
+            const boundaryScale = Math.min(
+                MAX_SCALE,
+                availableWidth / scaleState.startWidth,
+                availableHeight / scaleState.startHeight
+            );
+            hudScale = clamp(requestedScale, MIN_SCALE, Math.max(MIN_SCALE, boundaryScale));
+            hud.style.transform = `scale(${hudScale})`;
+        }, true);
+
+        handle.addEventListener('pointerup', finishScaling, true);
+        handle.addEventListener('pointercancel', finishScaling, true);
+        handle.addEventListener('lostpointercapture', finishScaling, true);
     }
 
     function bindTracklistDragging(element, container) {
@@ -2009,7 +2231,7 @@
         const id = getVideoId();
         if (title && id) {
             console.log('[CD HUD] Manual retry triggered.');
-            fetchTracklistFrom1001(title, id, true);
+            fetchTracklistFrom1001(title, id, true, true);
         } else {
             console.warn('[CD HUD] Cannot retry: missing title or video ID.');
         }
@@ -2133,6 +2355,10 @@
             hud = document.createElement('div');
             hud.id = 'yt-cd-hud';
 
+            const panelSurface = document.createElement('div');
+            panelSurface.className = 'hud-panel-surface';
+            panelSurface.setAttribute('aria-hidden', 'true');
+
             const wrapper = document.createElement('div');
             wrapper.className = 'cd-disc-wrapper';
             const disc = document.createElement('div');
@@ -2232,7 +2458,7 @@
             nextTrackBtn.classList.add('hud-next-track');
             transportControls.appendChild(previousTrackBtn);
             transportControls.appendChild(nextTrackBtn);
-            info.appendChild(transportControls);
+            sourceActions.appendChild(transportControls);
 
             const sideControls = document.createElement('div');
             sideControls.className = 'hud-side-controls';
@@ -2272,6 +2498,7 @@
             resizeHandle.className = 'resize-handle hud-resize-handle';
             resizeHandle.setAttribute('aria-hidden', 'true');
 
+            hud.appendChild(panelSurface);
             hud.appendChild(wrapper);
             hud.appendChild(info);
             hud.appendChild(sideControls);
@@ -2286,15 +2513,13 @@
             }, { passive: false });
 
             bindHudDragging(hud, player);
-            bindElementResizing(hud, player, () => ({
-                width: parseFloat(hud.style.minWidth) || 300,
-                height: parseFloat(hud.style.minHeight) || 118,
-            }), () => hudScale);
+            bindHudScaling(hud, player);
             applySizing();
         } else if (hud.parentNode !== player) {
             player.appendChild(hud);
         }
 
+        bindDiscReflection(hud.querySelector('.cd-disc-wrapper'));
         bindDiscScrubbing(hud.querySelector('.cd-disc-wrapper'));
 
         if (!statusLight) statusLight = document.querySelector('#yt-cd-hud .status-light');
@@ -2434,9 +2659,11 @@
             collectTracklistCandidates,
             angleDeltaToSeconds,
             calculateHudMinimumSize,
+            chooseHudTitle,
             detectBlockPage,
             getAdjacentTrackTime,
             getBalancedDiscSize,
+            getContentBalancedDiscSize,
             isSuccessfulHttpStatus,
             normalizeSearchTitle,
             normalizeAngleDelta,

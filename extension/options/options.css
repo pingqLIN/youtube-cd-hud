@@ -249,6 +249,7 @@ code { color: var(--signal); font-family: inherit; }
 .hud-preview {
     --preview-accent: #63b3ed;
     --preview-opacity: .85;
+    --preview-disc-size: 82px;
     position: absolute;
     top: 84px;
     left: 18px;
@@ -256,21 +257,30 @@ code { color: var(--signal); font-family: inherit; }
     align-items: center;
     gap: 14px;
     width: calc(100% - 36px);
-    min-height: 126px;
-    padding: 12px 42px 12px 12px;
+    min-height: var(--preview-disc-size);
+    padding: 0 42px 0 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: opacity .2s ease;
+}
+.hud-preview:before {
+    content: "";
+    position: absolute;
+    inset: 0 0 0 calc(var(--preview-disc-size) / 2);
     border: 1px solid #4a5568;
     border-radius: 2px;
     background: linear-gradient(180deg, rgba(45, 55, 72, .3), transparent 42%), rgba(26, 32, 44, var(--preview-opacity));
     box-shadow: 0 9px 30px rgba(0, 0, 0, .35), inset 3px 0 0 var(--preview-accent);
-    transition: opacity .2s ease;
 }
 .hud-preview.off { opacity: .28; filter: grayscale(.75); }
 .preview-disc {
     position: relative;
+    z-index: 2;
     flex: 0 0 auto;
-    width: 58px;
-    height: 58px;
-    margin: 6px 10px;
+    width: var(--preview-disc-size);
+    height: var(--preview-disc-size);
+    margin: 0 10px 0 0;
     overflow: hidden;
     border: 1px solid var(--preview-accent);
     border-radius: 50%;
@@ -279,19 +289,21 @@ code { color: var(--signal); font-family: inherit; }
 }
 .preview-disc:before { content: ""; position: absolute; inset: 8px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; }
 .preview-disc span { position: absolute; inset: 43%; border-radius: 50%; background: #070a0c; box-shadow: 0 0 0 2px #d5dcd7; }
-.preview-info { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
+.preview-info { position: relative; z-index: 1; display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
 .preview-info > strong { overflow: hidden; color: #f7fafc; font: 700 14px/1.35 var(--mono); white-space: nowrap; text-overflow: ellipsis; }
 .preview-info time { margin-top: 2px; color: #a0aec0; font-size: 12px; }
-.preview-source { display: flex; margin-top: 7px; font-size: 8px; }
-.preview-source > * { display: inline-flex; align-items: center; height: 22px; padding: 0 6px; border: 1px solid #4a5568; }
-.preview-source b { margin-left: -1px; color: #cbd5e0; font-weight: 500; }
-.preview-source b:nth-child(2) { color: #11181c; background: #e2e8f0; }
+.preview-source { display: flex; align-items: center; flex-wrap: nowrap; margin-top: 7px; font-size: 8px; }
+.preview-source > span, .preview-source > b { display: inline-flex; align-items: center; height: 22px; padding: 0 6px; border: 1px solid #4a5568; }
+.preview-source > b { margin-left: -1px; color: #cbd5e0; font-weight: 500; }
+.preview-source > b:nth-child(2) { color: #11181c; background: #e2e8f0; }
 .preview-source i { width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: var(--signal); }
-.preview-transport { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 5px; }
+.preview-transport { display: inline-flex; gap: 3px; margin-left: 6px; padding-left: 7px; border-left: 1px solid #4a5568; }
+.preview-transport b { flex: 0 0 48px; width: 48px; }
 .preview-transport b, .preview-tools b { border: 1px solid #4a5568; color: #a0aec0; background: #2d3748; font: 500 8px/20px var(--mono); text-align: center; }
-.preview-tools { position: absolute; top: 4px; right: 4px; display: grid; gap: 3px; padding-left: 4px; border-left: 1px solid #4a5568; }
+.preview-tools { position: absolute; top: 4px; right: 4px; z-index: 2; display: grid; gap: 3px; padding-left: 4px; border-left: 1px solid #4a5568; }
 .preview-tools b { width: 26px; height: 18px; line-height: 16px; }
-.hud-preview.hide-disc .preview-disc, .hud-preview.hide-transport .preview-transport, .hud-preview.hide-1001 .source-1001 { display: none; }
+.hud-preview.hide-disc .preview-disc { visibility: hidden; }
+.hud-preview.hide-transport .preview-transport, .hud-preview.hide-1001 .source-1001 { display: none; }
 
 .scope-list { margin: 24px 0 0; border-top: 1px solid var(--line-soft); }
 .scope-list div { display: flex; justify-content: space-between; gap: 20px; padding: 11px 0; border-bottom: 1px solid var(--line-soft); font-size: 10px; }

@@ -13,9 +13,9 @@ test('fills the balanced responsive circular disc with a native widescreen thumb
 
   assert.match(source, /mqdefault\.jpg/);
   assert.match(source, /--hud-disc-size:\s*clamp\(52\.8px,\s*6\.24vmin,\s*76\.8px\)/);
-  assert.match(source, /margin:\s*6px\s+10px/);
+  assert.match(source, /margin:\s*0\s+10px\s+0\s+0/);
   assert.doesNotMatch(source, /hudDiscSize/);
-  assert.match(source, /getBalancedDiscSize\(window\.innerWidth,\s*window\.innerHeight,\s*hudTitleFontSize\)/);
+  assert.match(source, /getContentBalancedDiscSize\(\s*window\.innerWidth,\s*window\.innerHeight,\s*hudTitleFontSize/);
   assert.match(source, /DEFAULT_TITLE_SIZE\s*=\s*14/);
   assert.match(source, /DEFAULT_TIME_SIZE\s*=\s*12/);
   assert.match(discArtRule, /background-size:\s*cover/);
@@ -42,6 +42,39 @@ test('keeps the status lamp circular and exposes disc scrubbing states', () => {
   assert.match(source, /\.cd-disc-wrapper\.scrub-reverse/);
   assert.match(source, /classList\.add\('hud-close-button'\)/);
   assert.match(source, /關閉 HUD（重新載入後恢復）/);
+  assert.match(source, /--cd-reflection-x/);
+  assert.match(source, /bindDiscReflection/);
+  assert.match(source, /addEventListener\('pointerenter',\s*updateReflection/);
+});
+
+test('uses the disc center as the opaque panel boundary with a pointer-through overhang', () => {
+  const hudRule = source.match(/#yt-cd-hud\s*\{[\s\S]*?\n\s*\}/)?.[0] || '';
+  const surfaceRule = source.match(/\.hud-panel-surface\s*\{[\s\S]*?\n\s*\}/)?.[0] || '';
+
+  assert.match(hudRule, /background:\s*transparent/);
+  assert.match(hudRule, /border:\s*0/);
+  assert.match(hudRule, /pointer-events:\s*none/);
+  assert.match(surfaceRule, /inset:\s*0\s+0\s+0\s+calc\(var\(--hud-balanced-disc-size,\s*var\(--hud-disc-size\)\)\s*\/\s*2\)/);
+  assert.match(surfaceRule, /pointer-events:\s*auto/);
+  assert.match(source, /panelSurface\.className\s*=\s*'hud-panel-surface'/);
+  assert.match(source, /hud\.appendChild\(panelSurface\)/);
+});
+
+test('hides only the disc artwork without moving the HUD layout anchor', () => {
+  const hiddenDiscRule = source.match(/#yt-cd-hud\.ytcd-hide-disc\s+\.cd-disc-wrapper\s*\{[\s\S]*?\n\s*\}/)?.[0] || '';
+
+  assert.match(hiddenDiscRule, /visibility:\s*hidden/);
+  assert.match(hiddenDiscRule, /pointer-events:\s*none/);
+  assert.doesNotMatch(hiddenDiscRule, /display:\s*none/);
+  assert.doesNotMatch(source, /ytcd-hide-disc\s+\.hud-panel-surface\s*\{[^}]*left:\s*0/);
+});
+
+test('paces 1001 candidate requests and cools down automatic retries after a block page', () => {
+  assert.match(source, /CANDIDATE_REQUEST_DELAY_MS\s*=\s*1200/);
+  assert.match(source, /AUTOMATIC_SEARCH_BLOCK_COOLDOWN_MS\s*=\s*5\s*\*\s*60\s*\*\s*1000/);
+  assert.match(source, /activeCandidateTimer\s*=\s*setTimeout\(\(\)\s*=>/);
+  assert.match(source, /scheduleCandidate\(candidateIndex\s*\+\s*1\)/);
+  assert.match(source, /fetchTracklistFrom1001\(title,\s*id,\s*true,\s*true\)/);
 });
 
 test('shows the tracklist explicitly and uses the redesigned compound controls', () => {
@@ -65,9 +98,14 @@ test('shows the tracklist explicitly and uses the redesigned compound controls',
   assert.match(source, /className\s*=\s*'resize-handle tracklist-resize-handle'/);
   assert.match(source, /syncHudContentBounds\(true\)/);
   assert.match(source, /hud\.style\.minWidth\s*=\s*`\$\{minimum\.width\}px`/);
+  assert.match(source, /hud\.style\.maxWidth\s*=\s*`\$\{minimum\.width\}px`/);
+  assert.match(source, /hud\.style\.width\s*=\s*`\$\{minimum\.width\}px`/);
   assert.match(source, /chapter\.style\.width\s*=\s*`\$\{requiredChapterWidth\}px`/);
-  assert.match(source, /bindElementResizing\(hud,\s*player,\s*\(\)\s*=>/);
+  assert.match(source, /bindHudScaling\(hud,\s*player\)/);
+  assert.doesNotMatch(source, /bindElementResizing\(hud,/);
   assert.match(source, /bindElementResizing\(panel,\s*player,\s*\{\s*width:\s*220,\s*height:\s*120\s*\}/);
+  assert.match(source, /sourceActions\.appendChild\(transportControls\)/);
+  assert.match(source, /width:\s*58px/);
   assert.match(source, /closest\('\.tracklist-header'\)/);
   assert.doesNotMatch(source, /createControlGroup\(\s*['"]CD['"]/);
 });

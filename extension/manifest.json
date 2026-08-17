@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube CD HUD",
-  "version": "5.8.0",
+  "version": "5.8.3",
   "description": "Adds a configurable CD-style track HUD and optional 1001Tracklists lookup to YouTube.",
   "permissions": [
     "storage"
