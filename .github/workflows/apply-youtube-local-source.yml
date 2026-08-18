@@ -1,7 +1,7 @@
 name: Apply YouTube local timestamp source
 
 on:
-  push:
+  pull_request:
     branches: [main]
 
 permissions:
@@ -9,20 +9,33 @@ permissions:
 
 jobs:
   apply:
-    if: github.event.head_commit.message == 'chore: bootstrap youtube local timestamp source'
+    if: github.head_ref == 'feature/youtube-local-timestamp-source'
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out feature branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Detect bootstrap payload
+        id: bootstrap
+        shell: bash
+        run: |
+          if [ -f scripts/apply-youtube-local-source.mjs ]; then
+            echo "apply=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "apply=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up Node.js
+        if: steps.bootstrap.outputs.apply == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Verify new tests are red before implementation
+        if: steps.bootstrap.outputs.apply == 'true'
         shell: bash
         run: |
           set +e
@@ -37,21 +50,27 @@ jobs:
           grep -q "exports YouTube local timestamp playlist helpers" /tmp/youtube-local-source-red.log
 
       - name: Apply implementation and documentation updates
+        if: steps.bootstrap.outputs.apply == 'true'
         run: node scripts/apply-youtube-local-source.mjs
 
       - name: Build extension
+        if: steps.bootstrap.outputs.apply == 'true'
         run: npm run build:extension
 
       - name: Verify generated source and syntax
+        if: steps.bootstrap.outputs.apply == 'true'
         run: npm run check
 
       - name: Run unit tests
+        if: steps.bootstrap.outputs.apply == 'true'
         run: npm test
 
       - name: Check patch whitespace
+        if: steps.bootstrap.outputs.apply == 'true'
         run: git diff --check
 
       - name: Commit verified feature
+        if: steps.bootstrap.outputs.apply == 'true'
         shell: bash
         run: |
           rm -f .github/workflows/apply-youtube-local-source.yml \
@@ -61,4 +80,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "feat: scan YouTube timestamp playlists from comments"
-          git push origin HEAD:main
+          git push origin HEAD:${{ github.head_ref }}
