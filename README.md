@@ -8,7 +8,7 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 
 > Find the tracklist. Match the timeline. Stay on the current track.
 
-[![Version 5.11.0](https://img.shields.io/badge/version-5.11.0-2563eb)](package.json)
+[![Version 5.12.0](https://img.shields.io/badge/version-5.12.0-2563eb)](package.json)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
 
@@ -31,7 +31,7 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 
 ## Project Status
 
-YouTube CD HUD is currently distributed as a **source-only beta**. The current source version is **5.11.0** for both the userscript and the Manifest V3 Chrome extension.
+YouTube CD HUD is currently distributed as a **source-only beta**. The current source version is **5.12.0** for both the userscript and the Manifest V3 Chrome extension.
 
 There is no Chrome Web Store package documented by this repository. The Chrome build is loaded as an unpacked extension; the userscript is installed through Tampermonkey.
 
@@ -43,7 +43,7 @@ The core of YouTube CD HUD is **tracklist discovery and playback-time synchroniz
 
 It can:
 
-- Use YouTube's own native chapter title or timestamped tracks from the video description.
+- Use YouTube's own native chapter title or timestamped playlists found in the video description or currently loaded comments.
 - Search or query additional tracklist sources including **1001Tracklists**, **MixesDB**, and **TrackId.net**.
 - Keep each provider's result separate instead of silently merging unrelated data.
 - Match the selected tracklist to the current YouTube playback position.
@@ -92,7 +92,7 @@ No build step is required just to use the current checked-in extension.
 ## Quick Start
 
 1. Open a YouTube DJ set, mix, radio recording, or music video.
-2. If YouTube provides chapters or timestamped description tracks, YouTube CD HUD loads them as the `YT` source first.
+2. If YouTube provides chapters or a timestamped playlist in the description / loaded comments, YouTube CD HUD loads it as the `YT` source first.
 3. Use the source control to query or switch to `1001`, `MIXESDB`, or `TRACKID`.
 4. Select a result when a provider has multiple credible candidates.
 5. Play or scrub the YouTube video. The active track, highlight, and navigation targets follow the current playback time.
@@ -108,12 +108,14 @@ YouTube CD HUD treats source matching as a data problem, not just a visual overl
 
 | Source | Primary evidence | Matching / fallback behavior |
 | --- | --- | --- |
-| `YT` | Native YouTube chapter title or timestamped description tracks | No external match is required; this remains the preferred source when available |
+| `YT` | Native YouTube chapter title or timestamped playlists in the description / loaded comments | No external match is required; a credible description playlist wins, otherwise the best single loaded-comment playlist is used |
 | `1001` | Normalized video title, ranked 1001Tracklists search results, timestamped candidate pages | Candidate ranking uses title evidence and supporting timing information; shortened recordings can still match a longer event tracklist |
 | `MIXESDB` | Exact YouTube ID when available | Fallback candidates must satisfy conservative title, duration, and cue-coverage checks |
 | `TRACKID` | Exact YouTube ID when available | Fallback candidates use title and duration checks; short single-track videos may use artist / title / version matching against the public music-track index |
 
 Provider tracklists remain independent. The project does not combine two providers merely because some text happens to match.
+
+For the local `YT` timeline, the description is checked first. If it has fewer than two valid playlist cues, currently loaded comments are scanned; the strongest single comment is selected by track count, then timeline coverage. Late-loaded comments are rechecked as the comments DOM changes or after scrolling.
 
 <p align="center">
   <img src="docs/assets/readme/youtube-cd-hud-cue-fox-provider-banner-v1.png" width="880" alt="Cue Fox comparing several tracklist-provider signals before selecting a synchronized source." />
@@ -123,7 +125,8 @@ Provider tracklists remain independent. The project does not combine two provide
 
 | Situation | Behavior |
 | --- | --- |
-| YouTube description contains timestamped tracks | Loads them as `YT` and uses them by default |
+| YouTube description contains a credible timestamped playlist | Loads it as `YT` and uses it by default |
+| Description has no credible playlist, but a loaded comment does | Uses the strongest single comment playlist as `YT`; comments are never merged together |
 | YouTube exposes a native chapter title | Displays the current chapter while `YT` is active |
 | 1001Tracklists returns a usable timestamped tracklist | Adds a selectable `1001` source synchronized to the same playback time |
 | MixesDB or TrackId.net returns a trusted match | Adds that provider as a separate selectable source |
@@ -181,6 +184,8 @@ The Chrome extension requests only the `storage` permission and limits host acce
 - TrackId.net
 
 The project does **not** request the Chrome `cookies` permission, call `chrome.cookies`, collect browsing history, or include analytics.
+
+Description / comment scanning happens entirely against the YouTube page DOM already loaded in the browser. It does not call a YouTube comments API, request extra comment data, upload comment text, or add another host permission.
 
 When Chrome sends an allowlisted request to 1001Tracklists, the browser may attach that site's own verification cookies. The extension does not read, store, or expose those cookie values.
 
