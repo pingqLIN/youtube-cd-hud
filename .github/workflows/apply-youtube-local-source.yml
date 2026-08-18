@@ -12,11 +12,15 @@ jobs:
     if: github.head_ref == 'feature/youtube-local-timestamp-source'
     runs-on: ubuntu-latest
     steps:
-      - name: Check out feature branch
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.head_ref }}
+      - name: Clone feature branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git clone --depth 20 --branch "${{ github.head_ref }}" \
+            "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" .
+          git log -1 --oneline
+          node --version
 
       - name: Detect bootstrap payload
         id: bootstrap
@@ -27,12 +31,6 @@ jobs:
           else
             echo "apply=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Set up Node.js
-        if: steps.bootstrap.outputs.apply == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
 
       - name: Verify new tests are red before implementation
         if: steps.bootstrap.outputs.apply == 'true'
