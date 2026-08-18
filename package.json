@@ -1,6 +1,6 @@
 {
   "name": "youtube-cd-hud",
-  "version": "5.11.0",
+  "version": "5.12.0",
   "private": true,
   "description": "Governed source and tests for the YouTube CD HUD userscript and Chrome extension.",
   "scripts": {
