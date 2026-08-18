@@ -13,7 +13,7 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
   const manifest = JSON.parse(read('extension/manifest.json'));
 
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '5.11.0');
+  assert.equal(manifest.version, '5.12.0');
   assert.deepEqual(manifest.permissions, ['storage']);
   assert.deepEqual(manifest.host_permissions, [
     'https://www.youtube.com/*',
