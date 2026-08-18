@@ -1,6 +1,10 @@
 # YouTube CD HUD
 
-![YouTube CD HUD 吉祥物 Vinyl Sentinel 位於簡潔的深色音訊工作室](docs/assets/readme/youtube-cd-hud-mascot-banner-v3.png)
+![Cue Fox 在唱片 cue 掃描器旁比對三組抽象曲目來源訊號](docs/assets/readme/youtube-cd-hud-cue-fox-provider-banner-v1.png)
+
+![Cue Fox 在環形播放時間軸上同步時間戳曲目卡](docs/assets/readme/youtube-cd-hud-cue-fox-sync-banner-v1.png)
+
+![Cue Fox 在發光唱片入口旁守護有容量上限的本機曲目快取](docs/assets/readme/youtube-cd-hud-cue-fox-cache-banner-v1.png)
 
 [English](README.md)
 
@@ -9,11 +13,24 @@ YouTube CD HUD 的核心功能是依目前 YouTube 影片搜尋可選的曲目�
 標題與影片說明欄內的時間戳曲目；既有 YouTube 曲目資訊會維持為預設來源，
 不會因 1001Tracklists 搜尋而被強制取代。
 
-同步後的曲目資訊會呈現在唱片風格 HUD 與曲目面板中。專案同時提供
-Tampermonkey Userscript 與 Manifest V3 Chrome 擴充版。
+同步後的曲目資訊會顯示在精簡的唱片風格 HUD 與曲目面板中。你可以選擇安裝
+Tampermonkey Userscript，或載入未封裝的 Manifest V3 Chrome 擴充功能。
 
 Userscript 原始檔位於 `src/youtube-cd-hud.user.js`，可載入的 Chrome 擴充位於
-`extension/`；兩個版本目前皆為 v5.10.0。
+`extension/`；兩個版本目前皆為 v5.11.0。
+
+## 快速開始
+
+1. 依下方步驟安裝 Userscript 或未封裝擴充功能，接著重新載入 YouTube 分頁。
+2. 開啟 YouTube 音樂 set。若影片已有原生章節或說明欄時間戳，HUD 會先採用
+   這些 YouTube 曲目資訊。
+3. 使用來源控制查詢或切換 `1001`、`MIXESDB` 與 `TRACKID`。切換來源時，曲名、
+   目前曲目高亮與上一曲／下一曲目標會一起更新，不會改變播放進度。
+4. 如果 1001Tracklists 要求瀏覽器驗證，請按 **OPEN 1001**，等待結果頁載入完成，
+   再回到原本的 YouTube 分頁。擴充會透過已驗證的第一方分頁重試。
+
+同一來源有多個可信候選時，來源按鈕會顯示 `(1)`、`(2)` 等編號。每按一次就
+切換到下一個候選；切到最後一個候選後再按一次，才會開啟其來源頁面。
 
 ## 功能亮點
 
@@ -29,7 +46,7 @@ Userscript 原始檔位於 `src/youtube-cd-hud.user.js`，可載入的 Chrome �
   來源間切換；兩者都有資料時，預設仍優先使用 YouTube。
 - 明確辨識 1001Tracklists CAPTCHA／IP 限制頁，自動查詢暫停五分鐘；完成網站
   驗證後仍可手動重試。
-- 以可拖移、等比例縮放的唱片風格 HUD 呈現同步資料，並提供圓形影片封面、
+- 以可拖移、可調整寬度的唱片風格 HUD 呈現同步資料，並提供圓形影片封面、
   封面取色、曲目面板與唱片拖曳播放。
 
 ## 曲目來源與同步方式
@@ -96,15 +113,10 @@ Chrome 設定檔或瀏覽資料。因此它能驗證控制頁互動，但不能�
 
 ## 吉祥物
 
-Vinyl Sentinel 是本專案的原創唱片守護者。手腕、唱片外圈與鞋底的亮黃色細節
-呼應高辨識度 cue 標記，青藍與洋紅光線則延續 HUD 的工業遙測語彙。
-
-![Vinyl Sentinel 在午夜聆聽室把 cue 光點放到唱盤上](docs/assets/readme/youtube-cd-hud-mascot-listening-room-v1.png)
-
-![Vinyl Sentinel 在簡潔控制桌引導三張抽象曲目卡](docs/assets/readme/youtube-cd-hud-mascot-tracklist-desk-v1.png)
-
-吉祥物與場景是為本專案建立的原創生成圖像，不重製第三方角色、標誌或介面
-截圖。
+Cue Fox 是為 YouTube CD HUD 原創設計的耳廓狐 cue 操作員。偏大的耳朵象徵
+持續聆聽；時間戳腕錶、cue 眼鏡、耳機、波形尾巴與輕量 DJ 背帶，分別呼應
+曲目來源搜尋、播放同步與有界本機快取。開頭三張橫幅使用同一角色與服裝，
+但安排在不同工作場景；圖像不重製第三方角色、標誌或介面截圖。
 
 ## 開發與驗證
 
@@ -119,6 +131,39 @@ npm test
 影片驗收。
 
 ## 版本紀錄
+
+### v5.11.0
+
+- 當瀏覽器可正常顯示 1001Tracklists 搜尋結果，但擴充的 service worker 仍被要求
+  驗證時，已開啟的結果分頁會註冊短效的第一方請求橋接；返回 YouTube 後會透過
+  該分頁直接讀取已呈現的搜尋結果 DOM，不再重送遭阻擋的 POST，並更新 HUD；
+  全程不讀取或揭露瀏覽器 Cookie。
+- 橋接僅接受原始 YouTube 分頁送出的 1001Tracklists 白名單 GET／POST，短效路由
+  狀態存於擴充 session storage；若結果分頁已關閉，則退回既有直接請求流程。
+- 將曲目清單按鈕移至來源選擇器右側，HUD 右下角改為獨立 resize bay，並縮短
+  旋轉唱片與資訊區之間的距離。
+- 目前顯示的曲名可直接開啟 Google 搜尋；TRACKLIST 標題旁會顯示目前來源系統
+  縮寫，並在來源網址可用時連結至 YouTube、1001Tracklists、MixesDB 或 TrackId
+  的匹配頁面。
+- 主面板右下角由等比例縮放改為真正的寬度調整；曲名會在剩餘空間中換行，CD
+  與按鈕尺寸維持不變，最窄寬度由完整控制列決定；最寬則鎖定為目前曲名、
+  控制列及 CD 的實際總需求，不允許向播放器邊界延伸出空白區。方向鍵可每次
+  調整 20px，`Home` 可恢復依內容自動決定寬度。
+- 原本分開的 `T+`／`T−` 合併為單一 `T±`，讓右側工具列下方保持空白、不再與
+  resize bay 競爭。左鍵或 Enter 放大、右鍵縮小，方向鍵可雙向調整。
+- 解析完成的曲目與來源網址會在本機快取六小時，最多保留最近 30 支影片、每個
+  來源最多 300 首；短時間重新開啟影片會直接還原並略過立即遠端查詢。完整第三方
+  HTML、Cookie、驗證內容及請求資料不會寫入快取。
+- 同一供應者若有多個可信曲目候選，TRACKLIST 標題旁的來源按鈕會標示 `(1)`、
+  `(2)`、`(3)`。從預設 `(1)` 開始，每次點擊依序切換並立即使用下一份曲目；
+  到達最後一個候選後，再點一次才會開啟該候選的來源頁。單一候選維持直接開頁。
+
+### v5.10.1
+
+- 只有從遭阻擋的搜尋或候選頁按下 `OPEN 1001` 時，才啟用一次性的驗證返回
+  偵測；完成驗證並回到同一支 YouTube 影片後，會清除 cooldown 並自動重試一次。
+- 驗證返回後若成功取得曲目，會立即切換至 1001 來源，即使影片已有 YouTube
+  章節；一般自動搜尋與手動 RETRY 仍遵循原有來源偏好設定。
 
 ### v5.10.0
 

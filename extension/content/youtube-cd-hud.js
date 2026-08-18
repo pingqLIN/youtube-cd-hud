@@ -46,14 +46,15 @@
         showTransport: true,
         customCss: '',
     });
-    const SCALE_STEP = 1.2;
-    const MIN_SCALE = 0.4;
-    const MAX_SCALE = 2.5;
     const DISC_SCRUB_SECONDS_PER_REVOLUTION = 24;
     const DISC_SAMPLE_SECONDS = 0.08;
     const CANDIDATE_REQUEST_DELAY_MS = 1200;
     const AUTOMATIC_SEARCH_BLOCK_COOLDOWN_MS = 5 * 60 * 1000;
     const SINGLE_TRACK_MAX_DURATION_SECONDS = 20 * 60;
+    const TRACKLIST_CACHE_STORAGE_KEY = 'ytCdHudTracklistCacheV1';
+    const TRACKLIST_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+    const TRACKLIST_CACHE_MAX_ENTRIES = 30;
+    const TRACKLIST_CACHE_MAX_TRACKS_PER_SOURCE = 300;
     let runtimeSettings = SETTINGS_API
         ? SETTINGS_API.normalize(SETTINGS_API.DEFAULTS)
         : { ...RUNTIME_DEFAULTS };
@@ -71,6 +72,8 @@
     let pending1001VerificationRequest = null;
     let tracklistUrlMixesDb = '';
     let tracklistUrlTrackId = '';
+    let tracklistCandidates = { '1001': [], mixesdb: [], trackid: [] };
+    let tracklistCandidateIndexes = { '1001': 0, mixesdb: 0, trackid: 0 };
     let lastVideoIdFor1001 = '';
     let lastSearchTitle = '';
 
@@ -82,10 +85,17 @@
     let activeCandidateTimer = null;
     const activeSupplementalRequests = new Set();
     let automaticSearchBlockedUntil = 0;
-    let hudScale = 1.0;
+    let awaiting1001VerificationReturn = false;
+    let awaiting1001VerificationVideoId = '';
+    let verificationPageOpenedAt = 0;
+    let verificationReturnRetryTimer = null;
+    let hudPreferredWidth = null;
     let hudTitleFontSize = DEFAULT_TITLE_SIZE;
     let hudTimeFontSize = DEFAULT_TIME_SIZE;
     let latestColorRequestVideoId = '';
+    let tracklistCache = {};
+    let cachePersistTimer = null;
+    let cacheHitVideoId = '';
 
     let tracklistPanel = null;
     let tracklistVisible = false;
@@ -129,6 +139,132 @@
         if (nums.length === 3) return nums[0] * 3600 + nums[1] * 60 + nums[2];
         if (nums.length === 2) return nums[0] * 60 + nums[1];
         return NaN;
+    }
+
+    function normalizeCachedTracks(tracks) {
+        if (!Array.isArray(tracks) || tracks.length > TRACKLIST_CACHE_MAX_TRACKS_PER_SOURCE) return [];
+        return tracks.map(track => ({
+            time: Number(track && track.time),
+            title: trim(String(track && track.title || '')).slice(0, 300),
+        })).filter(track => Number.isFinite(track.time) && track.time >= 0 && track.title);
+    }
+
+    function isProviderUrl(source, url) {
+        const value = String(url || '');
+        if (source === '1001') return is1001TracklistsUrl(value);
+        if (source === 'mixesdb') return /^https:\/\/www\.mixesdb\.com\//i.test(value);
+        if (source === 'trackid') return /^https:\/\/trackid\.net\//i.test(value);
+        return false;
+    }
+
+    function normalizeCachedCandidates(candidates, source) {
+        if (!Array.isArray(candidates)) return [];
+        const seenUrls = new Set();
+        let remainingTracks = TRACKLIST_CACHE_MAX_TRACKS_PER_SOURCE;
+        const normalized = [];
+        for (const candidate of candidates.slice(0, 10)) {
+            const url = isProviderUrl(source, candidate && candidate.url) ? String(candidate.url) : '';
+            if (!url || seenUrls.has(url) || remainingTracks <= 0) continue;
+            const tracks = normalizeCachedTracks(candidate && candidate.tracks).slice(0, remainingTracks);
+            if (!tracks.length) continue;
+            seenUrls.add(url);
+            remainingTracks -= tracks.length;
+            normalized.push({ tracks, url });
+        }
+        return normalized;
+    }
+
+    function getCandidateActionState(candidates, selectedIndex = 0) {
+        const count = Array.isArray(candidates) ? candidates.length : 0;
+        const index = count ? clamp(Number(selectedIndex) || 0, 0, count - 1) : 0;
+        const hasMultiple = count > 1;
+        return {
+            count,
+            index,
+            suffix: hasMultiple ? ` (${index + 1})` : '',
+            willOpen: !hasMultiple || index >= count - 1,
+        };
+    }
+
+    function normalizeTracklistCache(value, now = Date.now()) {
+        if (!value || typeof value !== 'object') return {};
+        return Object.fromEntries(Object.entries(value)
+            .filter(([videoId, entry]) => (
+                /^[\w-]{6,20}$/.test(videoId) &&
+                entry &&
+                Number(entry.savedAt) > now - TRACKLIST_CACHE_TTL_MS &&
+                Number(entry.savedAt) <= now + 60000
+            ))
+            .sort((left, right) => Number(right[1].savedAt) - Number(left[1].savedAt))
+            .slice(0, TRACKLIST_CACHE_MAX_ENTRIES)
+            .map(([videoId, entry]) => {
+                const candidates1001 = normalizeCachedCandidates(entry.candidates1001, '1001');
+                const candidatesMixesDb = normalizeCachedCandidates(entry.candidatesMixesDb, 'mixesdb');
+                const candidatesTrackId = normalizeCachedCandidates(entry.candidatesTrackId, 'trackid');
+                return [videoId, {
+                    savedAt: Number(entry.savedAt),
+                    activeSource: ['youtube', '1001', 'mixesdb', 'trackid'].includes(entry.activeSource)
+                        ? entry.activeSource
+                        : '',
+                    tracks1001: candidates1001.length ? [] : normalizeCachedTracks(entry.tracks1001),
+                    tracksMixesDb: candidatesMixesDb.length ? [] : normalizeCachedTracks(entry.tracksMixesDb),
+                    tracksTrackId: candidatesTrackId.length ? [] : normalizeCachedTracks(entry.tracksTrackId),
+                    url1001: is1001TracklistsUrl(entry.url1001) ? String(entry.url1001) : '',
+                    urlMixesDb: /^https:\/\/www\.mixesdb\.com\//i.test(String(entry.urlMixesDb || ''))
+                        ? String(entry.urlMixesDb)
+                        : '',
+                    urlTrackId: /^https:\/\/trackid\.net\//i.test(String(entry.urlTrackId || ''))
+                        ? String(entry.urlTrackId)
+                        : '',
+                    candidates1001,
+                    candidatesMixesDb,
+                    candidatesTrackId,
+                    candidateIndex1001: Math.max(0, Number(entry.candidateIndex1001) || 0),
+                    candidateIndexMixesDb: Math.max(0, Number(entry.candidateIndexMixesDb) || 0),
+                    candidateIndexTrackId: Math.max(0, Number(entry.candidateIndexTrackId) || 0),
+                }];
+            })
+            .filter(([, entry]) => (
+                entry.tracks1001.length || entry.tracksMixesDb.length || entry.tracksTrackId.length ||
+                entry.candidates1001.length || entry.candidatesMixesDb.length || entry.candidatesTrackId.length
+            )));
+    }
+
+    async function loadTracklistCache() {
+        try {
+            let stored = null;
+            if (globalThis.chrome?.storage?.local) {
+                const result = await globalThis.chrome.storage.local.get(TRACKLIST_CACHE_STORAGE_KEY);
+                stored = result[TRACKLIST_CACHE_STORAGE_KEY];
+            } else if (typeof globalThis.GM_getValue === 'function') {
+                stored = await globalThis.GM_getValue(TRACKLIST_CACHE_STORAGE_KEY, null);
+            }
+            tracklistCache = normalizeTracklistCache(stored);
+        } catch (error) {
+            tracklistCache = {};
+            console.warn('[CD HUD] Could not load the local tracklist cache.', error);
+        }
+    }
+
+    async function persistTracklistCache() {
+        try {
+            tracklistCache = normalizeTracklistCache(tracklistCache);
+            if (globalThis.chrome?.storage?.local) {
+                await globalThis.chrome.storage.local.set({ [TRACKLIST_CACHE_STORAGE_KEY]: tracklistCache });
+            } else if (typeof globalThis.GM_setValue === 'function') {
+                await globalThis.GM_setValue(TRACKLIST_CACHE_STORAGE_KEY, tracklistCache);
+            }
+        } catch (error) {
+            console.warn('[CD HUD] Could not persist the local tracklist cache.', error);
+        }
+    }
+
+    function scheduleTracklistCachePersist() {
+        if (cachePersistTimer !== null) clearTimeout(cachePersistTimer);
+        cachePersistTimer = setTimeout(() => {
+            cachePersistTimer = null;
+            void persistTracklistCache();
+        }, 100);
     }
 
     function clamp(value, min, max) {
@@ -185,22 +321,20 @@
         if (!runtimeSettings.enable1001) {
             activeSearchToken++;
             cancelActiveRequests();
-            tracksFrom1001 = [];
+            resetProviderCandidates('1001');
             searchState = 'idle';
             searchStateDetail = '';
-            tracklistUrl1001 = '';
             pending1001VerificationRequest = null;
+            clear1001VerificationReturn();
             lastSearchTitle = '';
             if (currentSource === '1001') setActiveSource(tracksFromYouTube.length ? 'youtube' : 'none');
         }
         if (!runtimeSettings.enableMixesDb) {
-            tracksFromMixesDb = [];
-            tracklistUrlMixesDb = '';
+            resetProviderCandidates('mixesdb');
             if (currentSource === 'mixesdb') setActiveSource('none');
         }
         if (!runtimeSettings.enableTrackId) {
-            tracksFromTrackId = [];
-            tracklistUrlTrackId = '';
+            resetProviderCandidates('trackid');
             if (currentSource === 'trackid') setActiveSource('none');
         }
 
@@ -269,6 +403,27 @@
         return trim(officialChapter) || trackTitle || 'Full Track Set';
     }
 
+    function getGoogleTrackSearchUrl(trackTitle) {
+        const query = trim(String(trackTitle || ''));
+        return query
+            ? `https://www.google.com/search?q=${encodeURIComponent(query)}`
+            : 'https://www.google.com/';
+    }
+
+    function getTracklistSourcePage(source, videoId, sourceUrls = {}) {
+        const definitions = {
+            youtube: {
+                label: 'YT',
+                url: videoId ? `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}` : '',
+            },
+            '1001': { label: '1001', url: String(sourceUrls.oneThousand || '') },
+            mixesdb: { label: 'MIXESDB', url: String(sourceUrls.mixesDb || '') },
+            trackid: { label: 'TRACKID', url: String(sourceUrls.trackId || '') },
+            none: { label: 'NONE', url: '' },
+        };
+        return definitions[source] || definitions.none;
+    }
+
     function calculateHudMinimumSize(metrics) {
         const paddingLeft = Math.max(0, Number(metrics.paddingLeft) || 0);
         const paddingRight = Math.max(0, Number(metrics.paddingRight) || 0);
@@ -296,6 +451,14 @@
                 paddingBottom
             ),
         };
+    }
+
+    function resolveHudWidth(naturalWidth, preferredWidth, minimumWidth, maximumWidth) {
+        const minimum = Math.max(1, Number(minimumWidth) || 1);
+        const maximum = Math.max(minimum, Number(maximumWidth) || minimum);
+        const preferred = Number(preferredWidth);
+        const natural = Math.max(minimum, Number(naturalWidth) || minimum);
+        return clamp(Number.isFinite(preferred) && preferred > 0 ? preferred : natural, minimum, maximum);
     }
 
     function getAdjacentTrackTime(tracks, currentTime, direction) {
@@ -371,7 +534,32 @@
         return Math.round((Number(hours && hours[1]) || 0) * 3600 + (Number(minutes && minutes[1]) || 0) * 60);
     }
 
-    function submit1001SearchVerification(request, openWindow = (...args) => window.open(...args)) {
+    function create1001BridgeToken() {
+        if (!globalThis.crypto) return '';
+        if (typeof globalThis.crypto.randomUUID === 'function') return globalThis.crypto.randomUUID();
+        if (typeof globalThis.crypto.getRandomValues !== 'function') return '';
+        const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+        return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+
+    function register1001BridgeSession() {
+        const token = create1001BridgeToken();
+        if (!token || !globalThis.chrome?.runtime?.sendMessage) return Promise.resolve('');
+        return new Promise(resolve => {
+            globalThis.chrome.runtime.sendMessage({
+                type: 'YT_CD_HUD_REGISTER_1001_BRIDGE',
+                token,
+            }, result => {
+                if (globalThis.chrome.runtime.lastError || !result?.ok) {
+                    resolve('');
+                    return;
+                }
+                resolve(token);
+            });
+        });
+    }
+
+    function submit1001SearchVerification(request, openWindow = (...args) => window.open(...args), bridgeToken = '') {
         if (!request || request.method !== 'POST' || !request.fields) return false;
         let action;
         try {
@@ -388,6 +576,7 @@
             targetWindow.opener = null;
             const form = targetWindow.document.createElement('form');
             form.method = 'POST';
+            if (bridgeToken) action.hash = `yt-cd-hud-session=${encodeURIComponent(bridgeToken)}`;
             form.action = action.href;
             Object.entries(request.fields).forEach(([name, value]) => {
                 const input = targetWindow.document.createElement('input');
@@ -406,13 +595,89 @@
         }
     }
 
-    function open1001TracklistsPage() {
-        if (pending1001VerificationRequest?.method === 'POST') {
-            if (submit1001SearchVerification(pending1001VerificationRequest)) return;
+    async function open1001TracklistsPage() {
+        if (pending1001VerificationRequest) {
+            const targetWindow = window.open('', '_blank');
+            const bridgeToken = await register1001BridgeSession();
+            if (targetWindow) {
+                if (pending1001VerificationRequest.method === 'POST' && submit1001SearchVerification(
+                    pending1001VerificationRequest,
+                    () => targetWindow,
+                    bridgeToken
+                )) {
+                    arm1001VerificationReturn();
+                    return;
+                }
+                if (pending1001VerificationRequest.method === 'GET') {
+                    try {
+                        const targetUrl = new URL(pending1001VerificationRequest.url);
+                        if (is1001TracklistsUrl(targetUrl.href)) {
+                            if (bridgeToken) {
+                                targetUrl.hash = `yt-cd-hud-session=${encodeURIComponent(bridgeToken)}`;
+                            }
+                            targetWindow.opener = null;
+                            targetWindow.location.replace(targetUrl.href);
+                            arm1001VerificationReturn();
+                            return;
+                        }
+                    } catch (error) {
+                        console.warn('[CD HUD] Could not open the blocked 1001Tracklists candidate.', error);
+                    }
+                }
+                if (typeof targetWindow.close === 'function') targetWindow.close();
+            }
         }
         if (tracklistUrl1001) {
             window.open(tracklistUrl1001, '_blank', 'noopener,noreferrer');
+            if (searchState === 'error' && pending1001VerificationRequest) {
+                arm1001VerificationReturn();
+            }
         }
+    }
+
+    function shouldRetry1001AfterVerificationReturn(awaiting, visibilityState, elapsedMs) {
+        return Boolean(awaiting && visibilityState !== 'hidden' && elapsedMs >= 500);
+    }
+
+    function clear1001VerificationReturn() {
+        awaiting1001VerificationReturn = false;
+        awaiting1001VerificationVideoId = '';
+        verificationPageOpenedAt = 0;
+        if (verificationReturnRetryTimer !== null) {
+            clearTimeout(verificationReturnRetryTimer);
+            verificationReturnRetryTimer = null;
+        }
+    }
+
+    function arm1001VerificationReturn() {
+        awaiting1001VerificationReturn = true;
+        awaiting1001VerificationVideoId = getVideoId();
+        verificationPageOpenedAt = Date.now();
+        searchStateDetail = '1001 搜尋頁已開啟；請保留該結果分頁並返回此 YouTube 分頁，將自動重新搜尋並切換至 1001 曲目。';
+        updateStatusLight();
+    }
+
+    function handle1001VerificationReturn() {
+        if (!shouldRetry1001AfterVerificationReturn(
+            awaiting1001VerificationReturn,
+            document.visibilityState,
+            Date.now() - verificationPageOpenedAt
+        )) return;
+        if (!awaiting1001VerificationVideoId || getVideoId() !== awaiting1001VerificationVideoId) {
+            clear1001VerificationReturn();
+            return;
+        }
+
+        awaiting1001VerificationReturn = false;
+        automaticSearchBlockedUntil = 0;
+        searchStateDetail = '已返回 YouTube，正在重新讀取完成驗證後的 1001 曲目…';
+        updateStatusLight();
+        verificationReturnRetryTimer = setTimeout(() => {
+            verificationReturnRetryTimer = null;
+            awaiting1001VerificationVideoId = '';
+            verificationPageOpenedAt = 0;
+            retrySearch(true);
+        }, 350);
     }
 
     function collectTracklistCandidates(doc, title, expectedDuration = 0, limit = 5) {
@@ -441,11 +706,18 @@
             const recall = queryTokens.length ? matchedTokens / queryTokens.length : 0;
             const precision = candidateTokens.size ? matchedTokens / candidateTokens.size : 0;
             const titleScore = recall * 0.75 + precision * 0.25;
+            if (queryTokens.length && matchedTokens === 0) return;
+            if (queryTokens.length >= 3 && (matchedTokens < 2 || recall < 0.3 || titleScore < 0.25)) return;
 
             const durationText = resultRow && typeof resultRow.querySelector === 'function'
                 ? resultRow.querySelector('[title="play time"]')?.textContent || ''
                 : '';
             const candidateDuration = parseSearchResultDuration(durationText);
+            const durationDifference = expectedDuration > 0 && candidateDuration > 0
+                ? Math.abs(candidateDuration - expectedDuration)
+                : 0;
+            const maximumDurationDifference = Math.max(900, Number(expectedDuration) * 0.35);
+            if (durationDifference > maximumDurationDifference) return;
             const durationScale = Math.max(Number(expectedDuration) * 0.5, 900);
             const durationScore = expectedDuration > 0 && candidateDuration > 0
                 ? Math.max(0, 1 - Math.abs(candidateDuration - expectedDuration) / durationScale)
@@ -706,7 +978,9 @@
     }
 
     function detectBlockPage(doc, responseText, status) {
-        if (status === 403) return '1001Tracklists 拒絕了請求（HTTP 403）。';
+        if (status === 403) {
+            return '1001Tracklists 拒絕自動請求並要求瀏覽器驗證（HTTP 403）；請用連結按鈕完成檢查後再返回重試。';
+        }
         if (status === 429) return '1001Tracklists 暫時限制請求頻率（HTTP 429）。';
         const pageTitle = trim(doc && doc.title).toLowerCase();
         const sample = String(responseText || '').slice(0, 200000).toLowerCase();
@@ -719,6 +993,10 @@
         ) {
             return '1001Tracklists 已限制請求頻率並要求 CAPTCHA；請用連結按鈕開啟網站完成驗證後再重試。';
         }
+        const validTracklistContent = doc && doc.querySelector(
+            '.bItm a[href*="/tracklist/"], input[id$="_cue_seconds"][value], input[name*="cue_seconds"][value]'
+        );
+        if (validTracklistContent) return '';
         const challengeNode = doc && doc.querySelector(
             '#challenge-form, #turnstile-container, .cf-turnstile, input[name="cf-turnstile-response"], ' +
             'input[name="cf_chl_opt"], input[name="bChk"]'
@@ -800,6 +1078,140 @@
         return '';
     }
 
+    function applyProviderCandidate(source, index, activate = false) {
+        const candidates = tracklistCandidates[source] || [];
+        if (!candidates.length) return false;
+        const selectedIndex = clamp(Number(index) || 0, 0, candidates.length - 1);
+        const selected = candidates[selectedIndex];
+        tracklistCandidateIndexes[source] = selectedIndex;
+        if (source === '1001') {
+            tracksFrom1001 = selected.tracks;
+            tracklistUrl1001 = selected.url;
+        } else if (source === 'mixesdb') {
+            tracksFromMixesDb = selected.tracks;
+            tracklistUrlMixesDb = selected.url;
+        } else if (source === 'trackid') {
+            tracksFromTrackId = selected.tracks;
+            tracklistUrlTrackId = selected.url;
+        }
+        if (activate || currentSource === source) setActiveSource(source);
+        else {
+            updateSourceButtons();
+            updateLinkButton();
+            if (tracklistPanel && tracklistVisible) renderTracklist(tracklistPanel);
+        }
+        return true;
+    }
+
+    function replaceProviderCandidates(source, candidates, selectedIndex = 0) {
+        tracklistCandidates[source] = normalizeCachedCandidates(candidates, source);
+        tracklistCandidateIndexes[source] = 0;
+        return applyProviderCandidate(source, selectedIndex, false);
+    }
+
+    function appendProviderCandidate(source, tracks, url) {
+        const next = normalizeCachedCandidates([
+            ...(tracklistCandidates[source] || []),
+            { tracks, url },
+        ], source);
+        const added = next.length > (tracklistCandidates[source] || []).length;
+        tracklistCandidates[source] = next;
+        if (added && next.length === 1) applyProviderCandidate(source, 0, false);
+        return added;
+    }
+
+    function resetProviderCandidates(source) {
+        tracklistCandidates[source] = [];
+        tracklistCandidateIndexes[source] = 0;
+        if (source === '1001') {
+            tracksFrom1001 = [];
+            tracklistUrl1001 = '';
+        } else if (source === 'mixesdb') {
+            tracksFromMixesDb = [];
+            tracklistUrlMixesDb = '';
+        } else if (source === 'trackid') {
+            tracksFromTrackId = [];
+            tracklistUrlTrackId = '';
+        }
+    }
+
+    function cycleTracklistCandidate(source) {
+        const candidates = tracklistCandidates[source] || [];
+        if (candidates.length <= 1) return false;
+        const index = tracklistCandidateIndexes[source] || 0;
+        if (index >= candidates.length - 1) return false;
+        applyProviderCandidate(source, index + 1, true);
+        searchStateDetail = `${source.toUpperCase()} 候選（${index + 2}/${candidates.length}）`;
+        updateStatusLight();
+        cacheCurrentTracklists(getVideoId());
+        return true;
+    }
+
+    function cacheCurrentTracklists(videoId) {
+        if (!videoId || !getAvailableRemoteSource()) return;
+        const activeRemoteSource = ['youtube', '1001', 'mixesdb', 'trackid'].includes(currentSource)
+            ? currentSource
+            : getAvailableRemoteSource();
+        tracklistCache[videoId] = {
+            savedAt: Date.now(),
+            activeSource: activeRemoteSource,
+            tracks1001: normalizeCachedTracks(tracksFrom1001),
+            tracksMixesDb: normalizeCachedTracks(tracksFromMixesDb),
+            tracksTrackId: normalizeCachedTracks(tracksFromTrackId),
+            url1001: tracklistUrl1001,
+            urlMixesDb: tracklistUrlMixesDb,
+            urlTrackId: tracklistUrlTrackId,
+            candidates1001: tracklistCandidates['1001'],
+            candidatesMixesDb: tracklistCandidates.mixesdb,
+            candidatesTrackId: tracklistCandidates.trackid,
+            candidateIndex1001: tracklistCandidateIndexes['1001'],
+            candidateIndexMixesDb: tracklistCandidateIndexes.mixesdb,
+            candidateIndexTrackId: tracklistCandidateIndexes.trackid,
+        };
+        tracklistCache = normalizeTracklistCache(tracklistCache);
+        scheduleTracklistCachePersist();
+    }
+
+    function restoreCachedTracklists(videoId) {
+        const cached = tracklistCache[videoId];
+        if (!cached) return false;
+        if (Number(cached.savedAt) <= Date.now() - TRACKLIST_CACHE_TTL_MS) {
+            delete tracklistCache[videoId];
+            scheduleTracklistCachePersist();
+            return false;
+        }
+        const restoreCandidates = (source, candidates, tracks, url, index) => {
+            const normalized = normalizeCachedCandidates(candidates, source);
+            replaceProviderCandidates(source, normalized.length ? normalized : [{ tracks, url }], index);
+        };
+        if (runtimeSettings.enable1001) {
+            restoreCandidates('1001', cached.candidates1001, cached.tracks1001, cached.url1001, cached.candidateIndex1001);
+        }
+        if (runtimeSettings.enableMixesDb) {
+            restoreCandidates('mixesdb', cached.candidatesMixesDb, cached.tracksMixesDb, cached.urlMixesDb, cached.candidateIndexMixesDb);
+        }
+        if (runtimeSettings.enableTrackId) {
+            restoreCandidates('trackid', cached.candidatesTrackId, cached.tracksTrackId, cached.urlTrackId, cached.candidateIndexTrackId);
+        }
+        const availableSource = (
+            cached.activeSource === '1001' && tracksFrom1001.length ? '1001' :
+            cached.activeSource === 'mixesdb' && tracksFromMixesDb.length ? 'mixesdb' :
+            cached.activeSource === 'trackid' && tracksFromTrackId.length ? 'trackid' :
+            getAvailableRemoteSource()
+        );
+        if (!availableSource) return false;
+        currentSource = availableSource;
+        parsedTracks = availableSource === '1001'
+            ? tracksFrom1001
+            : availableSource === 'mixesdb' ? tracksFromMixesDb : tracksFromTrackId;
+        cacheHitVideoId = videoId;
+        searchState = 'success';
+        searchStateDetail = `快取：${availableSource.toUpperCase()}（${parsedTracks.length} 首）`;
+        lastSearchTitle = getVideoTitle();
+        console.log(`[CD HUD] Restored ${parsedTracks.length} ${availableSource} tracks from local cache.`);
+        return cached.activeSource || availableSource;
+    }
+
     function setActiveSource(source) {
         if (source === 'youtube' && tracksFromYouTube.length) {
             parsedTracks = tracksFromYouTube;
@@ -843,7 +1255,7 @@
         updateTransportButtons();
     }
 
-    function fetchTracklistFrom1001(title, videoId, force = false, manual = false) {
+    function fetchTracklistFrom1001(title, videoId, force = false, manual = false, activateOnSuccess = false) {
         if (!title || !videoId) return;
         if (!runtimeSettings.enable1001) return;
         if (!force && !runtimeSettings.autoSearch1001) return;
@@ -860,9 +1272,8 @@
         lastSearchTitle = title;
         const searchToken = ++activeSearchToken;
         cancelActiveRequests();
-        tracklistUrl1001 = '';
+        resetProviderCandidates('1001');
         pending1001VerificationRequest = null;
-        tracksFrom1001 = [];
         searchState = 'searching';
         searchStateDetail = '';
         updateStatusLight();
@@ -970,9 +1381,27 @@
                     markSearchError('搜尋完成，但找不到符合的 1001Tracklists 曲目頁。');
                     return;
                 }
+                const stopAdditionalCandidateCollection = reason => {
+                    if (!tracklistCandidates['1001'].length) return false;
+                    console.warn(`[CD HUD] Stopped collecting additional 1001 candidates: ${reason}`);
+                    searchState = 'success';
+                    searchStateDetail = `1001Tracklists：${tracklistCandidates['1001'].length} 個候選`;
+                    updateStatusLight();
+                    updateLinkButton();
+                    cacheCurrentTracklists(videoId);
+                    return true;
+                };
                 const loadCandidate = candidateIndex => {
                     if (!isCurrentSearch()) return;
                     if (candidateIndex >= candidates.length) {
+                        if (tracklistCandidates['1001'].length) {
+                            searchState = 'success';
+                            searchStateDetail = `1001Tracklists：${tracklistCandidates['1001'].length} 個候選`;
+                            updateStatusLight();
+                            updateLinkButton();
+                            cacheCurrentTracklists(videoId);
+                            return;
+                        }
                         markSearchError(
                             `已嘗試 ${candidates.length} 個候選曲目頁，但都沒有可解析的時間戳。`
                         );
@@ -980,7 +1409,7 @@
                     }
 
                     const href = candidates[candidateIndex];
-                    tracklistUrl1001 = href;
+                    if (!tracklistCandidates['1001'].length) tracklistUrl1001 = href;
                     console.log(
                         `[CD HUD] Trying tracklist candidate ${candidateIndex + 1}/${candidates.length}: ${href}`
                     );
@@ -999,6 +1428,7 @@
                             const tracklistContentType = getResponseHeader(resp2, 'content-type') || 'unknown';
                             const finalTracklistUrl = resp2.finalUrl || href;
                             if (!is1001TracklistsUrl(finalTracklistUrl)) {
+                                if (stopAdditionalCandidateCollection('重新導向到非預期網站')) return;
                                 markSearchError('曲目頁被重新導向到非預期網站。');
                                 return;
                             }
@@ -1007,6 +1437,7 @@
                                     ? parseRemoteHtml(tracklistText)
                                     : null;
                                 const pageBlockReason = detectBlockPage(errorDocument, tracklistText, resp2.status);
+                                if (stopAdditionalCandidateCollection(pageBlockReason || `HTTP ${resp2.status}`)) return;
                                 if (pageBlockReason) {
                                     tracklistUrl1001 = finalTracklistUrl;
                                     pending1001VerificationRequest = { method: 'GET', url: finalTracklistUrl };
@@ -1026,16 +1457,19 @@
                                 return;
                             }
                             if (!isHtmlResponse(resp2, tracklistText)) {
+                                if (stopAdditionalCandidateCollection('回應不是 HTML')) return;
                                 markSearchError(`曲目頁回應不是 HTML（${tracklistContentType}）。`);
                                 return;
                             }
                             const tracklistDocument = parseRemoteHtml(tracklistText);
                             if (!tracklistDocument) {
+                                if (stopAdditionalCandidateCollection('無法安全解析頁面')) return;
                                 markSearchError('瀏覽器無法安全解析 1001Tracklists 曲目頁。');
                                 return;
                             }
                             const pageBlockReason = detectBlockPage(tracklistDocument, tracklistText, resp2.status);
                             if (pageBlockReason) {
+                                if (stopAdditionalCandidateCollection(pageBlockReason)) return;
                                 tracklistUrl1001 = finalTracklistUrl;
                                 pending1001VerificationRequest = { method: 'GET', url: finalTracklistUrl };
                                 markSearchError(pageBlockReason, {
@@ -1067,28 +1501,43 @@
                             const resolvedTracks = singleTrackMatch ? [singleTrackMatch] : tracks;
 
                             console.log(`[CD HUD] Loaded ${resolvedTracks.length} tracks from 1001.`);
-                            tracksFrom1001 = resolvedTracks;
-                            tracklistUrl1001 = finalTracklistUrl;
+                            const isFirstCandidate = tracklistCandidates['1001'].length === 0;
+                            appendProviderCandidate('1001', resolvedTracks, finalTracklistUrl);
                             pending1001VerificationRequest = null;
                             searchState = 'success';
-                            searchStateDetail = '';
+                            searchStateDetail = `1001Tracklists：${tracklistCandidates['1001'].length} 個候選`;
                             automaticSearchBlockedUntil = 0;
-                            if (runtimeSettings.prefer1001 || !tracksFromYouTube.length) {
+                            if (isFirstCandidate && (activateOnSuccess || runtimeSettings.prefer1001 || !tracksFromYouTube.length)) {
                                 setActiveSource('1001');
-                            } else if (currentSource === '1001') {
+                            } else if (isFirstCandidate && currentSource === '1001') {
                                 setActiveSource('1001');
                             } else {
                                 updateSourceButtons();
                             }
                             updateLinkButton();
                             updateStatusLight();
+                            cacheCurrentTracklists(videoId);
+                            scheduleCandidate(candidateIndex + 1);
                         },
                         onerror: function (err) {
                             activeTracklistRequest = null;
+                            if (tracklistCandidates['1001'].length) {
+                                console.warn('[CD HUD] Stopped collecting additional 1001 candidates after a network error.', err);
+                                searchState = 'success';
+                                searchStateDetail = `1001Tracklists：${tracklistCandidates['1001'].length} 個候選`;
+                                updateStatusLight();
+                                return;
+                            }
                             markSearchError('曲目頁網路請求失敗；請檢查連線權限或阻擋器。', err);
                         },
                         ontimeout: function () {
                             activeTracklistRequest = null;
+                            if (tracklistCandidates['1001'].length) {
+                                searchState = 'success';
+                                searchStateDetail = `1001Tracklists：${tracklistCandidates['1001'].length} 個候選`;
+                                updateStatusLight();
+                                return;
+                            }
                             markSearchError('曲目頁請求逾時。');
                         },
                     });
@@ -1118,6 +1567,7 @@
 
     async function fetchTracklistFromMixesDb(title, videoId) {
         if (!runtimeSettings.enableMixesDb || !title || !videoId) return;
+        resetProviderCandidates('mixesdb');
         searchState = 'searching';
         searchStateDetail = '正在搜尋 MixesDB…';
         updateStatusLight();
@@ -1145,6 +1595,7 @@
                 .sort((left, right) => right.score - left.score)
                 .slice(0, runtimeSettings.maxCandidates);
 
+            const matchedCandidates = [];
             for (const candidate of candidates) {
                 const detailUrl = new URL('https://www.mixesdb.com/w/api.php');
                 detailUrl.search = new URLSearchParams({
@@ -1170,17 +1621,20 @@
                 const plausibleCoverage = !duration || (lastCue <= duration + 300 && lastCue >= duration * 0.45);
                 if (!tracks.length || (!exactSource && (candidate.score < 0.55 || !plausibleCoverage))) continue;
 
-                tracksFromMixesDb = tracks;
-                tracklistUrlMixesDb = `https://www.mixesdb.com/w/${encodeURIComponent(candidate.title.replace(/ /g, '_'))}`;
-                searchState = 'success';
-                searchStateDetail = `MixesDB：${tracks.length} 首`;
-                if (!tracksFromYouTube.length && !tracksFrom1001.length) setActiveSource('mixesdb');
-                updateSourceButtons();
-                updateLinkButton();
-                updateStatusLight();
-                return;
+                matchedCandidates.push({
+                    tracks,
+                    url: `https://www.mixesdb.com/w/${encodeURIComponent(candidate.title.replace(/ /g, '_'))}`,
+                });
             }
-            throw new Error('找不到標題與錄音長度均可信的曲目頁。');
+            if (!matchedCandidates.length) throw new Error('找不到標題與錄音長度均可信的曲目頁。');
+            replaceProviderCandidates('mixesdb', matchedCandidates);
+            searchState = 'success';
+            searchStateDetail = `MixesDB：${matchedCandidates.length} 個候選`;
+            if (!tracksFromYouTube.length && !tracksFrom1001.length) setActiveSource('mixesdb');
+            updateSourceButtons();
+            updateLinkButton();
+            updateStatusLight();
+            cacheCurrentTracklists(videoId);
         } catch (error) {
             if (getVideoId() !== videoId) return;
             searchState = 'error';
@@ -1208,27 +1662,34 @@
             candidates = await loadCandidates(fallbackQuery);
         }
         if (getVideoId() !== videoId) return false;
-        const candidate = rankTrackIdMusicCandidates(exactQuery, candidates)[0];
-        if (!candidate || !candidate.slug) return false;
+        const matchedCandidates = rankTrackIdMusicCandidates(exactQuery, candidates)
+            .filter(candidate => candidate.slug)
+            .slice(0, runtimeSettings.maxCandidates)
+            .map(candidate => ({
+                tracks: [{
+                    time: 0,
+                    title: trim([candidate.artist, candidate.title].filter(Boolean).join(' - ')),
+                }],
+                url: `https://trackid.net/musictracks/${encodeURIComponent(candidate.slug)}`,
+            }));
+        if (!matchedCandidates.length) return false;
 
-        tracksFromTrackId = [{
-            time: 0,
-            title: trim([candidate.artist, candidate.title].filter(Boolean).join(' - ')),
-        }];
-        tracklistUrlTrackId = `https://trackid.net/musictracks/${encodeURIComponent(candidate.slug)}`;
+        replaceProviderCandidates('trackid', matchedCandidates);
         searchState = 'success';
-        searchStateDetail = 'TrackId.net：單曲資料匹配';
+        searchStateDetail = `TrackId.net：${matchedCandidates.length} 個單曲候選`;
         if (!tracksFromYouTube.length && !tracksFrom1001.length && !tracksFromMixesDb.length) {
             setActiveSource('trackid');
         }
         updateSourceButtons();
         updateLinkButton();
         updateStatusLight();
+        cacheCurrentTracklists(videoId);
         return true;
     }
 
     async function fetchTracklistFromTrackId(title, videoId) {
         if (!runtimeSettings.enableTrackId || !title || !videoId) return;
+        resetProviderCandidates('trackid');
         searchState = 'searching';
         searchStateDetail = '正在搜尋 TrackId.net…';
         updateStatusLight();
@@ -1268,8 +1729,7 @@
                     right.titleScore - left.titleScore ||
                     left.durationDifference - right.durationDifference
                 ));
-            const candidate = candidates[0];
-            if (!candidate || !candidate.slug) {
+            if (!candidates.some(candidate => candidate.slug)) {
                 if (isLikelySingleTrackVideo(searchTitle, duration)) {
                     const matchedMusicTrack = await fetchTrackIdMusicTrack(searchTitle, videoId);
                     if (matchedMusicTrack) return;
@@ -1278,20 +1738,33 @@
                 throw new Error('找不到影片 ID，或標題與錄音長度均可信的結果。');
             }
 
-            const detailPayload = await requestJson(`https://trackid.net/api/public/audiostreams/${encodeURIComponent(candidate.slug)}`);
-            if (getVideoId() !== videoId) return;
-            const tracks = parseTrackIdDetail(detailPayload);
-            if (!tracks.length) throw new Error('候選頁沒有可用的時間戳曲目。');
-            tracksFromTrackId = tracks;
-            tracklistUrlTrackId = `https://trackid.net/audiostreams/${encodeURIComponent(candidate.slug)}`;
+            const matchedCandidates = [];
+            for (const candidate of candidates.slice(0, runtimeSettings.maxCandidates)) {
+                if (!candidate.slug) continue;
+                try {
+                    const detailPayload = await requestJson(`https://trackid.net/api/public/audiostreams/${encodeURIComponent(candidate.slug)}`);
+                    if (getVideoId() !== videoId) return;
+                    const tracks = parseTrackIdDetail(detailPayload);
+                    if (!tracks.length) continue;
+                    matchedCandidates.push({
+                        tracks,
+                        url: `https://trackid.net/audiostreams/${encodeURIComponent(candidate.slug)}`,
+                    });
+                } catch (error) {
+                    console.warn('[CD HUD] Could not load an additional TrackId.net candidate.', error);
+                }
+            }
+            if (!matchedCandidates.length) throw new Error('候選頁沒有可用的時間戳曲目。');
+            replaceProviderCandidates('trackid', matchedCandidates);
             searchState = 'success';
-            searchStateDetail = `TrackId.net：${tracks.length} 首`;
+            searchStateDetail = `TrackId.net：${matchedCandidates.length} 個候選`;
             if (!tracksFromYouTube.length && !tracksFrom1001.length && !tracksFromMixesDb.length) {
                 setActiveSource('trackid');
             }
             updateSourceButtons();
             updateLinkButton();
             updateStatusLight();
+            cacheCurrentTracklists(videoId);
         } catch (error) {
             if (getVideoId() !== videoId) return;
             searchState = 'error';
@@ -1506,7 +1979,7 @@
                 padding: 0 42px 0 0;
                 display: flex;
                 align-items: center;
-                gap: 14px;
+                gap: 6px;
                 width: max-content;
                 min-width: 0;
                 min-height: 118px;
@@ -1539,7 +2012,7 @@
                 transition: opacity .2s ease, border-color .15s ease;
             }
             #yt-cd-hud.yt-cd-hud-dragging .hud-panel-surface { cursor: grabbing; }
-            #yt-cd-hud.resizing { cursor: nwse-resize; }
+            #yt-cd-hud.resizing { cursor: ew-resize; }
             #yt-cd-hud.ytcd-hide-disc .cd-disc-wrapper {
                 visibility: hidden;
                 pointer-events: none;
@@ -1566,7 +2039,7 @@
                 filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .5));
                 cursor: grab;
                 touch-action: none;
-                margin: 0 10px 0 0;
+                margin: 0 2px 0 0;
                 pointer-events: auto;
             }
             .cd-disc {
@@ -1672,11 +2145,24 @@
                 line-height: 1.4;
                 color: var(--hud-title);
                 max-width: none;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+                white-space: normal;
+                overflow: visible;
+                overflow-wrap: anywhere;
                 letter-spacing: .2px;
                 text-shadow: 0 1px 1px rgba(0, 0, 0, .85);
+                text-decoration: none;
+                cursor: pointer;
+                transition: color .15s ease, text-decoration-color .15s ease;
+            }
+            .hud-chapter:hover {
+                color: #fff;
+                text-decoration: underline;
+                text-decoration-color: var(--hud-focus);
+                text-underline-offset: 3px;
+            }
+            .hud-chapter:focus-visible {
+                outline: 1px solid var(--hud-focus);
+                outline-offset: 2px;
             }
             .hud-time {
                 font-size: ${DEFAULT_TIME_SIZE}px;
@@ -1750,6 +2236,10 @@
                 color: #fff;
                 border-color: var(--hud-error);
                 background: rgba(245, 101, 101, .22);
+            }
+            .hud-text-size-button {
+                font-size: 9px;
+                letter-spacing: -.4px;
             }
             .status-light {
                 width: 9px;
@@ -1831,6 +2321,19 @@
                 color: #1a202c;
                 border-color: var(--hud-primary);
                 background: var(--hud-primary);
+            }
+            .hud-source-selector .hud-tracklist-button {
+                min-width: 28px;
+                margin-left: -1px;
+                padding: 0 6px;
+                color: var(--hud-secondary);
+            }
+            .hud-source-selector .hud-tracklist-button[aria-expanded="true"] {
+                position: relative;
+                z-index: 1;
+                color: var(--hud-title);
+                border-color: var(--hud-focus);
+                background: var(--hud-user-accent-soft, rgba(99, 179, 237, .13));
             }
             .hud-status-button {
                 display: inline-flex;
@@ -1915,7 +2418,17 @@
                 outline: 1px solid var(--hud-focus);
                 outline-offset: -3px;
             }
-            .hud-resize-handle { z-index: 12; }
+            .hud-resize-handle {
+                right: 4px;
+                bottom: 4px;
+                z-index: 12;
+                width: 26px;
+                height: 26px;
+                border-top: 1px solid rgba(74, 85, 104, .72);
+                border-left: 1px solid rgba(74, 85, 104, .72);
+                background-color: rgba(15, 23, 42, .34);
+                cursor: ew-resize;
+            }
 
             .yt-tracklist-panel {
                 box-sizing: border-box;
@@ -1963,6 +2476,38 @@
                 font-weight: 600;
                 letter-spacing: .8px;
                 text-transform: uppercase;
+            }
+            .tracklist-heading {
+                display: inline-flex;
+                align-items: center;
+                min-width: 0;
+                gap: 7px;
+            }
+            .tracklist-source-link {
+                display: inline-flex;
+                align-items: center;
+                height: 18px;
+                padding: 0 5px;
+                border-left: 1px solid var(--hud-border);
+                color: var(--hud-focus);
+                font-size: 8px;
+                letter-spacing: .55px;
+                text-decoration: none;
+                cursor: pointer;
+            }
+            .tracklist-source-link:hover {
+                color: #fff;
+                text-decoration: underline;
+                text-underline-offset: 2px;
+            }
+            .tracklist-source-link:focus-visible {
+                outline: 1px solid var(--hud-focus);
+                outline-offset: 1px;
+            }
+            .tracklist-source-link.is-unavailable {
+                color: var(--hud-muted);
+                cursor: default;
+                text-decoration: none;
             }
             .tracklist-control-button {
                 width: 18px;
@@ -2039,11 +2584,15 @@
         timeEl.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
         const officialChapter = document.querySelector('.ytp-chapter-title-content');
         const chapterText = officialChapter ? trim(officialChapter.textContent) : '';
-        chapterEl.textContent = chooseHudTitle(
+        const displayedTrack = chooseHudTitle(
             currentSource,
             getCurrentTrack(video.currentTime),
             chapterText
         );
+        chapterEl.textContent = displayedTrack;
+        chapterEl.href = getGoogleTrackSearchUrl(displayedTrack);
+        chapterEl.title = `使用 Google 搜尋：${displayedTrack}`;
+        chapterEl.setAttribute('aria-label', `使用 Google 搜尋曲目：${displayedTrack}`);
         updateTracklistHighlight(video.currentTime);
         syncHudContentBounds();
     }
@@ -2317,6 +2866,7 @@
             runtimeSettings.showDisc,
             runtimeSettings.showTransport,
             runtimeSettings.enable1001,
+            hudPreferredWidth,
             player.clientWidth,
             player.clientHeight,
         ].join('|');
@@ -2338,16 +2888,23 @@
         const paddingTop = parseFloat(hudStyle.paddingTop) || 0;
         const paddingBottom = parseFloat(hudStyle.paddingBottom) || 0;
         const gap = parseFloat(hudStyle.columnGap || hudStyle.gap) || 0;
-        const scale = Math.max(0.1, Number(hudScale) || 1);
-        const maximumWidth = Math.max(1, (player.clientWidth - hud.offsetLeft) / scale);
-        const maximumHeight = Math.max(118, (player.clientHeight - hud.offsetTop) / scale);
+        let viewportMaximumWidth = Math.max(1, player.clientWidth - hud.offsetLeft);
+        const maximumHeight = Math.max(118, player.clientHeight - hud.offsetTop);
         const rightRailReserve = Math.max(paddingRight, sideSize.width + 8);
-        const infoHeight = getContentHeight(info);
+        const controlWidth = Math.max(
+            time.scrollWidth,
+            sourceActions ? Math.max(sourceActions.scrollWidth, sourceActions.offsetWidth) : 0,
+            transport ? Math.max(transport.scrollWidth, transport.offsetWidth) : 0
+        );
+        const controlHeight = Math.max(
+            time.offsetHeight + (sourceActions ? sourceActions.offsetHeight + 13 : 0),
+            sideSize.height
+        );
         const balancedDiscSize = getContentBalancedDiscSize(
             window.innerWidth,
             window.innerHeight,
             hudTitleFontSize,
-            Math.max(infoHeight, sideSize.height),
+            controlHeight,
             runtimeSettings.discScale
         );
         hud.style.setProperty('--hud-balanced-disc-size', `${balancedDiscSize}px`);
@@ -2355,21 +2912,12 @@
         disc.style.height = `${balancedDiscSize}px`;
         const discSize = getElementOuterSize(disc);
         const fixedWidth = paddingLeft + discSize.width + gap + rightRailReserve + 2;
-        const availableInfoWidth = Math.max(1, maximumWidth - fixedWidth);
-
         chapter.style.width = 'auto';
         chapter.style.maxWidth = 'none';
+        const previousWhiteSpace = chapter.style.whiteSpace;
+        chapter.style.whiteSpace = 'nowrap';
         const fullChapterWidth = Math.max(1, getTextContentWidth(chapter));
-        const requiredChapterWidth = Math.min(fullChapterWidth, availableInfoWidth);
-        chapter.style.width = `${requiredChapterWidth}px`;
-        chapter.style.maxWidth = `${requiredChapterWidth}px`;
-
-        const infoWidth = Math.max(
-            requiredChapterWidth,
-            time.scrollWidth,
-            sourceActions ? sourceActions.offsetWidth : 0,
-            transport ? transport.offsetWidth : 0
-        );
+        chapter.style.whiteSpace = previousWhiteSpace;
         const minimum = calculateHudMinimumSize({
             paddingLeft,
             paddingRight,
@@ -2378,21 +2926,70 @@
             discWidth: discSize.width,
             discHeight: discSize.height,
             gap,
-            infoWidth,
+            infoWidth: controlWidth,
+            infoHeight: controlHeight,
+            sideWidth: sideSize.width,
+            sideHeight: sideSize.height,
+        });
+        const natural = calculateHudMinimumSize({
+            paddingLeft,
+            paddingRight,
+            paddingTop,
+            paddingBottom,
+            discWidth: discSize.width,
+            discHeight: discSize.height,
+            gap,
+            infoWidth: Math.max(fullChapterWidth, controlWidth),
+            infoHeight: controlHeight,
+            sideWidth: sideSize.width,
+            sideHeight: sideSize.height,
+        });
+        if (minimum.width <= player.clientWidth && hud.offsetLeft + minimum.width > player.clientWidth) {
+            const correctedLeft = Math.max(0, player.clientWidth - minimum.width);
+            hud.style.left = `${Math.round(correctedLeft)}px`;
+            viewportMaximumWidth = Math.max(1, player.clientWidth - correctedLeft);
+        }
+        const minimumWidth = Math.min(minimum.width, viewportMaximumWidth);
+        const contentMaximumWidth = Math.max(
+            minimumWidth,
+            Math.min(natural.width, viewportMaximumWidth)
+        );
+        const targetWidth = resolveHudWidth(
+            natural.width,
+            hudPreferredWidth,
+            minimumWidth,
+            contentMaximumWidth
+        );
+        const availableInfoWidth = Math.max(1, targetWidth - fixedWidth);
+        const requiredChapterWidth = Math.min(fullChapterWidth, availableInfoWidth);
+        chapter.style.width = `${requiredChapterWidth}px`;
+        chapter.style.maxWidth = `${requiredChapterWidth}px`;
+
+        const infoHeight = getContentHeight(info);
+        const resolvedHeight = calculateHudMinimumSize({
+            paddingLeft,
+            paddingRight,
+            paddingTop,
+            paddingBottom,
+            discWidth: discSize.width,
+            discHeight: discSize.height,
+            gap,
+            infoWidth: Math.max(requiredChapterWidth, controlWidth),
             infoHeight,
             sideWidth: sideSize.width,
             sideHeight: sideSize.height,
         });
-        minimum.width = Math.min(minimum.width, maximumWidth);
-        minimum.height = Math.min(minimum.height, maximumHeight);
-        hud.style.minWidth = `${minimum.width}px`;
-        hud.style.maxWidth = `${minimum.width}px`;
-        hud.style.minHeight = `${minimum.height}px`;
-        hud.style.maxHeight = `${minimum.height}px`;
-        hud.style.width = `${minimum.width}px`;
-        hud.style.height = `${minimum.height}px`;
+        const targetHeight = Math.min(resolvedHeight.height, maximumHeight);
+        hud.style.minWidth = `${minimumWidth}px`;
+        hud.style.maxWidth = `${contentMaximumWidth}px`;
+        hud.style.minHeight = `${targetHeight}px`;
+        hud.style.maxHeight = `${targetHeight}px`;
+        hud.style.width = `${targetWidth}px`;
+        hud.style.height = `${targetHeight}px`;
+        hud._ytCdMinimumWidth = minimumWidth;
+        hud._ytCdMaximumWidth = contentMaximumWidth;
         hud._ytCdContentSignature = signature;
-        return minimum;
+        return { width: targetWidth, height: targetHeight, minimumWidth, maximumWidth: contentMaximumWidth };
     }
 
     function applySizing() {
@@ -2403,19 +3000,17 @@
         syncHudContentBounds(true);
     }
 
-    function updateScale(scaleFactor) {
-        const newScale = clamp(hudScale * scaleFactor, MIN_SCALE, MAX_SCALE);
-        if (newScale === hudScale) return;
-        hudScale = newScale;
-        const hud = document.getElementById('yt-cd-hud');
-        if (hud) {
-            hud.style.transform = `scale(${hudScale})`;
-        }
+    function adjustHudTextSize(delta) {
+        const direction = Math.sign(Number(delta) || 0);
+        if (!direction) return;
+        hudTitleFontSize = clamp(hudTitleFontSize + direction, 9, 28);
+        hudTimeFontSize = clamp(hudTimeFontSize + direction, 10, 29);
+        applySizing();
     }
 
     function isControlTarget(target, hud) {
         if (!target || typeof target.closest !== 'function') return false;
-        const control = target.closest('.hud-control-button, .status-light, .cd-disc-wrapper, .resize-handle');
+        const control = target.closest('.hud-control-button, .status-light, .hud-chapter, .cd-disc-wrapper, .resize-handle');
         return Boolean(control && hud.contains(control));
     }
 
@@ -2439,8 +3034,8 @@
             const rect = player.getBoundingClientRect();
             let left = dragState.startLeft + clientX - dragState.startX;
             let top = dragState.startTop + clientY - dragState.startY;
-            const maxLeft = Math.max(0, rect.width - hud.offsetWidth * hudScale);
-            const maxTop = Math.max(0, rect.height - hud.offsetHeight * hudScale);
+            const maxLeft = Math.max(0, rect.width - hud.offsetWidth);
+            const maxTop = Math.max(0, rect.height - hud.offsetHeight);
             left = clamp(left, 0, maxLeft);
             top = clamp(top, 0, maxTop);
             hud.style.left = Math.round(left) + 'px';
@@ -2553,16 +3148,16 @@
         handle.addEventListener('lostpointercapture', finishResize, true);
     }
 
-    function bindHudScaling(hud, container) {
-        if (!hud || !container || hud._ytCdScaleBound) return;
+    function bindHudWidthResizing(hud, container) {
+        if (!hud || !container || hud._ytCdWidthResizeBound) return;
         const handle = Array.from(hud.children).find(child => child.classList.contains('hud-resize-handle'));
         if (!handle) return;
-        hud._ytCdScaleBound = true;
-        let scaleState = null;
+        hud._ytCdWidthResizeBound = true;
+        let resizeState = null;
 
-        const finishScaling = event => {
-            if (!scaleState || (event && event.pointerId !== scaleState.pointerId)) return;
-            scaleState = null;
+        const finishResize = event => {
+            if (!resizeState || (event && event.pointerId !== resizeState.pointerId)) return;
+            resizeState = null;
             hud.classList.remove('resizing');
         };
 
@@ -2571,44 +3166,51 @@
             event.preventDefault();
             event.stopPropagation();
             syncHudContentBounds(true);
-            scaleState = {
+            resizeState = {
                 pointerId: event.pointerId,
                 startX: event.clientX,
-                startY: event.clientY,
-                startScale: hudScale,
                 startWidth: Math.max(1, hud.offsetWidth),
-                startHeight: Math.max(1, hud.offsetHeight),
             };
             hud.classList.add('resizing');
             if (typeof handle.setPointerCapture === 'function') handle.setPointerCapture(event.pointerId);
         }, true);
 
         handle.addEventListener('pointermove', event => {
-            if (!scaleState || event.pointerId !== scaleState.pointerId) return;
+            if (!resizeState || event.pointerId !== resizeState.pointerId) return;
             event.preventDefault();
             event.stopPropagation();
-            const widthDelta = (event.clientX - scaleState.startX) / scaleState.startWidth;
-            const heightDelta = (event.clientY - scaleState.startY) / scaleState.startHeight;
-            const requestedScale = scaleState.startScale * (1 + (widthDelta + heightDelta) / 2);
-            const availableWidth = Math.max(1, container.clientWidth - hud.offsetLeft);
-            const availableHeight = Math.max(1, container.clientHeight - hud.offsetTop);
-            const boundaryScale = Math.min(
-                MAX_SCALE,
-                availableWidth / scaleState.startWidth,
-                availableHeight / scaleState.startHeight
+            const minimumWidth = Math.max(1, Number(hud._ytCdMinimumWidth) || 1);
+            const maximumWidth = Math.max(
+                minimumWidth,
+                Math.min(Number(hud._ytCdMaximumWidth) || Infinity, container.clientWidth - hud.offsetLeft)
             );
-            hudScale = clamp(requestedScale, MIN_SCALE, Math.max(MIN_SCALE, boundaryScale));
-            hud.style.transform = `scale(${hudScale})`;
+            hudPreferredWidth = clamp(
+                resizeState.startWidth + event.clientX - resizeState.startX,
+                minimumWidth,
+                maximumWidth
+            );
+            syncHudContentBounds(true);
         }, true);
 
-        handle.addEventListener('pointerup', finishScaling, true);
-        handle.addEventListener('pointercancel', finishScaling, true);
-        handle.addEventListener('lostpointercapture', finishScaling, true);
+        handle.addEventListener('pointerup', finishResize, true);
+        handle.addEventListener('pointercancel', finishResize, true);
+        handle.addEventListener('lostpointercapture', finishResize, true);
         handle.addEventListener('keydown', event => {
-            if (!['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(event.key)) return;
+            if (!['ArrowRight', 'ArrowLeft', 'Home'].includes(event.key)) return;
             event.preventDefault();
             event.stopPropagation();
-            updateScale(['ArrowUp', 'ArrowRight'].includes(event.key) ? SCALE_STEP : 1 / SCALE_STEP);
+            if (event.key === 'Home') {
+                hudPreferredWidth = null;
+            } else {
+                const minimumWidth = Math.max(1, Number(hud._ytCdMinimumWidth) || 1);
+                const maximumWidth = Math.max(minimumWidth, Number(hud._ytCdMaximumWidth) || minimumWidth);
+                hudPreferredWidth = clamp(
+                    (Number(hudPreferredWidth) || hud.offsetWidth) + (event.key === 'ArrowRight' ? 20 : -20),
+                    minimumWidth,
+                    maximumWidth
+                );
+            }
+            syncHudContentBounds(true);
         });
     }
 
@@ -2675,7 +3277,7 @@
         };
 
         element.addEventListener('mousedown', (event) => {
-            if (!event.target.closest('.tracklist-header') || event.target.closest('.tracklist-control-button')) return;
+            if (!event.target.closest('.tracklist-header') || event.target.closest('.tracklist-header-action')) return;
             if (event.button !== 0) return;
             event.preventDefault();
             event.stopPropagation();
@@ -2683,7 +3285,7 @@
         }, true);
 
         element.addEventListener('touchstart', (event) => {
-            if (!event.target.closest('.tracklist-header') || event.target.closest('.tracklist-control-button')) return;
+            if (!event.target.closest('.tracklist-header') || event.target.closest('.tracklist-header-action')) return;
             if (event.touches.length === 1) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -2693,7 +3295,7 @@
         }, true);
 
         element.addEventListener('click', (event) => {
-            if (!event.target.closest('.tracklist-item, .tracklist-control-button, .resize-handle')) {
+            if (!event.target.closest('.tracklist-item, .tracklist-header-action, .resize-handle')) {
                 event.preventDefault();
                 event.stopPropagation();
             }
@@ -2788,6 +3390,7 @@
         }
         mixesDbLinkBtn.style.display = tracklistUrlMixesDb && tracksFromMixesDb.length ? 'flex' : 'none';
         trackIdLinkBtn.style.display = tracklistUrlTrackId && tracksFromTrackId.length ? 'flex' : 'none';
+        if (tracklistPanel) updateTracklistSourceLink(tracklistPanel);
     }
 
     function updateTransportButtons() {
@@ -2805,18 +3408,20 @@
         updateHud();
     }
 
-    function retrySearch() {
+    function retrySearch(activateOnSuccess = false) {
+        if (!activateOnSuccess) clear1001VerificationReturn();
         const title = getVideoTitle();
         const id = getVideoId();
         if (title && id) {
             console.log('[CD HUD] Manual retry triggered.');
-            fetchTracklistFrom1001(title, id, true, true);
+            fetchTracklistFrom1001(title, id, true, true, activateOnSuccess);
         } else {
             console.warn('[CD HUD] Cannot retry: missing title or video ID.');
         }
     }
 
     function renderTracklist(container) {
+        updateTracklistSourceLink(container);
         const list = container.querySelector('.tracklist-list') || container;
         list.replaceChildren();
         if (!parsedTracks.length) {
@@ -2849,6 +3454,34 @@
             }, true);
             list.appendChild(item);
         });
+    }
+
+    function updateTracklistSourceLink(container) {
+        const sourceLink = container && container.querySelector('.tracklist-source-link');
+        if (!sourceLink) return;
+        const sourcePage = getTracklistSourcePage(currentSource, getVideoId(), {
+            oneThousand: tracklistUrl1001,
+            mixesDb: tracklistUrlMixesDb,
+            trackId: tracklistUrlTrackId,
+        });
+        const action = getCandidateActionState(
+            tracklistCandidates[currentSource],
+            tracklistCandidateIndexes[currentSource]
+        );
+        sourceLink.textContent = `${sourcePage.label}${action.suffix}${sourcePage.url && action.willOpen ? ' ↗' : ''}`;
+        sourceLink.classList.toggle('is-unavailable', !sourcePage.url);
+        sourceLink.setAttribute('aria-label', sourcePage.url
+            ? action.count > 1 && !action.willOpen
+                ? `切換至 ${sourcePage.label} 候選 ${action.index + 2}，共 ${action.count} 個候選`
+                : `開啟 ${sourcePage.label} 曲目來源頁面`
+            : `${sourcePage.label} 尚無可用來源頁面`);
+        if (sourcePage.url) {
+            sourceLink.href = sourcePage.url;
+            sourceLink.removeAttribute('aria-disabled');
+        } else {
+            sourceLink.removeAttribute('href');
+            sourceLink.setAttribute('aria-disabled', 'true');
+        }
     }
 
     function updateTracklistHighlight(currentTime) {
@@ -2892,8 +3525,24 @@
 
             const header = document.createElement('div');
             header.className = 'tracklist-header';
+            const heading = document.createElement('div');
+            heading.className = 'tracklist-heading';
             const headerTitle = document.createElement('span');
+            headerTitle.className = 'tracklist-heading-title';
             headerTitle.textContent = 'TRACKLIST';
+            const sourceLink = document.createElement('a');
+            sourceLink.className = 'tracklist-source-link tracklist-header-action';
+            sourceLink.target = '_blank';
+            sourceLink.rel = 'noopener noreferrer';
+            sourceLink.addEventListener('mousedown', event => event.stopPropagation(), true);
+            sourceLink.addEventListener('touchstart', event => event.stopPropagation(), true);
+            sourceLink.addEventListener('click', event => {
+                if (!cycleTracklistCandidate(currentSource)) return;
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            heading.appendChild(headerTitle);
+            heading.appendChild(sourceLink);
             const closeButton = createControlButton('×', '關閉曲目清單', () => {
                 tracklistVisible = false;
                 panel.style.display = 'none';
@@ -2902,8 +3551,8 @@
                     tracklistBtn.setAttribute('aria-expanded', 'false');
                 }
             });
-            closeButton.classList.add('tracklist-control-button');
-            header.appendChild(headerTitle);
+            closeButton.classList.add('tracklist-control-button', 'tracklist-header-action');
+            header.appendChild(heading);
             header.appendChild(closeButton);
 
             const list = document.createElement('div');
@@ -2950,10 +3599,14 @@
 
             const info = document.createElement('div');
             info.className = 'hud-info';
-            const chapter = document.createElement('div');
+            const chapter = document.createElement('a');
             chapter.className = 'hud-chapter';
             chapter.id = 'hud-chapter';
             chapter.textContent = 'Album Mode';
+            chapter.href = getGoogleTrackSearchUrl(chapter.textContent);
+            chapter.target = '_blank';
+            chapter.rel = 'noopener noreferrer';
+            chapter.title = '使用 Google 搜尋目前曲目';
             const time = document.createElement('div');
             time.className = 'hud-time';
             time.id = 'hud-time';
@@ -3025,7 +3678,7 @@
             });
             linkBtn = createControlButton('OPEN 1001 ↗', '開啟 1001Tracklists 頁面', () => {
                 set1001MenuExpanded(false);
-                open1001TracklistsPage();
+                void open1001TracklistsPage();
             });
             linkBtn.classList.add('hud-1001-link');
             linkBtn.style.display = 'none';
@@ -3061,6 +3714,10 @@
             oneThousandMenu.appendChild(trackIdSearchBtn);
             oneThousandMenu.appendChild(trackIdLinkBtn);
             sourceSelector.appendChild(oneThousandMenu);
+            tracklistBtn = createControlButton('≡', '顯示／隱藏曲目清單', toggleTracklist);
+            tracklistBtn.classList.add('hud-tracklist-button');
+            tracklistBtn.setAttribute('aria-expanded', 'false');
+            sourceSelector.appendChild(tracklistBtn);
             sourceActions.appendChild(sourceSelector);
 
             info.appendChild(sourceActions);
@@ -3086,34 +3743,33 @@
             });
             closeBtn.classList.add('hud-close-button');
 
-            const textDecreaseBtn = createControlButton('T−', '縮小字級', () => {
-                hudTitleFontSize = clamp(hudTitleFontSize - 1, 9, 28);
-                hudTimeFontSize = clamp(hudTimeFontSize - 1, 10, 29);
-                applySizing();
-            });
-            textDecreaseBtn.classList.add('hud-text-size-button');
-
-            const textIncreaseBtn = createControlButton('T+', '放大字級', () => {
-                hudTitleFontSize = clamp(hudTitleFontSize + 1, 9, 28);
-                hudTimeFontSize = clamp(hudTimeFontSize + 1, 10, 29);
-                applySizing();
-            });
-            textIncreaseBtn.classList.add('hud-text-size-button');
-
-            tracklistBtn = createControlButton('≡', '顯示／隱藏曲目清單', toggleTracklist);
-            tracklistBtn.classList.add('hud-tracklist-button');
-            tracklistBtn.setAttribute('aria-expanded', 'false');
+            const textSizeBtn = createControlButton(
+                'T±',
+                '左鍵或 Enter 放大字級；右鍵縮小；方向鍵可增減',
+                () => adjustHudTextSize(1)
+            );
+            textSizeBtn.classList.add('hud-text-size-button');
+            textSizeBtn.setAttribute('aria-keyshortcuts', 'ArrowUp ArrowRight ArrowDown ArrowLeft');
+            textSizeBtn.addEventListener('contextmenu', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                adjustHudTextSize(-1);
+            }, true);
+            textSizeBtn.addEventListener('keydown', event => {
+                if (!['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(event.key)) return;
+                event.preventDefault();
+                event.stopPropagation();
+                adjustHudTextSize(['ArrowUp', 'ArrowRight'].includes(event.key) ? 1 : -1);
+            }, true);
 
             sideControls.appendChild(closeBtn);
-            sideControls.appendChild(textDecreaseBtn);
-            sideControls.appendChild(textIncreaseBtn);
-            sideControls.appendChild(tracklistBtn);
+            sideControls.appendChild(textSizeBtn);
 
             const resizeHandle = document.createElement('button');
             resizeHandle.type = 'button';
             resizeHandle.className = 'resize-handle hud-resize-handle';
-            resizeHandle.setAttribute('aria-label', '拖曳調整 HUD 大小');
-            resizeHandle.title = '拖曳調整 HUD 大小';
+            resizeHandle.setAttribute('aria-label', '拖曳或使用左右方向鍵調整 HUD 寬度；Home 恢復自動寬度');
+            resizeHandle.title = '拖曳調整 HUD 寬度；Home 恢復自動寬度';
 
             hud.appendChild(panelSurface);
             hud.appendChild(wrapper);
@@ -3122,15 +3778,8 @@
             hud.appendChild(resizeHandle);
             player.appendChild(hud);
 
-            hud.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const delta = e.deltaY > 0 ? 1 / SCALE_STEP : SCALE_STEP;
-                updateScale(delta);
-            }, { passive: false });
-
             bindHudDragging(hud, player);
-            bindHudScaling(hud, player);
+            bindHudWidthResizing(hud, player);
             applySizing();
         } else if (hud.parentNode !== player) {
             player.appendChild(hud);
@@ -3177,27 +3826,34 @@
 
         const videoId = getVideoId();
         const title = getVideoTitle();
+        let restoredCacheSource = '';
 
         if (videoId && videoId !== lastVideoIdFor1001) {
             activeSearchToken++;
             cancelActiveRequests();
             tracksFromYouTube = [];
-            tracksFrom1001 = [];
-            tracksFromMixesDb = [];
-            tracksFromTrackId = [];
+            resetProviderCandidates('1001');
+            resetProviderCandidates('mixesdb');
+            resetProviderCandidates('trackid');
             parsedTracks = [];
             currentSource = 'none';
             searchState = 'idle';
             searchStateDetail = '';
-            tracklistUrl1001 = '';
             pending1001VerificationRequest = null;
-            tracklistUrlMixesDb = '';
-            tracklistUrlTrackId = '';
+            clear1001VerificationReturn();
             lastVideoIdFor1001 = videoId;
             lastSearchTitle = '';
+            cacheHitVideoId = '';
+            restoredCacheSource = restoreCachedTracklists(videoId);
         }
 
         parseDescriptionTracks();
+        if (restoredCacheSource === 'youtube' && tracksFromYouTube.length) {
+            setActiveSource('youtube');
+        }
+        if (restoredCacheSource) {
+            searchStateDetail = `快取：${currentSource.toUpperCase()}（${parsedTracks.length} 首）`;
+        }
 
         if (runtimeSettings.enable1001 && runtimeSettings.autoSearch1001 && searchState === 'idle' && title && videoId) {
             fetchTracklistFrom1001(title, videoId);
@@ -3225,6 +3881,7 @@
             if (
                 runtimeSettings.enable1001 &&
                 runtimeSettings.autoSearch1001 &&
+                cacheHitVideoId !== videoId &&
                 refreshedTitle &&
                 refreshedTitle !== lastSearchTitle
             ) {
@@ -3265,6 +3922,7 @@
     function cleanup() {
         activeSearchToken++;
         cancelActiveRequests();
+        clear1001VerificationReturn();
         if (stopDiscScrubbing) stopDiscScrubbing(false);
         if (initTimer) {
             clearInterval(initTimer);
@@ -3272,7 +3930,14 @@
         }
         metadataRefreshTimers.forEach(timer => clearTimeout(timer));
         metadataRefreshTimers = [];
+        if (cachePersistTimer !== null) {
+            clearTimeout(cachePersistTimer);
+            cachePersistTimer = null;
+            void persistTracklistCache();
+        }
         window.removeEventListener('resize', applySizing, false);
+        window.removeEventListener('focus', handle1001VerificationReturn, false);
+        document.removeEventListener('visibilitychange', handle1001VerificationReturn, false);
         if (currentVideo) {
             currentVideo.removeEventListener('timeupdate', updateHud);
             currentVideo.removeEventListener('durationchange', updateHud);
@@ -3292,10 +3957,14 @@
             getAdjacentTrackTime,
             getBalancedDiscSize,
             getContentBalancedDiscSize,
+            getGoogleTrackSearchUrl,
+            getCandidateActionState,
+            getTracklistSourcePage,
             getTrackIdMusicFallbackQuery,
             isSuccessfulHttpStatus,
             isLikelySingleTrackVideo,
             normalizeSearchTitle,
+            normalizeTracklistCache,
             normalizeAngleDelta,
             parseRemoteHtml,
             parseSearchResultDuration,
@@ -3305,16 +3974,21 @@
             parseTimestampToSeconds,
             parseTracklistDocument,
             rankTrackIdMusicCandidates,
+            resolveHudWidth,
             selectSingleTrackMatch,
+            shouldRetry1001AfterVerificationReturn,
         };
         return;
     }
 
     async function boot() {
         await prepareExtensionSettings();
+        await loadTracklistCache();
         document.addEventListener('yt-navigate-finish', scheduleInitialization, false);
         window.addEventListener('load', scheduleInitialization, false);
         window.addEventListener('resize', applySizing, false);
+        window.addEventListener('focus', handle1001VerificationReturn, false);
+        document.addEventListener('visibilitychange', handle1001VerificationReturn, false);
         window.addEventListener('pagehide', cleanup, { once: true });
         scheduleInitialization();
     }

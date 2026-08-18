@@ -46,10 +46,14 @@ const {
   getAdjacentTrackTime,
   getBalancedDiscSize,
   getContentBalancedDiscSize,
+  getGoogleTrackSearchUrl,
+  getCandidateActionState,
+  getTracklistSourcePage,
   getTrackIdMusicFallbackQuery,
   isSuccessfulHttpStatus,
   isLikelySingleTrackVideo,
   normalizeSearchTitle,
+  normalizeTracklistCache,
   normalizeAngleDelta,
   parseRemoteHtml,
   parseSearchResultDuration,
@@ -58,9 +62,120 @@ const {
   parseTimestampToSeconds,
   parseTracklistDocument,
   rankTrackIdMusicCandidates,
+  resolveHudWidth,
   selectSingleTrackMatch,
+  shouldRetry1001AfterVerificationReturn,
   submit1001SearchVerification,
 } = sandbox.__YT_CD_HUD_TEST_EXPORTS__;
+
+test('builds an encoded Google search URL for the displayed track', () => {
+  assert.equal(
+    getGoogleTrackSearchUrl('Tiësto & KSHMR - Secrets (Original Mix)'),
+    'https://www.google.com/search?q=Ti%C3%ABsto%20%26%20KSHMR%20-%20Secrets%20(Original%20Mix)',
+  );
+  assert.equal(getGoogleTrackSearchUrl(''), 'https://www.google.com/');
+});
+
+test('maps each tracklist system to its source-site abbreviation and page', () => {
+  assert.deepEqual(JSON.parse(JSON.stringify(getTracklistSourcePage('youtube', 'AhlwTljZafo'))), {
+    label: 'YT',
+    url: 'https://www.youtube.com/watch?v=AhlwTljZafo',
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(getTracklistSourcePage('1001', '', {
+    oneThousand: 'https://www.1001tracklists.com/tracklist/example',
+  }))), {
+    label: '1001',
+    url: 'https://www.1001tracklists.com/tracklist/example',
+  });
+  assert.equal(getTracklistSourcePage('mixesdb', '', { mixesDb: 'https://www.mixesdb.com/w/Test' }).label, 'MIXESDB');
+  assert.equal(getTracklistSourcePage('trackid', '', { trackId: 'https://trackid.net/audiostreams/test' }).label, 'TRACKID');
+});
+
+test('cycles multiple provider candidates before opening the selected source page', () => {
+  const candidates = [{}, {}, {}];
+  assert.deepEqual(JSON.parse(JSON.stringify(getCandidateActionState(candidates, 0))), {
+    count: 3,
+    index: 0,
+    suffix: ' (1)',
+    willOpen: false,
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(getCandidateActionState(candidates, 1))), {
+    count: 3,
+    index: 1,
+    suffix: ' (2)',
+    willOpen: false,
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(getCandidateActionState(candidates, 2))), {
+    count: 3,
+    index: 2,
+    suffix: ' (3)',
+    willOpen: true,
+  });
+  assert.equal(getCandidateActionState([{}], 0).suffix, '');
+  assert.equal(getCandidateActionState([{}], 0).willOpen, true);
+});
+
+test('keeps user HUD width between the button floor and player boundary', () => {
+  assert.equal(resolveHudWidth(420, NaN, 300, 800), 420);
+  assert.equal(resolveHudWidth(420, 240, 300, 800), 300);
+  assert.equal(resolveHudWidth(420, 560, 300, 800), 560);
+  assert.equal(resolveHudWidth(420, 900, 300, 800), 800);
+});
+
+test('keeps only bounded, recent, parsed tracklist cache entries', () => {
+  const now = Date.now();
+  const cache = normalizeTracklistCache({
+    AhlwTljZafo: {
+      savedAt: now - 1000,
+      activeSource: '1001',
+      tracks1001: [{ time: 0, title: 'Artist - Track' }, { time: -1, title: 'invalid' }],
+      url1001: 'https://www.1001tracklists.com/tracklist/example',
+      candidates1001: [
+        { tracks: [{ time: 0, title: 'Candidate 1' }], url: 'https://www.1001tracklists.com/tracklist/one' },
+        { tracks: [{ time: 10, title: 'Candidate 2' }], url: 'https://www.1001tracklists.com/tracklist/two' },
+      ],
+      candidateIndex1001: 1,
+      urlMixesDb: 'https://evil.example/cache',
+    },
+    expired01: {
+      savedAt: now - 7 * 60 * 60 * 1000,
+      tracks1001: [{ time: 0, title: 'Expired' }],
+    },
+    empty001: {
+      savedAt: now,
+      tracks1001: [{ time: -1, title: '' }],
+    },
+  }, now);
+
+  assert.deepEqual(Object.keys(cache), ['AhlwTljZafo']);
+  assert.deepEqual(JSON.parse(JSON.stringify(cache.AhlwTljZafo.tracks1001)), []);
+  assert.equal(cache.AhlwTljZafo.url1001, 'https://www.1001tracklists.com/tracklist/example');
+  assert.equal(cache.AhlwTljZafo.urlMixesDb, '');
+  assert.equal(cache.AhlwTljZafo.candidates1001.length, 2);
+  assert.equal(cache.AhlwTljZafo.candidateIndex1001, 1);
+
+  const manyTracks = count => Array.from({ length: count }, (_, index) => ({
+    time: index * 10,
+    title: `Track ${index}`,
+  }));
+  const aggregateBound = normalizeTracklistCache({
+    bounded1: {
+      savedAt: now,
+      candidatesTrackId: [
+        { tracks: manyTracks(200), url: 'https://trackid.net/audiostreams/one' },
+        { tracks: manyTracks(200), url: 'https://trackid.net/audiostreams/two' },
+      ],
+    },
+  }, now).bounded1;
+  assert.equal(aggregateBound.candidatesTrackId.reduce((sum, candidate) => sum + candidate.tracks.length, 0), 300);
+  assert.equal(aggregateBound.tracksTrackId.length, 0);
+
+  const oversized = Object.fromEntries(Array.from({ length: 35 }, (_, index) => [
+    `video_${String(index).padStart(2, '0')}`,
+    { savedAt: now - index, tracksTrackId: [{ time: 0, title: `Track ${index}` }] },
+  ]));
+  assert.equal(Object.keys(normalizeTracklistCache(oversized, now)).length, 30);
+});
 
 const trackIdMusicFixtures = [
   { artist: 'Dosem & Gouryella', title: 'Tenshi (Extended Mix)', slug: 'dosem-gouryella-tenshi-extended-mix' },
@@ -180,6 +295,30 @@ test('detects the current 1001Tracklists JavaScript Turnstile forwarding page', 
   );
 
   assert.match(message, /瀏覽器驗證/);
+});
+
+test('does not mistake rendered 1001 results with generic challenge scripts for a block page', () => {
+  const doc = {
+    title: '1001Tracklists search results',
+    querySelector: selector => selector.includes('.bItm a[href*="/tracklist/"]') ? {} : null,
+  };
+  const message = detectBlockPage(
+    doc,
+    '<script>function onTurnstileLoad() { turnstile.render("#turnstile-container") }</script>',
+    200,
+  );
+
+  assert.equal(message, '');
+});
+
+test('treats HTTP 403 as verification while requiring challenge evidence for HTTP 503', () => {
+  const emptyDoc = { title: 'Service unavailable', querySelector: () => null };
+  assert.match(detectBlockPage(emptyDoc, '', 403), /瀏覽器驗證/);
+  assert.equal(detectBlockPage(emptyDoc, '<html>Maintenance</html>', 503), '');
+  assert.match(
+    detectBlockPage(emptyDoc, '<div id="turnstile-container">Please wait, you will be forwarded</div>', 503),
+    /瀏覽器驗證/,
+  );
 });
 
 test('maps clockwise disc motion forward and unwraps the angle boundary', () => {
@@ -310,6 +449,42 @@ test('ranks the closest tracklist result ahead of generic results', () => {
 
   const candidates = collectTracklistCandidates(doc, 'Hardwell Tomorrowland 2026');
   assert.match(candidates[0], /hardwell-tomorrowland-2026/);
+  assert.equal(candidates.some(candidate => candidate.includes('another-artist')), false);
+});
+
+test('rejects 1001 candidates with unrelated titles or materially different durations', () => {
+  const resultRow = playTime => ({
+    querySelector(selector) {
+      if (selector === '[title="play time"]') return fakeElement({ textContent: playTime });
+      return null;
+    },
+  });
+  const links = [
+    fakeLink('/tracklist/good/hardwell-tomorrowland.html', 'Hardwell Tomorrowland', resultRow('1h 2m')),
+    fakeLink('/tracklist/wrong/unrelated-artist.html', 'Unrelated Artist', resultRow('1h 2m')),
+    fakeLink('/tracklist/long/hardwell-tomorrowland.html', 'Hardwell Tomorrowland', resultRow('3h')),
+  ];
+  const candidates = collectTracklistCandidates(
+    { querySelectorAll: () => links },
+    'Hardwell Tomorrowland',
+    3600,
+  );
+  assert.equal(candidates.length, 1);
+  assert.match(candidates[0], /\/good\//);
+});
+
+test('rejects weak one-token 1001 matches when duration evidence is unavailable', () => {
+  const links = [
+    fakeLink('/tracklist/good/armin-asot-utrecht.html', 'Armin ASOT Utrecht'),
+    fakeLink('/tracklist/weak/armin-generic.html', 'Armin Festival Mix'),
+  ];
+  const candidates = collectTracklistCandidates(
+    { querySelectorAll: () => links },
+    'Armin ASOT Utrecht 2026',
+    7200,
+  );
+  assert.equal(candidates.length, 1);
+  assert.match(candidates[0], /\/good\//);
 });
 
 test('parses compact 1001Tracklists search-result durations', () => {
@@ -403,6 +578,30 @@ test('replays a blocked 1001 search as the original POST in a new tab', () => {
   );
 });
 
+test('carries an opaque extension bridge token in the verification result fragment', () => {
+  let submittedForm = null;
+  const popupDocument = {
+    body: { appendChild(element) { submittedForm = element; } },
+    createElement(tagName) {
+      if (tagName === 'form') return { appendChild() {}, submit() { this.submitted = true; } };
+      return {};
+    },
+  };
+  const popup = { document: popupDocument, opener: {} };
+  const replayed = submit1001SearchVerification({
+    method: 'POST',
+    url: 'https://www.1001tracklists.com/search/result.php',
+    fields: { main_search: 'test', search_selection: '9' },
+  }, () => popup, '12345678-1234-1234-1234-123456789abc');
+
+  assert.equal(replayed, true);
+  assert.equal(
+    submittedForm.action,
+    'https://www.1001tracklists.com/search/result.php#yt-cd-hud-session=12345678-1234-1234-1234-123456789abc',
+  );
+  assert.equal(submittedForm.submitted, true);
+});
+
 test('refuses to replay a verification POST outside the 1001 search endpoint', () => {
   const openWindow = () => {
     throw new Error('must not open');
@@ -413,6 +612,13 @@ test('refuses to replay a verification POST outside the 1001 search endpoint', (
     url: 'https://example.com/search/result.php',
     fields: { main_search: 'test' },
   }, openWindow), false);
+});
+
+test('retries only after the verified tab has returned visibly and after the focus guard', () => {
+  assert.equal(shouldRetry1001AfterVerificationReturn(true, 'visible', 500), true);
+  assert.equal(shouldRetry1001AfterVerificationReturn(true, 'hidden', 5000), false);
+  assert.equal(shouldRetry1001AfterVerificationReturn(true, 'visible', 499), false);
+  assert.equal(shouldRetry1001AfterVerificationReturn(false, 'visible', 5000), false);
 });
 
 test('prefers the inert parser when Chrome exposes its sanitizing parser', () => {

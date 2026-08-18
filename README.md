@@ -1,6 +1,10 @@
 # YouTube CD HUD
 
-![Vinyl Sentinel, the YouTube CD HUD mascot, in a clean dark audio studio](docs/assets/readme/youtube-cd-hud-mascot-banner-v3.png)
+![Cue Fox comparing three abstract tracklist-provider signals beside a vinyl cue scanner](docs/assets/readme/youtube-cd-hud-cue-fox-provider-banner-v1.png)
+
+![Cue Fox synchronizing timestamp cards around a circular playback timeline](docs/assets/readme/youtube-cd-hud-cue-fox-sync-banner-v1.png)
+
+![Cue Fox securing a bounded local tracklist cache beside a glowing vinyl portal](docs/assets/readme/youtube-cd-hud-cue-fox-cache-banner-v1.png)
 
 [繁體中文](README.zh-tw.md)
 
@@ -10,12 +14,29 @@ also works with YouTube's native chapter title and timestamped tracks parsed
 from the video description, so existing YouTube track information remains the
 default instead of being replaced.
 
-The synchronized track controls are presented through an album-style HUD and
-tracklist panel. The project is available as both a Tampermonkey userscript and
-a Manifest V3 Chrome extension.
+The synchronized controls appear in a compact album-style HUD and tracklist
+panel. You can install the project as either a Tampermonkey userscript or an
+unpacked Manifest V3 Chrome extension.
 
 The current userscript source is `src/youtube-cd-hud.user.js`. The unpacked
-Chrome extension is in `extension/`. Both variants are version 5.10.0.
+Chrome extension is in `extension/`. Both variants are version 5.11.0.
+
+## Quick start
+
+1. Install either the userscript or unpacked extension using the instructions
+   below, then reload the YouTube tab.
+2. Open a YouTube music set. The HUD first uses native chapters or timestamped
+   tracks from the description when they are available.
+3. Use the source control to query or switch among `1001`, `MIXESDB`, and
+   `TRACKID`. The track title, highlight, and previous/next targets follow the
+   selected source without changing the current playback time.
+4. If 1001Tracklists asks for browser verification, choose **OPEN 1001**, let
+   the result page finish loading, then return to the original YouTube tab. The
+   extension retries through that verified first-party tab.
+
+The source button shows `(1)`, `(2)`, and so on when a provider returns more
+than one credible candidate. Each click advances to the next candidate; one
+additional click after the last candidate opens its source page.
 
 ## Highlights
 
@@ -33,7 +54,7 @@ Chrome extension is in `extension/`. Both variants are version 5.10.0.
 - Handles 1001Tracklists CAPTCHA or IP-limit responses explicitly, pauses
   automatic retries for five minutes, and keeps manual retry available after
   site verification.
-- Presents the synchronized data in a draggable, scalable album-style HUD with
+- Presents the synchronized data in a draggable, resizable album-style HUD with
   circular thumbnail artwork, cover-derived accent color, tracklist panel, and
   direct disc scrubbing.
 
@@ -106,16 +127,12 @@ a live YouTube tab.
 
 ## Mascot
 
-Vinyl Sentinel is the project's original vinyl-disc guardian. The yellow wrist,
-rim, and boot accents echo a high-visibility cue marker while the cyan and
-magenta lighting retains the HUD's industrial telemetry character.
-
-![Vinyl Sentinel placing a cue light over a turntable in a quiet midnight listening room](docs/assets/readme/youtube-cd-hud-mascot-listening-room-v1.png)
-
-![Vinyl Sentinel guiding three simplified track cards at a compact control desk](docs/assets/readme/youtube-cd-hud-mascot-tracklist-desk-v1.png)
-
-The mascot and scenes are original generated artwork for this project. They do
-not reproduce third-party characters, logos, or interface screenshots.
+Cue Fox is an original fennec-fox cue operator created for YouTube CD HUD. Its
+oversized ears suggest active listening, while the timestamp dial, cue glasses,
+headphones, waveform tail, and compact DJ harness represent provider discovery,
+playback synchronization, and bounded local caching. The three opening scenes
+use the same character and outfit without reproducing third-party characters,
+logos, or interface screenshots.
 
 ## Development and validation
 
@@ -131,6 +148,52 @@ YouTube video test with the userscript or unpacked extension in the operator's
 actual browser profile.
 
 ## Release notes
+
+### 5.11.0
+
+- When the browser can display a valid 1001Tracklists result but the extension
+  service worker is still challenged, the opened result tab now registers a
+  short-lived, first-party request bridge. Returning to YouTube retries through
+  that tab, consumes the already rendered search-result document without
+  repeating the blocked POST, and refreshes the HUD without reading or exposing
+  browser cookies.
+- The bridge accepts only allowlisted 1001Tracklists GET/POST requests from the
+  originating YouTube tab, persists its short-lived routing state in extension
+  session storage, and falls back to the existing direct request path if the
+  result tab has been closed.
+- Moves the tracklist toggle beside the source selector, reserves the HUD's
+  lower-right corner as a distinct resize bay, and tightens the spacing between
+  the spinning disc and information area.
+- Makes the displayed track title a Google-search link and adds the active
+  system abbreviation beside `TRACKLIST`, linking to the matching YouTube,
+  1001Tracklists, MixesDB, or TrackId source page when available.
+- Replaces proportional HUD scaling at the lower-right handle with true width
+  resizing. Track text wraps inside the remaining space while CD and button
+  sizes stay fixed; the complete control row defines the minimum width, while
+  the current title and controls define a hard content maximum with no empty
+  extension toward the player edge. Arrow keys resize in 20 px steps and
+  `Home` restores automatic content width.
+- Combines the separate text-size controls into one compact `T±` button so the
+  lower side rail stays clear of the resize bay. Primary click/Enter increases,
+  secondary click decreases, and arrow keys adjust in either direction.
+- Caches only parsed track data and source links for up to six hours, bounded to
+  30 recent videos and 300 tracks per provider. Reopening a cached video skips
+  the immediate remote lookup; third-party HTML, cookies, and challenge data are
+  never stored.
+- When one provider returns multiple credible tracklist candidates, the source
+  action beside `TRACKLIST` shows `(1)`, `(2)`, `(3)`, and so on. Each click
+  advances to and immediately uses the next candidate; after reaching the last
+  candidate, the following click opens that candidate's source page. A single
+  candidate retains the direct-open behavior.
+
+### 5.10.1
+
+- Arms a one-shot verification-return watcher only after `OPEN 1001` opens a
+  blocked search or candidate page. Returning to the same YouTube video clears
+  the cooldown and automatically retries the original search once.
+- A successful verification-return retry activates the 1001 source immediately,
+  even when native YouTube chapters exist; ordinary automatic and manual
+  searches continue to respect the saved source preference.
 
 ### 5.10.0
 

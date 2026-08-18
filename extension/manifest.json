@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube CD HUD",
-  "version": "5.10.0",
+  "version": "5.11.0",
   "description": "Adds a configurable CD-style track HUD and selectable tracklist providers to YouTube.",
   "permissions": [
     "storage"
@@ -29,6 +29,16 @@
         "shared/settings.js",
         "content/gm-xmlhttp-request.js",
         "content/youtube-cd-hud.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://1001tracklists.com/*",
+        "https://www.1001tracklists.com/*"
+      ],
+      "js": [
+        "content/1001-session-bridge.js"
       ],
       "run_at": "document_idle"
     }

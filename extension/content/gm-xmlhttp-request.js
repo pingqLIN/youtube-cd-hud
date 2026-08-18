@@ -1,10 +1,19 @@
 (function () {
     'use strict';
 
+    function createRequestId() {
+        if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
+            return globalThis.crypto.randomUUID();
+        }
+        return `request-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
     globalThis.GM_xmlhttpRequest = function (options) {
         let aborted = false;
+        const requestId = createRequestId();
         chrome.runtime.sendMessage({
             type: 'YT_CD_HUD_REMOTE_REQUEST',
+            requestId,
             request: {
                 method: String(options.method || 'GET').toUpperCase(),
                 url: String(options.url || ''),
@@ -35,7 +44,12 @@
 
         return {
             abort() {
+                if (aborted) return;
                 aborted = true;
+                chrome.runtime.sendMessage({
+                    type: 'YT_CD_HUD_CANCEL_REMOTE_REQUEST',
+                    requestId,
+                }, () => void chrome.runtime.lastError);
             },
         };
     };

@@ -281,7 +281,7 @@ code { color: var(--signal); font-family: inherit; }
     left: 18px;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 6px;
     width: calc(100% - 36px);
     min-height: var(--preview-disc-size);
     padding: 0 42px 0 0;
@@ -307,7 +307,7 @@ code { color: var(--signal); font-family: inherit; }
     flex: 0 0 auto;
     width: var(--preview-disc-size);
     height: var(--preview-disc-size);
-    margin: 0 10px 0 0;
+    margin: 0 2px 0 0;
     overflow: hidden;
     border: 1px solid var(--preview-accent);
     border-radius: 50%;
@@ -324,11 +324,25 @@ code { color: var(--signal); font-family: inherit; }
 .preview-source > b { margin-left: -1px; color: #cbd5e0; font-weight: 500; }
 .preview-source > b:nth-child(2) { color: #11181c; background: #e2e8f0; }
 .preview-source i { width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: var(--signal); }
+.preview-source .preview-tracklist { min-width: 28px; padding: 0; justify-content: center; }
 .preview-transport { display: inline-flex; gap: 3px; margin-left: 6px; padding-left: 7px; border-left: 1px solid #4a5568; }
 .preview-transport b { flex: 0 0 48px; width: 48px; }
 .preview-transport b, .preview-tools b { border: 1px solid #4a5568; color: #a0aec0; background: #2d3748; font: 500 8px/20px var(--preview-font); text-align: center; }
 .preview-tools { position: absolute; top: 4px; right: 4px; z-index: 2; display: grid; gap: 3px; padding-left: 4px; border-left: 1px solid #4a5568; }
 .preview-tools b { width: 26px; height: 18px; line-height: 16px; }
+.preview-resize {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    z-index: 2;
+    width: 26px;
+    height: 26px;
+    border-top: 1px solid #4a5568;
+    border-left: 1px solid #4a5568;
+    background:
+        linear-gradient(135deg, transparent 0 54%, #4a5568 55% 61%, transparent 62% 70%, var(--preview-accent) 71% 78%, transparent 79%),
+        rgba(15, 23, 42, .34);
+}
 .hud-preview.hide-disc .preview-disc { visibility: hidden; }
 .hud-preview.hide-transport .preview-transport, .hud-preview.hide-1001 .source-1001 { display: none; }
 
