@@ -202,6 +202,31 @@ main { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
     border-top: 1px solid var(--line-soft);
     border-bottom: 1px solid var(--line-soft);
 }
+.font-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
+    align-items: center;
+    gap: 24px;
+    margin-top: 22px;
+    padding: 15px 0;
+    border-top: 1px solid var(--line-soft);
+}
+.font-field span { display: flex; flex-direction: column; gap: 5px; }
+.font-field b { font: 650 14px/1 var(--display); }
+.font-field small { color: var(--muted); font-size: 10px; line-height: 1.45; }
+.font-field select {
+    width: 100%;
+    min-height: 36px;
+    padding: 0 34px 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 0;
+    color: var(--ink);
+    background: #090d0f;
+    font: 11px/1.2 var(--mono);
+    cursor: pointer;
+}
+.font-field select:hover,
+.font-field select:focus-visible { border-color: var(--signal); }
 .color-field span { display: flex; flex-direction: column; gap: 5px; }
 .color-field b { font: 650 14px/1 var(--display); }
 .color-field small { color: var(--muted); font-size: 10px; }
@@ -250,6 +275,7 @@ code { color: var(--signal); font-family: inherit; }
     --preview-accent: #63b3ed;
     --preview-opacity: .85;
     --preview-disc-size: 82px;
+    --preview-font: "Cascadia Mono", "Cascadia Code", "Lucida Console", Consolas, monospace;
     position: absolute;
     top: 84px;
     left: 18px;
@@ -263,6 +289,7 @@ code { color: var(--signal); font-family: inherit; }
     background: transparent;
     box-shadow: none;
     transition: opacity .2s ease;
+    font-family: var(--preview-font);
 }
 .hud-preview:before {
     content: "";
@@ -290,7 +317,7 @@ code { color: var(--signal); font-family: inherit; }
 .preview-disc:before { content: ""; position: absolute; inset: 8px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; }
 .preview-disc span { position: absolute; inset: 43%; border-radius: 50%; background: #070a0c; box-shadow: 0 0 0 2px #d5dcd7; }
 .preview-info { position: relative; z-index: 1; display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
-.preview-info > strong { overflow: hidden; color: #f7fafc; font: 700 14px/1.35 var(--mono); white-space: nowrap; text-overflow: ellipsis; }
+.preview-info > strong { overflow: hidden; color: #f7fafc; font: 700 14px/1.35 var(--preview-font); white-space: nowrap; text-overflow: ellipsis; }
 .preview-info time { margin-top: 2px; color: #a0aec0; font-size: 12px; }
 .preview-source { display: flex; align-items: center; flex-wrap: nowrap; margin-top: 7px; font-size: 8px; }
 .preview-source > span, .preview-source > b { display: inline-flex; align-items: center; height: 22px; padding: 0 6px; border: 1px solid #4a5568; }
@@ -299,7 +326,7 @@ code { color: var(--signal); font-family: inherit; }
 .preview-source i { width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: var(--signal); }
 .preview-transport { display: inline-flex; gap: 3px; margin-left: 6px; padding-left: 7px; border-left: 1px solid #4a5568; }
 .preview-transport b { flex: 0 0 48px; width: 48px; }
-.preview-transport b, .preview-tools b { border: 1px solid #4a5568; color: #a0aec0; background: #2d3748; font: 500 8px/20px var(--mono); text-align: center; }
+.preview-transport b, .preview-tools b { border: 1px solid #4a5568; color: #a0aec0; background: #2d3748; font: 500 8px/20px var(--preview-font); text-align: center; }
 .preview-tools { position: absolute; top: 4px; right: 4px; z-index: 2; display: grid; gap: 3px; padding-left: 4px; border-left: 1px solid #4a5568; }
 .preview-tools b { width: 26px; height: 18px; line-height: 16px; }
 .hud-preview.hide-disc .preview-disc { visibility: hidden; }
@@ -337,7 +364,7 @@ code { color: var(--signal); font-family: inherit; }
 .secondary-button { border: 1px solid var(--line); color: var(--ink); background: transparent; }
 .secondary-button:hover { border-color: var(--muted); background: var(--panel); }
 
-input:focus-visible, button:focus-visible, textarea:focus-visible {
+input:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible {
     outline: 2px solid var(--signal);
     outline-offset: 3px;
 }
@@ -359,6 +386,7 @@ input:focus-visible, button:focus-visible, textarea:focus-visible {
     .header-readout { margin-top: 18px; }
     .master-strip { align-items: start; }
     .dial-grid, .visual-dials { grid-template-columns: 1fr; }
+    .font-field { grid-template-columns: 1fr; }
     .action-bar { align-items: stretch; flex-direction: column; padding: 14px 0; }
     .action-bar div { display: grid; grid-template-columns: 1fr 1fr; }
     .action-bar button { min-width: 0; }

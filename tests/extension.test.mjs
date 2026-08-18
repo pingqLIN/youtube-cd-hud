@@ -13,7 +13,7 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
   const manifest = JSON.parse(read('extension/manifest.json'));
 
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '5.9.0');
+  assert.equal(manifest.version, '5.10.0');
   assert.deepEqual(manifest.permissions, ['storage']);
   assert.deepEqual(manifest.host_permissions, [
     'https://www.youtube.com/*',
@@ -42,6 +42,7 @@ test('keeps extension settings normalized and bounded', () => {
     discScale: 0,
     accentColor: 'not-a-color',
     customCss: 'x'.repeat(22000),
+    fontFamily: 'untrusted-font); color: red',
   });
 
   assert.equal(normalized.requestTimeoutMs, 5000);
@@ -50,6 +51,8 @@ test('keeps extension settings normalized and bounded', () => {
   assert.equal(normalized.discScale, 0.7);
   assert.equal(normalized.accentColor, '#63b3ed');
   assert.equal(normalized.customCss.length, 20000);
+  assert.equal(normalized.fontFamily, 'cascadia-mono');
+  assert.match(context.YtCdHudSettings.FONT_STACKS['cascadia-mono'], /Cascadia Mono/);
 });
 
 test('uses external scripts and exposes the complete control surface', () => {
@@ -69,6 +72,7 @@ test('uses external scripts and exposes the complete control surface', () => {
     'maxCandidates',
     'titleFontSize',
     'timeFontSize',
+    'fontFamily',
     'discScale',
     'surfaceOpacity',
     'accentColor',
@@ -240,6 +244,13 @@ test('uses anonymous read-only requests for supplemental providers', async () =>
   assert.equal(fetchRequest.init.body, undefined);
   assert.equal(fetchRequest.init.headers.Accept, 'application/json');
 
+  const musicTrackResponse = await request({
+    type: 'YT_CD_HUD_REMOTE_REQUEST',
+    request: { method: 'GET', url: 'https://trackid.net/api/public/musictracks?keywords=Suburban+Train' },
+  });
+  assert.equal(musicTrackResponse.response.ok, true);
+  assert.equal(fetchRequest.init.credentials, 'omit');
+
   const rejected = await request({
     type: 'YT_CD_HUD_REMOTE_REQUEST',
     request: { method: 'POST', url: 'https://trackid.net/api/public/audiostreams' },
@@ -258,6 +269,8 @@ test('keeps the settings preview aligned with the half-overhang HUD geometry', (
   assert.match(css, /\.preview-transport b\s*\{[\s\S]*?width:\s*48px/);
   assert.match(css, /\.hud-preview\.hide-disc\s+\.preview-disc\s*\{\s*visibility:\s*hidden/);
   assert.doesNotMatch(css, /\.hud-preview\.hide-disc:before\s*\{[^}]*left:\s*0/);
+  assert.match(css, /font-family:\s*var\(--preview-font\)/);
+  assert.match(read('extension/options/options.js'), /settingsApi\.FONT_STACKS\[settings\.fontFamily\]/);
 });
 
 test('keeps the generated extension HUD synchronized with the userscript source', () => {

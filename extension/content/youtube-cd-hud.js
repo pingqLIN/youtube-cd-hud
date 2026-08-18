@@ -4,6 +4,14 @@
     'use strict';
 
     const IS_TEST_MODE = Boolean(globalThis.__YT_CD_HUD_TEST_MODE__);
+    const HUD_FONT_STACKS = Object.freeze({
+        'cascadia-mono': '"Cascadia Mono", "Cascadia Code", "Lucida Console", Consolas, monospace',
+        'ocr-machine': '"OCR A Extended", "OCR A Std", "Lucida Console", "Cascadia Mono", Consolas, monospace',
+        'jetbrains-mono': '"JetBrains Mono", "Cascadia Mono", Consolas, monospace',
+        'ibm-plex-mono': '"IBM Plex Mono", "Cascadia Mono", Consolas, monospace',
+        'source-code-pro': '"Source Code Pro", "Cascadia Mono", Consolas, monospace',
+        consolas: 'Consolas, "Lucida Console", monospace',
+    });
 
     let remoteHtmlPolicy = null;
     if (window.trustedTypes && typeof window.trustedTypes.createPolicy === 'function') {
@@ -30,6 +38,7 @@
         maxCandidates: 5,
         titleFontSize: DEFAULT_TITLE_SIZE,
         timeFontSize: DEFAULT_TIME_SIZE,
+        fontFamily: 'cascadia-mono',
         discScale: 1,
         surfaceOpacity: 85,
         accentColor: '#63b3ed',
@@ -44,6 +53,7 @@
     const DISC_SAMPLE_SECONDS = 0.08;
     const CANDIDATE_REQUEST_DELAY_MS = 1200;
     const AUTOMATIC_SEARCH_BLOCK_COOLDOWN_MS = 5 * 60 * 1000;
+    const SINGLE_TRACK_MAX_DURATION_SECONDS = 20 * 60;
     let runtimeSettings = SETTINGS_API
         ? SETTINGS_API.normalize(SETTINGS_API.DEFAULTS)
         : { ...RUNTIME_DEFAULTS };
@@ -58,6 +68,7 @@
     let searchState = 'idle';
     let searchStateDetail = '';
     let tracklistUrl1001 = '';
+    let pending1001VerificationRequest = null;
     let tracklistUrlMixesDb = '';
     let tracklistUrlTrackId = '';
     let lastVideoIdFor1001 = '';
@@ -136,6 +147,10 @@
         root.style.setProperty('--hud-focus', runtimeSettings.accentColor);
         root.style.setProperty('--hud-surface', `rgba(26, 32, 44, ${runtimeSettings.surfaceOpacity / 100})`);
         root.style.setProperty('--hud-user-accent-soft', `rgba(${r}, ${g}, ${b}, .16)`);
+        root.style.setProperty(
+            '--hud-font',
+            HUD_FONT_STACKS[runtimeSettings.fontFamily] || HUD_FONT_STACKS['cascadia-mono']
+        );
 
         const hud = document.getElementById('yt-cd-hud');
         if (hud) {
@@ -174,6 +189,7 @@
             searchState = 'idle';
             searchStateDetail = '';
             tracklistUrl1001 = '';
+            pending1001VerificationRequest = null;
             lastSearchTitle = '';
             if (currentSource === '1001') setActiveSource(tracksFromYouTube.length ? 'youtube' : 'none');
         }
@@ -347,9 +363,61 @@
             .filter(token => token.length > 1 && !stopWords.has(token));
     }
 
-    function collectTracklistCandidates(doc, title, limit = 5) {
+    function parseSearchResultDuration(value) {
+        const text = trim(String(value || '')).toLowerCase();
+        const hours = /(?:^|\s)(\d+(?:\.\d+)?)\s*h\b/.exec(text);
+        const minutes = /(?:^|\s)(\d+(?:\.\d+)?)\s*m\b/.exec(text);
+        if (!hours && !minutes) return 0;
+        return Math.round((Number(hours && hours[1]) || 0) * 3600 + (Number(minutes && minutes[1]) || 0) * 60);
+    }
+
+    function submit1001SearchVerification(request, openWindow = (...args) => window.open(...args)) {
+        if (!request || request.method !== 'POST' || !request.fields) return false;
+        let action;
+        try {
+            action = new URL(request.url);
+        } catch (error) {
+            return false;
+        }
+        if (!is1001TracklistsUrl(action.href) || action.pathname !== '/search/result.php') return false;
+
+        let targetWindow = null;
+        try {
+            targetWindow = openWindow('', '_blank');
+            if (!targetWindow || !targetWindow.document) return false;
+            targetWindow.opener = null;
+            const form = targetWindow.document.createElement('form');
+            form.method = 'POST';
+            form.action = action.href;
+            Object.entries(request.fields).forEach(([name, value]) => {
+                const input = targetWindow.document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = String(value);
+                form.appendChild(input);
+            });
+            (targetWindow.document.body || targetWindow.document.documentElement).appendChild(form);
+            form.submit();
+            return true;
+        } catch (error) {
+            console.warn('[CD HUD] Could not replay the blocked 1001Tracklists search.', error);
+            if (targetWindow && typeof targetWindow.close === 'function') targetWindow.close();
+            return false;
+        }
+    }
+
+    function open1001TracklistsPage() {
+        if (pending1001VerificationRequest?.method === 'POST') {
+            if (submit1001SearchVerification(pending1001VerificationRequest)) return;
+        }
+        if (tracklistUrl1001) {
+            window.open(tracklistUrl1001, '_blank', 'noopener,noreferrer');
+        }
+    }
+
+    function collectTracklistCandidates(doc, title, expectedDuration = 0, limit = 5) {
         if (!doc || typeof doc.querySelectorAll !== 'function') return [];
-        const queryTokens = getTitleTokens(title);
+        const queryTokens = [...new Set(getTitleTokens(title))];
         const seenUrls = new Set();
         const candidates = [];
 
@@ -364,12 +432,25 @@
             if (!is1001TracklistsUrl(href) || seenUrls.has(href)) return;
             seenUrls.add(href);
 
-            const candidateText = `${link.textContent || ''} ${href}`
-                .toLowerCase()
-                .normalize('NFKD')
-                .replace(/[\u0300-\u036f]/g, ' ');
-            const matchedTokens = queryTokens.filter(token => candidateText.includes(token)).length;
-            const score = queryTokens.length ? matchedTokens / queryTokens.length : 0;
+            const resultRow = typeof link.closest === 'function' ? link.closest('.bItm') : null;
+            const dateText = resultRow && typeof resultRow.querySelector === 'function'
+                ? resultRow.querySelector('[title="tracklist date"]')?.textContent || ''
+                : '';
+            const candidateTokens = new Set(getTitleTokens(`${link.textContent || ''} ${dateText}`));
+            const matchedTokens = queryTokens.filter(token => candidateTokens.has(token)).length;
+            const recall = queryTokens.length ? matchedTokens / queryTokens.length : 0;
+            const precision = candidateTokens.size ? matchedTokens / candidateTokens.size : 0;
+            const titleScore = recall * 0.75 + precision * 0.25;
+
+            const durationText = resultRow && typeof resultRow.querySelector === 'function'
+                ? resultRow.querySelector('[title="play time"]')?.textContent || ''
+                : '';
+            const candidateDuration = parseSearchResultDuration(durationText);
+            const durationScale = Math.max(Number(expectedDuration) * 0.5, 900);
+            const durationScore = expectedDuration > 0 && candidateDuration > 0
+                ? Math.max(0, 1 - Math.abs(candidateDuration - expectedDuration) / durationScale)
+                : 0.5;
+            const score = titleScore * 0.9 + durationScore * 0.1;
             candidates.push({ href, score, index });
         });
 
@@ -475,6 +556,88 @@
         return queryTokens.filter(token => candidateTokens.has(token)).length / queryTokens.length;
     }
 
+    function getTrackTitleParts(title) {
+        const normalized = normalizeSearchTitle(title);
+        const parts = normalized.split(/\s+[-–—]\s+/);
+        if (parts.length < 2) return { artist: '', track: normalized };
+        return {
+            artist: trim(parts.shift()),
+            track: trim(parts.join(' - ')),
+        };
+    }
+
+    function getCoreTrackTokens(title) {
+        const { track } = getTrackTitleParts(title);
+        return [...new Set(getTitleTokens(track.replace(/[[(][^\])]*[\])]/g, ' ')))]
+            .filter(token => !['mix', 'remix', 'edit', 'version', 'remaster', 'remastered'].includes(token));
+    }
+
+    function getSignificantVersionTokens(title) {
+        const bracketText = Array.from(String(title || '').matchAll(/[[(]([^\])]+)[\])]/g))
+            .map(match => match[1])
+            .join(' ');
+        const genericTokens = new Set([
+            'mix', 'remix', 'edit', 'version', 'original', 'extended', 'radio', 'club',
+            'remaster', 'remastered', 'official', 'audio', 'video',
+        ]);
+        return [...new Set(getTitleTokens(bracketText))].filter(token => !genericTokens.has(token));
+    }
+
+    function rankTrackIdMusicCandidates(queryTitle, candidates) {
+        const queryParts = getTrackTitleParts(queryTitle);
+        const queryArtistTokens = [...new Set(getTitleTokens(queryParts.artist))];
+        const queryCoreTokens = getCoreTrackTokens(queryTitle);
+        const queryVersionTokens = getSignificantVersionTokens(queryTitle);
+        if (!queryCoreTokens.length) return [];
+
+        return (candidates || []).map(candidate => {
+            const candidateArtistTokens = new Set(getTitleTokens(candidate.artist));
+            const candidateCoreTokens = new Set(getCoreTrackTokens(candidate.title));
+            const candidateAllTokens = new Set(getTitleTokens(`${candidate.artist || ''} ${candidate.title || ''}`));
+            const artistScore = queryArtistTokens.length
+                ? queryArtistTokens.filter(token => candidateArtistTokens.has(token)).length / queryArtistTokens.length
+                : 1;
+            const coreScore = queryCoreTokens.filter(token => candidateCoreTokens.has(token)).length / queryCoreTokens.length;
+            const versionScore = queryVersionTokens.length
+                ? queryVersionTokens.filter(token => candidateAllTokens.has(token)).length / queryVersionTokens.length
+                : 1;
+            return {
+                ...candidate,
+                artistScore,
+                coreScore,
+                versionScore,
+                score: artistScore * 0.35 + coreScore * 0.45 + versionScore * 0.2,
+            };
+        }).filter(candidate => (
+            candidate.artistScore >= 0.5 &&
+            candidate.coreScore >= 0.8 &&
+            candidate.versionScore >= 0.66
+        )).sort((left, right) => right.score - left.score);
+    }
+
+    function selectSingleTrackMatch(queryTitle, tracks) {
+        const candidates = (tracks || []).map((track, index) => {
+            const parts = getTrackTitleParts(track.title);
+            return {
+                artist: parts.artist,
+                title: parts.track,
+                slug: String(index),
+                originalTrack: track,
+            };
+        });
+        const match = rankTrackIdMusicCandidates(queryTitle, candidates)[0];
+        return match ? { time: 0, title: match.originalTrack.title } : null;
+    }
+
+    function isLikelySingleTrackVideo(title, duration) {
+        if (!Number.isFinite(duration) || duration <= 0 || duration > SINGLE_TRACK_MAX_DURATION_SECONDS) return false;
+        return !/\b(?:dj\s*set|podcast|radio\s*show|essential\s*mix|full\s*set|live\s*set)\b/i.test(title);
+    }
+
+    function getTrackIdMusicFallbackQuery(title) {
+        return trim(normalizeSearchTitle(title).replace(/[[(][^\])]*[\])]/g, ' ').replace(/\s+/g, ' '));
+    }
+
     function getDurationDifferenceSeconds(durationText, videoDuration) {
         const candidateDuration = parseTimestampToSeconds(String(durationText || '').split('.')[0]);
         if (!Number.isFinite(candidateDuration) || !Number.isFinite(videoDuration) || videoDuration <= 0) return Infinity;
@@ -557,12 +720,13 @@
             return '1001Tracklists 已限制請求頻率並要求 CAPTCHA；請用連結按鈕開啟網站完成驗證後再重試。';
         }
         const challengeNode = doc && doc.querySelector(
-            '#challenge-form, .cf-turnstile, input[name="cf-turnstile-response"], input[name="cf_chl_opt"]'
+            '#challenge-form, #turnstile-container, .cf-turnstile, input[name="cf-turnstile-response"], ' +
+            'input[name="cf_chl_opt"], input[name="bChk"]'
         );
         if (
             challengeNode ||
             /just a moment|checking your browser|attention required|access denied/.test(pageTitle) ||
-            /cf-chl-|challenge-platform|cdn-cgi\/challenge-platform/.test(sample)
+            /cf-chl-|challenge-platform|cdn-cgi\/challenge-platform|onturnstileload|turnstile\.render|turnstile-container|please wait, you will be forwarded|please enable javascript/.test(sample)
         ) {
             return '1001Tracklists 要求瀏覽器驗證；請用連結按鈕開啟網站完成檢查後再重試。';
         }
@@ -697,6 +861,7 @@
         const searchToken = ++activeSearchToken;
         cancelActiveRequests();
         tracklistUrl1001 = '';
+        pending1001VerificationRequest = null;
         tracksFrom1001 = [];
         searchState = 'searching';
         searchStateDetail = '';
@@ -750,7 +915,14 @@
                         ? parseRemoteHtml(responseText)
                         : null;
                     const blockReason = detectBlockPage(errorDocument, responseText, resp.status);
-                    if (blockReason) tracklistUrl1001 = searchPageUrl;
+                    if (blockReason) {
+                        tracklistUrl1001 = searchUrl;
+                        pending1001VerificationRequest = {
+                            method: 'POST',
+                            url: searchUrl,
+                            fields: { main_search: searchTitle, search_selection: '9' },
+                        };
+                    }
                     markSearchError(
                         blockReason || `1001Tracklists 搜尋失敗（HTTP ${resp.status}，${contentType}）。`,
                         blockReason ? {
@@ -774,7 +946,12 @@
                 }
                 const blockReason = detectBlockPage(doc, responseText, resp.status);
                 if (blockReason) {
-                    tracklistUrl1001 = searchPageUrl;
+                    tracklistUrl1001 = searchUrl;
+                    pending1001VerificationRequest = {
+                        method: 'POST',
+                        url: searchUrl,
+                        fields: { main_search: searchTitle, search_selection: '9' },
+                    };
                     markSearchError(blockReason, {
                         phase: 'search',
                         status: resp.status,
@@ -783,7 +960,11 @@
                     }, true);
                     return;
                 }
-                const candidates = collectTracklistCandidates(doc, searchTitle)
+                const candidates = collectTracklistCandidates(
+                    doc,
+                    searchTitle,
+                    Number(currentVideo && currentVideo.duration) || 0
+                )
                     .slice(0, runtimeSettings.maxCandidates);
                 if (!candidates.length) {
                     markSearchError('搜尋完成，但找不到符合的 1001Tracklists 曲目頁。');
@@ -826,6 +1007,10 @@
                                     ? parseRemoteHtml(tracklistText)
                                     : null;
                                 const pageBlockReason = detectBlockPage(errorDocument, tracklistText, resp2.status);
+                                if (pageBlockReason) {
+                                    tracklistUrl1001 = finalTracklistUrl;
+                                    pending1001VerificationRequest = { method: 'GET', url: finalTracklistUrl };
+                                }
                                 markSearchError(
                                     pageBlockReason ||
                                     `曲目頁載入失敗（HTTP ${resp2.status}，${tracklistContentType}）。`,
@@ -851,6 +1036,8 @@
                             }
                             const pageBlockReason = detectBlockPage(tracklistDocument, tracklistText, resp2.status);
                             if (pageBlockReason) {
+                                tracklistUrl1001 = finalTracklistUrl;
+                                pending1001VerificationRequest = { method: 'GET', url: finalTracklistUrl };
                                 markSearchError(pageBlockReason, {
                                     phase: 'tracklist',
                                     candidate: candidateIndex + 1,
@@ -867,9 +1054,22 @@
                                 return;
                             }
 
-                            console.log(`[CD HUD] Loaded ${tracks.length} tracks from 1001.`);
-                            tracksFrom1001 = tracks;
+                            const duration = Number(currentVideo && currentVideo.duration) || 0;
+                            const isSingleTrack = isLikelySingleTrackVideo(title, duration);
+                            const singleTrackMatch = isSingleTrack
+                                ? selectSingleTrackMatch(title, tracks)
+                                : null;
+                            if (isSingleTrack && !singleTrackMatch) {
+                                console.warn(`[CD HUD] Candidate does not contain the requested single track: ${href}`);
+                                scheduleCandidate(candidateIndex + 1);
+                                return;
+                            }
+                            const resolvedTracks = singleTrackMatch ? [singleTrackMatch] : tracks;
+
+                            console.log(`[CD HUD] Loaded ${resolvedTracks.length} tracks from 1001.`);
+                            tracksFrom1001 = resolvedTracks;
                             tracklistUrl1001 = finalTracklistUrl;
+                            pending1001VerificationRequest = null;
                             searchState = 'success';
                             searchStateDetail = '';
                             automaticSearchBlockedUntil = 0;
@@ -990,6 +1190,43 @@
         }
     }
 
+    async function fetchTrackIdMusicTrack(title, videoId) {
+        const exactQuery = normalizeSearchTitle(title) || title;
+        const fallbackQuery = getTrackIdMusicFallbackQuery(exactQuery);
+        const loadCandidates = async keywords => {
+            const query = new URLSearchParams({
+                keywords,
+                pageSize: String(Math.max(runtimeSettings.maxCandidates, 10)),
+                currentPage: '0',
+            });
+            const payload = await requestJson(`https://trackid.net/api/public/musictracks?${query}`);
+            return payload.result && payload.result.musicTracks || [];
+        };
+
+        let candidates = await loadCandidates(exactQuery);
+        if (!candidates.length && fallbackQuery && fallbackQuery !== exactQuery) {
+            candidates = await loadCandidates(fallbackQuery);
+        }
+        if (getVideoId() !== videoId) return false;
+        const candidate = rankTrackIdMusicCandidates(exactQuery, candidates)[0];
+        if (!candidate || !candidate.slug) return false;
+
+        tracksFromTrackId = [{
+            time: 0,
+            title: trim([candidate.artist, candidate.title].filter(Boolean).join(' - ')),
+        }];
+        tracklistUrlTrackId = `https://trackid.net/musictracks/${encodeURIComponent(candidate.slug)}`;
+        searchState = 'success';
+        searchStateDetail = 'TrackId.net：單曲資料匹配';
+        if (!tracksFromYouTube.length && !tracksFrom1001.length && !tracksFromMixesDb.length) {
+            setActiveSource('trackid');
+        }
+        updateSourceButtons();
+        updateLinkButton();
+        updateStatusLight();
+        return true;
+    }
+
     async function fetchTracklistFromTrackId(title, videoId) {
         if (!runtimeSettings.enableTrackId || !title || !videoId) return;
         searchState = 'searching';
@@ -1032,7 +1269,14 @@
                     left.durationDifference - right.durationDifference
                 ));
             const candidate = candidates[0];
-            if (!candidate || !candidate.slug) throw new Error('找不到影片 ID，或標題與錄音長度均可信的結果。');
+            if (!candidate || !candidate.slug) {
+                if (isLikelySingleTrackVideo(searchTitle, duration)) {
+                    const matchedMusicTrack = await fetchTrackIdMusicTrack(searchTitle, videoId);
+                    if (matchedMusicTrack) return;
+                    throw new Error('單曲索引沒有版本資訊足夠一致的結果。');
+                }
+                throw new Error('找不到影片 ID，或標題與錄音長度均可信的結果。');
+            }
 
             const detailPayload = await requestJson(`https://trackid.net/api/public/audiostreams/${encodeURIComponent(candidate.slug)}`);
             if (getVideoId() !== videoId) return;
@@ -1248,7 +1492,7 @@
                 --hud-cover-accent: rgba(160, 174, 192, .5);
                 --hud-cover-glow: rgba(99, 179, 237, .18);
                 --hud-shadow: 0 4px 6px -1px rgba(0, 0, 0, .3), 0 2px 4px -1px rgba(0, 0, 0, .2);
-                --hud-font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+                --hud-font: "Cascadia Mono", "Cascadia Code", "Lucida Console", Consolas, monospace;
                 --hud-disc-size: clamp(52.8px, 6.24vmin, 76.8px);
             }
             #yt-cd-hud {
@@ -1263,7 +1507,8 @@
                 display: flex;
                 align-items: center;
                 gap: 14px;
-                min-width: 300px;
+                width: max-content;
+                min-width: 0;
                 min-height: 118px;
                 font-family: var(--hud-font);
                 box-shadow: none;
@@ -1649,17 +1894,28 @@
             }
             .resize-handle {
                 position: absolute;
-                right: 2px;
-                bottom: 2px;
+                right: 0;
+                bottom: 0;
                 z-index: 8;
-                width: 14px;
-                height: 14px;
+                width: 22px;
+                height: 22px;
+                padding: 0;
+                border: 0;
                 cursor: nwse-resize;
                 touch-action: none;
                 background:
-                    linear-gradient(135deg, transparent 0 48%, var(--hud-border) 49% 56%, transparent 57% 67%, var(--hud-focus) 68% 75%, transparent 76%);
+                    linear-gradient(135deg, transparent 0 54%, var(--hud-border) 55% 61%, transparent 62% 70%, var(--hud-focus) 71% 78%, transparent 79%);
                 opacity: .82;
+                pointer-events: auto;
             }
+            .resize-handle:hover,
+            .resize-handle:focus-visible {
+                opacity: 1;
+                filter: drop-shadow(0 0 3px var(--hud-focus));
+                outline: 1px solid var(--hud-focus);
+                outline-offset: -3px;
+            }
+            .hud-resize-handle { z-index: 12; }
 
             .yt-tracklist-panel {
                 box-sizing: border-box;
@@ -2057,6 +2313,7 @@
             time.style.fontSize,
             time.textContent.length,
             runtimeSettings.discScale,
+            runtimeSettings.fontFamily,
             runtimeSettings.showDisc,
             runtimeSettings.showTransport,
             runtimeSettings.enable1001,
@@ -2064,7 +2321,7 @@
             player.clientHeight,
         ].join('|');
         if (!force && hud._ytCdContentSignature === signature) {
-            const lockedWidth = parseFloat(hud.style.minWidth) || 300;
+            const lockedWidth = parseFloat(hud.style.width) || hud.offsetWidth || 1;
             const lockedHeight = parseFloat(hud.style.minHeight) || 118;
             hud.style.width = `${lockedWidth}px`;
             hud.style.height = `${lockedHeight}px`;
@@ -2082,7 +2339,7 @@
         const paddingBottom = parseFloat(hudStyle.paddingBottom) || 0;
         const gap = parseFloat(hudStyle.columnGap || hudStyle.gap) || 0;
         const scale = Math.max(0.1, Number(hudScale) || 1);
-        const maximumWidth = Math.max(300, (player.clientWidth - hud.offsetLeft) / scale);
+        const maximumWidth = Math.max(1, (player.clientWidth - hud.offsetLeft) / scale);
         const maximumHeight = Math.max(118, (player.clientHeight - hud.offsetTop) / scale);
         const rightRailReserve = Math.max(paddingRight, sideSize.width + 8);
         const infoHeight = getContentHeight(info);
@@ -2098,10 +2355,11 @@
         disc.style.height = `${balancedDiscSize}px`;
         const discSize = getElementOuterSize(disc);
         const fixedWidth = paddingLeft + discSize.width + gap + rightRailReserve + 2;
-        const availableInfoWidth = Math.max(120, maximumWidth - fixedWidth);
+        const availableInfoWidth = Math.max(1, maximumWidth - fixedWidth);
 
+        chapter.style.width = 'auto';
         chapter.style.maxWidth = 'none';
-        const fullChapterWidth = Math.max(chapter.scrollWidth, getTextContentWidth(chapter));
+        const fullChapterWidth = Math.max(1, getTextContentWidth(chapter));
         const requiredChapterWidth = Math.min(fullChapterWidth, availableInfoWidth);
         chapter.style.width = `${requiredChapterWidth}px`;
         chapter.style.maxWidth = `${requiredChapterWidth}px`;
@@ -2346,6 +2604,12 @@
         handle.addEventListener('pointerup', finishScaling, true);
         handle.addEventListener('pointercancel', finishScaling, true);
         handle.addEventListener('lostpointercapture', finishScaling, true);
+        handle.addEventListener('keydown', event => {
+            if (!['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(event.key)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            updateScale(['ArrowUp', 'ArrowRight'].includes(event.key) ? SCALE_STEP : 1 / SCALE_STEP);
+        });
     }
 
     function bindTracklistDragging(element, container) {
@@ -2761,9 +3025,7 @@
             });
             linkBtn = createControlButton('OPEN 1001 ↗', '開啟 1001Tracklists 頁面', () => {
                 set1001MenuExpanded(false);
-                if (tracklistUrl1001) {
-                    window.open(tracklistUrl1001, '_blank', 'noopener,noreferrer');
-                }
+                open1001TracklistsPage();
             });
             linkBtn.classList.add('hud-1001-link');
             linkBtn.style.display = 'none';
@@ -2847,9 +3109,11 @@
             sideControls.appendChild(textIncreaseBtn);
             sideControls.appendChild(tracklistBtn);
 
-            const resizeHandle = document.createElement('div');
+            const resizeHandle = document.createElement('button');
+            resizeHandle.type = 'button';
             resizeHandle.className = 'resize-handle hud-resize-handle';
-            resizeHandle.setAttribute('aria-hidden', 'true');
+            resizeHandle.setAttribute('aria-label', '拖曳調整 HUD 大小');
+            resizeHandle.title = '拖曳調整 HUD 大小';
 
             hud.appendChild(panelSurface);
             hud.appendChild(wrapper);
@@ -2926,6 +3190,7 @@
             searchState = 'idle';
             searchStateDetail = '';
             tracklistUrl1001 = '';
+            pending1001VerificationRequest = null;
             tracklistUrlMixesDb = '';
             tracklistUrlTrackId = '';
             lastVideoIdFor1001 = videoId;
@@ -3027,14 +3292,20 @@
             getAdjacentTrackTime,
             getBalancedDiscSize,
             getContentBalancedDiscSize,
+            getTrackIdMusicFallbackQuery,
             isSuccessfulHttpStatus,
+            isLikelySingleTrackVideo,
             normalizeSearchTitle,
             normalizeAngleDelta,
             parseRemoteHtml,
+            parseSearchResultDuration,
+            submit1001SearchVerification,
             parseMixesDbWikitext,
             parseTrackIdDetail,
             parseTimestampToSeconds,
             parseTracklistDocument,
+            rankTrackIdMusicCandidates,
+            selectSingleTrackMatch,
         };
         return;
     }

@@ -42,6 +42,10 @@
         preview.style.setProperty('--preview-accent', settings.accentColor);
         preview.style.setProperty('--preview-opacity', String(settings.surfaceOpacity / 100));
         preview.style.setProperty('--preview-disc-size', `${82 * settings.discScale}px`);
+        preview.style.setProperty(
+            '--preview-font',
+            settingsApi.FONT_STACKS[settings.fontFamily] || settingsApi.FONT_STACKS[settingsApi.DEFAULTS.fontFamily]
+        );
         document.getElementById('preview-title-text').style.fontSize = `${settings.titleFontSize}px`;
         document.getElementById('preview-time').style.fontSize = `${settings.timeFontSize}px`;
         updateOutputs(settings);

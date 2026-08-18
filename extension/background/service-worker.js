@@ -16,7 +16,7 @@ const REMOTE_PROVIDERS = Object.freeze([
         referrer: '',
     },
     {
-        pattern: /^https:\/\/trackid\.net\/api\/public\/audiostreams(?:[/?]|$)/i,
+        pattern: /^https:\/\/trackid\.net\/api\/public\/(?:audiostreams|musictracks)(?:[/?]|$)/i,
         methods: new Set(['GET']),
         defaultAccept: 'application/json',
         credentials: 'omit',

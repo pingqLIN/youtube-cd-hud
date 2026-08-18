@@ -15,7 +15,7 @@ tracklist panel. The project is available as both a Tampermonkey userscript and
 a Manifest V3 Chrome extension.
 
 The current userscript source is `src/youtube-cd-hud.user.js`. The unpacked
-Chrome extension is in `extension/`. Both variants are version 5.9.0.
+Chrome extension is in `extension/`. Both variants are version 5.10.0.
 
 ## Highlights
 
@@ -23,6 +23,8 @@ Chrome extension is in `extension/`. Both variants are version 5.9.0.
   results, and tries timestamped candidate tracklists in order.
 - Offers manual, independent MixesDB and TrackId.net lookups. Exact YouTube IDs
   are preferred; fallback candidates must also pass title and duration checks.
+- For short single-track videos, TrackId.net can fall back to artist/title/version
+  matching against its public music-track index and creates a single cue at 00:00.
 - Synchronizes the selected tracklist with the YouTube playback position,
   highlights the current track, and provides previous/next track navigation.
 - Preserves compatibility with YouTube's own chapter title and timestamped video
@@ -129,6 +131,50 @@ YouTube video test with the userscript or unpacked extension in the operator's
 actual browser profile.
 
 ## Release notes
+
+### 5.10.0
+
+- Keeps a larger interactive resize target fixed to the HUD's lower-right
+  corner and adds keyboard scaling through the arrow keys.
+- Measures the currently rendered track title directly, allowing the HUD to
+  shrink again when playback moves from a long title to a shorter one; its
+  width is capped at the combined disc, text, controls, spacing, and side rail.
+- Uses Cascadia Mono as the mechanical/digital default and adds a bounded local
+  font selector for Cascadia, OCR A, JetBrains Mono, IBM Plex Mono, Source Code
+  Pro, and Consolas stacks.
+
+### 5.9.4
+
+- When 1001Tracklists blocks the search POST for browser verification, `OPEN
+  1001` now replays the same title and tracklist-search selection in a new tab
+  instead of opening the unrelated empty search page.
+- Verification blocks on a known candidate still open that exact tracklist URL.
+
+### 5.9.3
+
+- Ranks same-event 1001Tracklists results using both query-token recall and
+  candidate-title precision, preventing extra artists or formats such as a
+  face-to-face set from outranking the requested solo set.
+- Uses the search result's play time only as a soft ranking signal, so a
+  shortened YouTube recording can still match its complete event tracklist.
+
+### 5.9.2
+
+- Recognizes 1001Tracklists' current HTTP 206 JavaScript/Turnstile forwarding
+  page as a verification block and stops candidate retries immediately.
+- Directs the existing 1001 link to the blocked candidate so verification can
+  be completed in a normal tab before a manual retry.
+- For short single-track videos, accepts a 1001 candidate only when its parsed
+  rows contain the requested artist, core title, and meaningful version tokens;
+  the selected song becomes a single cue at 00:00.
+
+### 5.9.1
+
+- Falls back from TrackId.net audiostream tracklists to its public music-track
+  index for videos under 20 minutes that do not look like DJ sets or radio shows.
+- Requires artist, core title, and meaningful remix/version tokens to agree;
+  generic `Original Mix` text may match an otherwise exact unqualified record.
+- Keeps MixesDB set timelines rejected for short single-track videos.
 
 ### 5.9.0
 

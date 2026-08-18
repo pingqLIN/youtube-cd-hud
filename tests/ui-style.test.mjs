@@ -77,6 +77,15 @@ test('paces 1001 candidate requests and cools down automatic retries after a blo
   assert.match(source, /fetchTracklistFrom1001\(title,\s*id,\s*true,\s*true\)/);
 });
 
+test('keeps the lower-right HUD resize handle interactive and content-bounds the width', () => {
+  assert.match(source, /\.resize-handle\s*\{[\s\S]*?pointer-events:\s*auto/);
+  assert.match(source, /createElement\('button'\)[\s\S]*?className\s*=\s*'resize-handle hud-resize-handle'/);
+  assert.match(source, /chapter\.style\.width\s*=\s*'auto'/);
+  assert.match(source, /fullChapterWidth\s*=\s*Math\.max\(1,\s*getTextContentWidth\(chapter\)\)/);
+  assert.doesNotMatch(source, /fullChapterWidth\s*=\s*Math\.max\(chapter\.scrollWidth/);
+  assert.match(source, /hud\.style\.maxWidth\s*=\s*`\$\{minimum\.width\}px`/);
+});
+
 test('shows the tracklist explicitly and uses the redesigned compound controls', () => {
   assert.match(source, /tracklistPanel\.style\.display\s*=\s*tracklistVisible\s*\?\s*'block'\s*:\s*'none'/);
   assert.match(source, /panel\.style\.display\s*=\s*tracklistVisible\s*\?\s*'block'\s*:\s*'none'/);

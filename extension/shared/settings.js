@@ -2,6 +2,14 @@
     'use strict';
 
     const STORAGE_KEY = 'ytCdHudSettings';
+    const FONT_STACKS = Object.freeze({
+        'cascadia-mono': '"Cascadia Mono", "Cascadia Code", "Lucida Console", Consolas, monospace',
+        'ocr-machine': '"OCR A Extended", "OCR A Std", "Lucida Console", "Cascadia Mono", Consolas, monospace',
+        'jetbrains-mono': '"JetBrains Mono", "Cascadia Mono", Consolas, monospace',
+        'ibm-plex-mono': '"IBM Plex Mono", "Cascadia Mono", Consolas, monospace',
+        'source-code-pro': '"Source Code Pro", "Cascadia Mono", Consolas, monospace',
+        consolas: 'Consolas, "Lucida Console", monospace',
+    });
     const DEFAULTS = Object.freeze({
         enabled: true,
         enable1001: true,
@@ -13,6 +21,7 @@
         maxCandidates: 5,
         titleFontSize: 14,
         timeFontSize: 12,
+        fontFamily: 'cascadia-mono',
         discScale: 1,
         surfaceOpacity: 85,
         accentColor: '#63b3ed',
@@ -33,6 +42,11 @@
         return /^#[0-9a-f]{6}$/.test(normalized) ? normalized : DEFAULTS.accentColor;
     }
 
+    function normalizeFontFamily(value) {
+        const key = String(value || '');
+        return Object.hasOwn(FONT_STACKS, key) ? key : DEFAULTS.fontFamily;
+    }
+
     function normalize(value = {}) {
         return {
             enabled: value.enabled !== false,
@@ -45,6 +59,7 @@
             maxCandidates: clampNumber(value.maxCandidates, DEFAULTS.maxCandidates, 1, 10, true),
             titleFontSize: clampNumber(value.titleFontSize, DEFAULTS.titleFontSize, 9, 28, true),
             timeFontSize: clampNumber(value.timeFontSize, DEFAULTS.timeFontSize, 10, 29, true),
+            fontFamily: normalizeFontFamily(value.fontFamily),
             discScale: clampNumber(value.discScale, DEFAULTS.discScale, 0.7, 1.6),
             surfaceOpacity: clampNumber(value.surfaceOpacity, DEFAULTS.surfaceOpacity, 45, 100, true),
             accentColor: normalizeColor(value.accentColor),
@@ -57,6 +72,7 @@
     globalThis.YtCdHudSettings = Object.freeze({
         STORAGE_KEY,
         DEFAULTS,
+        FONT_STACKS,
         normalize,
     });
 })();

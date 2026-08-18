@@ -15,7 +15,7 @@
         </div>
         <div class="header-readout" aria-label="擴充版本資訊">
             <span>BUILD</span>
-            <strong>5.9.0</strong>
+            <strong>5.10.0</strong>
             <span>MODE</span>
             <strong>LOCAL</strong>
         </div>
@@ -67,7 +67,7 @@
                                 <i aria-hidden="true"></i>
                             </label>
                             <label class="switch-row">
-                                <span><b>啟用 TrackId.net</b><small>允許手動搜尋既有公開 tracklist</small></span>
+                                <span><b>啟用 TrackId.net</b><small>允許手動搜尋既有公開 tracklist／單曲資料</small></span>
                                 <input id="enableTrackId" name="enableTrackId" type="checkbox">
                                 <i aria-hidden="true"></i>
                             </label>
@@ -128,6 +128,18 @@
                                 <input id="surfaceOpacity" name="surfaceOpacity" type="range" min="45" max="100" step="1">
                             </label>
                         </div>
+
+                        <label class="font-field">
+                            <span><b>HUD 字體</b><small>使用本機已安裝字體；未安裝時自動回退至 Cascadia Mono／Consolas</small></span>
+                            <select id="fontFamily" name="fontFamily">
+                                <option value="cascadia-mono">Cascadia Mono / Digital Grid（預設）</option>
+                                <option value="ocr-machine">OCR A / Machine Readout</option>
+                                <option value="jetbrains-mono">JetBrains Mono / Technical</option>
+                                <option value="ibm-plex-mono">IBM Plex Mono / Instrument</option>
+                                <option value="source-code-pro">Source Code Pro / Console</option>
+                                <option value="consolas">Consolas / Legacy Terminal</option>
+                            </select>
+                        </label>
 
                         <label class="color-field">
                             <span><b>訊號色</b><small>焦點、作用中控制與刻度線</small></span>
