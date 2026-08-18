@@ -8,7 +8,7 @@
 
 > 找到曲目資料、對準播放時間軸，讓目前播放的曲目一直保持同步。
 
-[![Version 5.11.0](https://img.shields.io/badge/version-5.11.0-2563eb)](package.json)
+[![Version 5.12.0](https://img.shields.io/badge/version-5.12.0-2563eb)](package.json)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
 
@@ -31,7 +31,7 @@
 
 ## 專案狀態
 
-YouTube CD HUD 目前以**原始碼 Beta** 形式發布。Userscript 與 Manifest V3 Chrome 擴充功能的目前版本皆為 **5.11.0**。
+YouTube CD HUD 目前以**原始碼 Beta** 形式發布。Userscript 與 Manifest V3 Chrome 擴充功能的目前版本皆為 **5.12.0**。
 
 本 repository 沒有宣稱已發布 Chrome 線上應用程式商店版本。Chrome 版採「載入未封裝項目」安裝；Userscript 則透過 Tampermonkey 安裝。
 
@@ -43,7 +43,7 @@ YouTube CD HUD 的核心不是 CD 動畫本身，而是**曲目資料搜尋、�
 
 它可以：
 
-- 使用 YouTube 原生章節標題，或影片說明欄內帶時間戳的曲目資料。
+- 使用 YouTube 原生章節標題，或掃描影片說明欄與目前已載入留言中的時間戳 playlist。
 - 查詢 **1001Tracklists**、**MixesDB**、**TrackId.net** 等額外曲目來源。
 - 將不同供應者的結果分開保存，不因文字看起來相似就自動混在一起。
 - 依 YouTube 目前播放時間，自動判斷並高亮正在播放的曲目。
@@ -92,7 +92,7 @@ YouTube CD HUD 的核心不是 CD 動畫本身，而是**曲目資料搜尋、�
 ## 快速開始
 
 1. 開啟 YouTube DJ Set、Mix、Radio 錄音或音樂影片。
-2. 如果 YouTube 已提供章節或說明欄時間戳，YouTube CD HUD 會先載入成 `YT` 來源。
+2. 如果 YouTube 已提供章節，或說明欄／目前已載入留言含時間戳 playlist，YouTube CD HUD 會先載入成 `YT` 來源。
 3. 使用來源控制查詢或切換 `1001`、`MIXESDB`、`TRACKID`。
 4. 如果某個供應者找到多個可信候選，可逐一切換結果。
 5. 播放或拖曳 YouTube 時間軸；目前曲名、高亮與上一曲／下一曲目標會跟著播放位置更新。
@@ -108,12 +108,14 @@ YouTube CD HUD 把「找到正確 tracklist」當成資料匹配問題處理，�
 
 | 來源 | 主要證據 | 匹配／備援方式 |
 | --- | --- | --- |
-| `YT` | YouTube 原生章節或說明欄時間戳 | 不需要外部匹配；有資料時預設優先使用 |
+| `YT` | YouTube 原生章節，或說明欄／目前已載入留言中的時間戳 playlist | 不需要外部匹配；可信的說明欄 playlist 優先，否則採用最佳單一留言 playlist |
 | `1001` | 正規化後的影片標題、1001Tracklists 搜尋排序、候選頁時間戳 | 以標題證據為主並搭配時間資訊排序；因此截短版錄影仍可對應較完整的活動 tracklist |
 | `MIXESDB` | 可取得時優先比對完全相同的 YouTube ID | 備援候選仍須通過保守的標題、影片長度與 cue coverage 檢查 |
 | `TRACKID` | 可取得時優先比對完全相同的 YouTube ID | 備援候選會檢查標題與長度；短篇單曲影片可改以 artist／title／version 比對公開單曲索引 |
 
 不同供應者的 tracklist 彼此保持獨立；專案不會因為部分文字剛好相似，就把兩個來源的資料自動合併。
+
+`YT` 本機時間軸會先檢查說明欄。若說明欄少於兩個有效 playlist cue，才掃描目前已載入的留言；候選依曲目數量、再依時間軸涵蓋範圍排序，只採用單一留言。留言 DOM 後續載入或使用者捲動頁面時會重新檢查。
 
 <p align="center">
   <img src="docs/assets/readme/youtube-cd-hud-cue-fox-provider-banner-v1.png" width="880" alt="Cue Fox 在多個曲目供應者訊號之間進行匹配與選擇。" />
@@ -123,7 +125,8 @@ YouTube CD HUD 把「找到正確 tracklist」當成資料匹配問題處理，�
 
 | 狀況 | YouTube CD HUD 的行為 |
 | --- | --- |
-| YouTube 說明欄有時間戳曲目 | 載入為 `YT`，並預設使用 |
+| YouTube 說明欄有可信的時間戳 playlist | 載入為 `YT`，並預設使用 |
+| 說明欄沒有可信 playlist，但已載入留言中有 | 選擇最佳單一留言 playlist 作為 `YT`；不會把多則留言合併 |
 | YouTube 有原生章節標題 | `YT` 啟用時顯示目前章節 |
 | 1001Tracklists 找到可用的時間戳 tracklist | 新增可切換的 `1001` 來源，依同一播放時間同步 |
 | MixesDB 或 TrackId.net 找到可信結果 | 各自新增成獨立來源，不與其他供應者自動合併 |
@@ -181,6 +184,8 @@ Chrome 擴充功能只要求 `storage` 權限，主機存取範圍限制在：
 - TrackId.net
 
 專案**不要求** Chrome `cookies` 權限、不呼叫 `chrome.cookies`、不收集瀏覽紀錄，也沒有內建 analytics。
+
+說明欄／留言掃描只處理瀏覽器已載入的 YouTube 頁面 DOM；不呼叫 YouTube comments API、不額外要求留言資料、不上傳留言文字，也不新增 host permission。
 
 Chrome 對白名單內的 1001Tracklists 請求，可能會自動附帶該網站自己的驗證 Cookie；擴充功能本身不讀取、儲存或輸出 Cookie 值。
 
