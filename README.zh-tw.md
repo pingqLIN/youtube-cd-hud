@@ -1,323 +1,243 @@
 # YouTube CD HUD
 
-![Cue Fox 在唱片 cue 掃描器旁比對三組抽象曲目來源訊號](docs/assets/readme/youtube-cd-hud-cue-fox-provider-banner-v1.png)
-
-![Cue Fox 在環形播放時間軸上同步時間戳曲目卡](docs/assets/readme/youtube-cd-hud-cue-fox-sync-banner-v1.png)
-
-![Cue Fox 在發光唱片入口旁守護有容量上限的本機曲目快取](docs/assets/readme/youtube-cd-hud-cue-fox-cache-banner-v1.png)
+把 YouTube DJ Set、Mix 與音樂影片轉成**可切換資料來源、會跟著播放時間同步的曲目 HUD**。
 
 [English](README.md)
 
-YouTube CD HUD 的核心功能是依目前 YouTube 影片搜尋可選的曲目資料來源、匯入
-帶時間戳的曲目，並讓目前曲目隨播放時間同步更新。同時相容 YouTube 原生章節
-標題與影片說明欄內的時間戳曲目；既有 YouTube 曲目資訊會維持為預設來源，
-不會因 1001Tracklists 搜尋而被強制取代。
+![Cue Fox 在環形播放時間軸上同步時間戳曲目卡](docs/assets/readme/youtube-cd-hud-cue-fox-sync-banner-v1.png)
 
-同步後的曲目資訊會顯示在精簡的唱片風格 HUD 與曲目面板中。你可以選擇安裝
-Tampermonkey Userscript，或載入未封裝的 Manifest V3 Chrome 擴充功能。
+> 找到曲目資料、對準播放時間軸，讓目前播放的曲目一直保持同步。
 
-Userscript 原始檔位於 `src/youtube-cd-hud.user.js`，可載入的 Chrome 擴充位於
-`extension/`；兩個版本目前皆為 v5.11.0。
+[![Version 5.11.0](https://img.shields.io/badge/version-5.11.0-2563eb)](package.json)
+[![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
+[![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
+
+---
+
+## 目錄
+
+- [專案狀態](#專案狀態)
+- [這個專案在做什麼](#這個專案在做什麼)
+- [安裝方式怎麼選](#安裝方式怎麼選)
+- [快速開始](#快速開始)
+- [曲目來源與匹配方式](#曲目來源與匹配方式)
+- [1001Tracklists 瀏覽器驗證](#1001tracklists-瀏覽器驗證)
+- [介面與控制](#介面與控制)
+- [隱私、權限與快取](#隱私權限與快取)
+- [開發與驗證](#開發與驗證)
+- [專案結構](#專案結構)
+
+---
+
+## 專案狀態
+
+YouTube CD HUD 目前以**原始碼 Beta** 形式發布。Userscript 與 Manifest V3 Chrome 擴充功能的目前版本皆為 **5.11.0**。
+
+本 repository 沒有宣稱已發布 Chrome 線上應用程式商店版本。Chrome 版採「載入未封裝項目」安裝；Userscript 則透過 Tampermonkey 安裝。
+
+---
+
+## 這個專案在做什麼
+
+YouTube CD HUD 的核心不是 CD 動畫本身，而是**曲目資料搜尋、來源選擇，以及與 YouTube 播放時間軸同步**。
+
+它可以：
+
+- 使用 YouTube 原生章節標題，或影片說明欄內帶時間戳的曲目資料。
+- 查詢 **1001Tracklists**、**MixesDB**、**TrackId.net** 等額外曲目來源。
+- 將不同供應者的結果分開保存，不因文字看起來相似就自動混在一起。
+- 依 YouTube 目前播放時間，自動判斷並高亮正在播放的曲目。
+- 提供上一曲／下一曲跳轉。
+- 在不同資料來源間切換，但**不改變目前播放時間**。
+- 用可拖移的 CD 風格 HUD 與曲目面板呈現同步結果。
+
+如果 YouTube 本身已經有可用的章節或時間戳曲目，`YT` 會維持預設來源；外部服務的用途是補充，而不是直接覆蓋 YouTube 原有資料。
+
+---
+
+## 安裝方式怎麼選
+
+兩個版本共用相同核心原始碼，但適合的使用方式不同。
+
+| 版本 | 適合誰 | 特點 |
+| --- | --- | --- |
+| **Tampermonkey Userscript** | 想最快試用，或本來就有使用 Userscript 的人 | 單一腳本，直接注入 YouTube |
+| **Chrome 擴充功能** | 想使用完整設定頁與較完整瀏覽器整合的人 | Manifest V3、獨立 Options 頁、背景請求處理，以及 1001Tracklists 第一方驗證橋接 |
+
+### 方案 A — Tampermonkey
+
+1. 先在瀏覽器安裝 Tampermonkey。
+2. 開啟 [`src/youtube-cd-hud.user.js`](src/youtube-cd-hud.user.js)。
+3. 使用 Tampermonkey 安裝或匯入這個檔案。
+4. 如果以前裝過舊版 YouTube CD HUD，先停用重複腳本。
+5. 完整重新載入 YouTube 分頁。
+
+### 方案 B — Chrome 擴充功能
+
+**單純使用目前 repository 內的版本，不需要先執行 build。**
+
+1. 下載本 repository 並解壓縮。
+2. 在 Chrome 開啟 `chrome://extensions`。
+3. 開啟右上角的**開發人員模式**。
+4. 按**載入未封裝項目**。
+5. 選擇解壓縮後的 `extension/` 資料夾。
+6. 如需調整資料來源、外觀或控制項目，開啟擴充功能的設定頁。
+7. 把已經開著的 YouTube 分頁重新載入一次。
+
+> [!NOTE]
+> `npm run build:extension` 是**開發者**修改共用原始碼後才需要使用的指令。一般使用者載入目前 repository 內已存在的 `extension/`，不需要先跑 build。
+
+---
 
 ## 快速開始
 
-1. 依下方步驟安裝 Userscript 或未封裝擴充功能，接著重新載入 YouTube 分頁。
-2. 開啟 YouTube 音樂 set。若影片已有原生章節或說明欄時間戳，HUD 會先採用
-   這些 YouTube 曲目資訊。
-3. 使用來源控制查詢或切換 `1001`、`MIXESDB` 與 `TRACKID`。切換來源時，曲名、
-   目前曲目高亮與上一曲／下一曲目標會一起更新，不會改變播放進度。
-4. 如果 1001Tracklists 要求瀏覽器驗證，請按 **OPEN 1001**，等待結果頁載入完成，
-   再回到原本的 YouTube 分頁。擴充會透過已驗證的第一方分頁重試。
+1. 開啟 YouTube DJ Set、Mix、Radio 錄音或音樂影片。
+2. 如果 YouTube 已提供章節或說明欄時間戳，YouTube CD HUD 會先載入成 `YT` 來源。
+3. 使用來源控制查詢或切換 `1001`、`MIXESDB`、`TRACKID`。
+4. 如果某個供應者找到多個可信候選，可逐一切換結果。
+5. 播放或拖曳 YouTube 時間軸；目前曲名、高亮與上一曲／下一曲目標會跟著播放位置更新。
+6. 隨時切換來源。切換只會改變顯示與同步所使用的曲目資料，不會把影片跳到別的時間。
 
-同一來源有多個可信候選時，來源按鈕會顯示 `(1)`、`(2)` 等編號。每按一次就
-切換到下一個候選；切到最後一個候選後再按一次，才會開啟其來源頁面。
+同一供應者若回傳多個可信候選，來源按鈕會顯示 `(1)`、`(2)` 等編號。每按一次切到下一個候選；到最後一個候選後再按一次，才會開啟該來源頁面。
 
-## 功能亮點
+---
 
-- 以正規化後的 YouTube 影片標題搜尋 1001Tracklists、排列相符結果，並依序
-  嘗試含時間戳的候選曲目頁。
-- 提供互相獨立的 MixesDB 與 TrackId.net 手動查詢。優先採用完全相同的
-  YouTube ID；備援候選仍須通過標題與錄音長度檢查。
-- 對短篇單曲影片，TrackId.net 可改以藝人／曲名／版本比對公開單曲索引，
-  並建立一個從 00:00 開始的曲目 cue。
-- 將選定曲目來源與 YouTube 播放位置同步：自動高亮目前曲目，並提供上一曲／
-  下一曲跳轉。
-- 相容 YouTube 原生章節標題與影片說明欄的時間戳曲目。可在 `YT` 與 `1001`
-  來源間切換；兩者都有資料時，預設仍優先使用 YouTube。
-- 明確辨識 1001Tracklists CAPTCHA／IP 限制頁，自動查詢暫停五分鐘；完成網站
-  驗證後仍可手動重試。
-- 以可拖移、可調整寬度的唱片風格 HUD 呈現同步資料，並提供圓形影片封面、
-  封面取色、曲目面板與唱片拖曳播放。
+## 曲目來源與匹配方式
 
-## 曲目來源與同步方式
+YouTube CD HUD 把「找到正確 tracklist」當成資料匹配問題處理，而不是只做畫面疊加。**不是所有來源都只靠標題相似度決定結果。**
 
-| 狀況 | 行為 |
-|---|---|
-| YouTube 說明欄含時間戳曲目 | 載入為 `YT` 來源，並預設使用這份曲目。 |
-| YouTube 顯示原生章節標題 | 使用 `YT` 來源時同步顯示該章節標題。 |
-| 1001Tracklists 找到含時間戳的曲目 | 新增可切換的 `1001` 來源，並依同一影片播放時間同步。 |
-| MixesDB 或 TrackId.net 找到可信結果 | 新增獨立的可切換來源，不與其他供應者資料自動合併。 |
-| 多個來源都有資料 | 預設保持 `YT`；啟用「優先採用 1001」後，可在 1001 搜尋成功時自動切換。 |
-| 1001Tracklists 遭阻擋或沒有可用結果 | 保留現有 YouTube 來源，顯示 1001 搜尋狀態，不會覆蓋原有曲目。 |
+| 來源 | 主要證據 | 匹配／備援方式 |
+| --- | --- | --- |
+| `YT` | YouTube 原生章節或說明欄時間戳 | 不需要外部匹配；有資料時預設優先使用 |
+| `1001` | 正規化後的影片標題、1001Tracklists 搜尋排序、候選頁時間戳 | 以標題證據為主並搭配時間資訊排序；因此截短版錄影仍可對應較完整的活動 tracklist |
+| `MIXESDB` | 可取得時優先比對完全相同的 YouTube ID | 備援候選仍須通過保守的標題、影片長度與 cue coverage 檢查 |
+| `TRACKID` | 可取得時優先比對完全相同的 YouTube ID | 備援候選會檢查標題與長度；短篇單曲影片可改以 artist／title／version 比對公開單曲索引 |
 
-切換來源時，曲目清單、目前曲目高亮、HUD 曲名與上一曲／下一曲目標會一起
-更新，不會改變當下的 YouTube 播放時間。
+不同供應者的 tracklist 彼此保持獨立；專案不會因為部分文字剛好相似，就把兩個來源的資料自動合併。
 
-## 安裝
+<p align="center">
+  <img src="docs/assets/readme/youtube-cd-hud-cue-fox-provider-banner-v1.png" width="880" alt="Cue Fox 在多個曲目供應者訊號之間進行匹配與選擇。" />
+</p>
 
-### Tampermonkey
+### 常見狀況
 
-1. 把 `src/youtube-cd-hud.user.js` 匯入 Tampermonkey。
-2. 停用較舊的重複腳本。
-3. 完整重新載入 YouTube 分頁。
+| 狀況 | YouTube CD HUD 的行為 |
+| --- | --- |
+| YouTube 說明欄有時間戳曲目 | 載入為 `YT`，並預設使用 |
+| YouTube 有原生章節標題 | `YT` 啟用時顯示目前章節 |
+| 1001Tracklists 找到可用的時間戳 tracklist | 新增可切換的 `1001` 來源，依同一播放時間同步 |
+| MixesDB 或 TrackId.net 找到可信結果 | 各自新增成獨立來源，不與其他供應者自動合併 |
+| 同時存在多個來源 | 預設保持 `YT`；若已設定 Prefer 1001，成功搜尋後可自動切到 1001 |
+| 遠端來源被擋或沒有可信結果 | 保留既有 YouTube／本機資料，不使用弱匹配覆蓋它 |
 
-### Chrome 擴充功能
+---
 
-1. 修改共用 userscript 原始碼後，執行 `npm run build:extension`。
-2. 開啟 `chrome://extensions`，啟用「開發人員模式」，選擇「載入未封裝項目」。
-3. 選取本專案的 `extension/` 目錄。
-4. 開啟擴充控制頁、儲存偏好設定，再重新載入已開啟的 YouTube 分頁。
+## 1001Tracklists 瀏覽器驗證
 
-目前是原始碼散布形式，本說明未宣稱它已在 Chrome 線上應用程式商店發布。
+1001Tracklists 有時會回傳 CAPTCHA、瀏覽器驗證頁或 IP 限制。
 
-## 控制頁
+使用 **Chrome 擴充功能**時：
 
-控制頁可調整 HUD 總開關、啟用的曲目資料來源、1001Tracklists 行為、字級、唱片倍率、面板透明度、
-訊號色、顯示控制與自訂 CSS；建議使用 `#yt-cd-hud` 或
-`.yt-tracklist-panel` 自行限定選擇器範圍。
+1. 按 **OPEN 1001**。
+2. 在開啟的 1001Tracklists 分頁完成網站要求的驗證。
+3. 等待結果頁完整載入。
+4. 回到原本的 YouTube 分頁。
+
+擴充功能可透過已完成驗證的第一方 1001Tracklists 分頁重試。這個短效橋接只接受與原始 YouTube 分頁相關、且在白名單內的 1001Tracklists 請求。
+
+偵測到阻擋後，自動 1001 查詢會暫停；完成網站驗證後仍可手動重試。
+
+---
+
+## 介面與控制
+
+HUD 的角色是呈現同步後的資料，而不是取代資料匹配流程本身。
+
+主要介面功能：
+
+- 可拖移的 CD 風格 HUD。
+- 以目前 YouTube 縮圖製作的圓形唱片圖。
+- 從封面推導的 accent color。
+- 目前曲名與來源指示。
+- 上一曲／下一曲跳轉。
+- 會高亮目前曲目的 tracklist 面板。
+- 直接拖曳唱片調整播放位置。
+- 可調整 HUD 寬度與文字大小。
+- Chrome 擴充功能提供獨立設定頁，可調整供應者、字型、唱片倍率、面板透明度、accent color、顯示控制與自訂 CSS。
 
 ![YouTube CD HUD 控制頁顯示預設本機設定與即時 HUD 預覽](docs/assets/readme/youtube-cd-hud-options-overview.png)
 
-下圖記錄一次實際控制頁操作：把訊號色改為亮黃、唱片倍率調為 115%、面板
-不透明度調為 92%、隱藏跳曲控制，並由設定表單回報儲存成功。
+若使用自訂 CSS，建議盡量把 selector 限定在 `#yt-cd-hud` 或 `.yt-tracklist-panel`，避免樣式影響 YouTube 其他介面。
 
-![YouTube CD HUD 控制頁完成亮黃訊號色、115% 唱片倍率、92% 不透明度與隱藏跳曲控制設定](docs/assets/readme/youtube-cd-hud-options-configured.png)
+---
 
-截圖實際執行專案內的 `options.html`、`options.css`、`settings.js` 與
-`options.js`；僅以有界的記憶體介面替代 `chrome.storage.local`，未使用個人
-Chrome 設定檔或瀏覽資料。因此它能驗證控制頁互動，但不能取代 YouTube 分頁
-上的安裝與操作驗收。
+## 隱私、權限與快取
 
-## 隱私與權限
+Chrome 擴充功能只要求 `storage` 權限，主機存取範圍限制在：
 
-- 擴充偏好只保存在 Chrome 本機儲存空間。
-- Manifest 僅要求 `storage`，主機存取範圍限制於 YouTube、1001Tracklists、
-  MixesDB 與 TrackId.net 的 HTTPS 頁面。
-- 擴充沒有 `cookies` 權限，不呼叫 `chrome.cookies`，也不讀取或輸出 Cookie
-  值。
-- 啟用 1001Tracklists 整合後，Chrome 可在 allowlist HTTPS 請求附帶該網站
-  自己的驗證 Cookie；擴充本身無法讀取這些 Cookie 值。
-- MixesDB 與 TrackId.net 僅使用不帶憑證的匿名唯讀請求；擴充不會上傳音訊，
-  也不會提交新的辨識工作。
-- 專案不收集瀏覽紀錄、帳密或分析資料。
+- YouTube
+- 1001Tracklists
+- MixesDB
+- TrackId.net
 
-## 吉祥物
+專案**不要求** Chrome `cookies` 權限、不呼叫 `chrome.cookies`、不收集瀏覽紀錄，也沒有內建 analytics。
 
-Cue Fox 是為 YouTube CD HUD 原創設計的耳廓狐 cue 操作員。偏大的耳朵象徵
-持續聆聽；時間戳腕錶、cue 眼鏡、耳機、波形尾巴與輕量 DJ 背帶，分別呼應
-曲目來源搜尋、播放同步與有界本機快取。開頭三張橫幅使用同一角色與服裝，
-但安排在不同工作場景；圖像不重製第三方角色、標誌或介面截圖。
+Chrome 對白名單內的 1001Tracklists 請求，可能會自動附帶該網站自己的驗證 Cookie；擴充功能本身不讀取、儲存或輸出 Cookie 值。
+
+MixesDB 與 TrackId.net 查詢是匿名唯讀請求。專案不會上傳音訊，也不會提交新的音訊辨識工作。
+
+解析完成的曲目資料與來源連結可在本機快取最長 **6 小時**，上限為**最近 30 部影片**、**每個供應者 300 首曲目**。第三方 HTML、Cookie 與 challenge 資料不會被存進這份快取。
+
+<p align="center">
+  <img src="docs/assets/readme/youtube-cd-hud-cue-fox-cache-banner-v1.png" width="880" alt="Cue Fox 守護有容量與時間限制的本機曲目快取。" />
+</p>
+
+---
 
 ## 開發與驗證
 
+共用原始碼位於：
+
+```text
+src/youtube-cd-hud.user.js
+```
+
+Chrome 擴充功能位於：
+
+```text
+extension/
+```
+
+修改共用原始碼後執行：
+
 ```powershell
+npm run build:extension
 npm run check
 npm test
 ```
 
-`npm run check` 會確認擴充內容腳本與 userscript 原始碼同步，並執行 JavaScript
-語法檢查；`npm test` 會執行 Node.js 測試。這些都屬於本機檢查；最終仍需在
-操作者的實際瀏覽器設定檔，使用 userscript 或未封裝擴充完成可見的 YouTube
-影片驗收。
+`npm run check` 會確認 extension content script 與 userscript 共用原始碼保持同步，並執行 JavaScript 語法檢查；`npm test` 會執行 Node.js 測試。
 
-## 版本紀錄
+這些檢查可以驗證 repository 狀態，但最終驗收仍應在實際瀏覽器設定檔中，用已安裝的 Userscript 或未封裝擴充功能打開真正的 YouTube 影片測試。
 
-### v5.11.0
+---
 
-- 當瀏覽器可正常顯示 1001Tracklists 搜尋結果，但擴充的 service worker 仍被要求
-  驗證時，已開啟的結果分頁會註冊短效的第一方請求橋接；返回 YouTube 後會透過
-  該分頁直接讀取已呈現的搜尋結果 DOM，不再重送遭阻擋的 POST，並更新 HUD；
-  全程不讀取或揭露瀏覽器 Cookie。
-- 橋接僅接受原始 YouTube 分頁送出的 1001Tracklists 白名單 GET／POST，短效路由
-  狀態存於擴充 session storage；若結果分頁已關閉，則退回既有直接請求流程。
-- 將曲目清單按鈕移至來源選擇器右側，HUD 右下角改為獨立 resize bay，並縮短
-  旋轉唱片與資訊區之間的距離。
-- 目前顯示的曲名可直接開啟 Google 搜尋；TRACKLIST 標題旁會顯示目前來源系統
-  縮寫，並在來源網址可用時連結至 YouTube、1001Tracklists、MixesDB 或 TrackId
-  的匹配頁面。
-- 主面板右下角由等比例縮放改為真正的寬度調整；曲名會在剩餘空間中換行，CD
-  與按鈕尺寸維持不變，最窄寬度由完整控制列決定；最寬則鎖定為目前曲名、
-  控制列及 CD 的實際總需求，不允許向播放器邊界延伸出空白區。方向鍵可每次
-  調整 20px，`Home` 可恢復依內容自動決定寬度。
-- 原本分開的 `T+`／`T−` 合併為單一 `T±`，讓右側工具列下方保持空白、不再與
-  resize bay 競爭。左鍵或 Enter 放大、右鍵縮小，方向鍵可雙向調整。
-- 解析完成的曲目與來源網址會在本機快取六小時，最多保留最近 30 支影片、每個
-  來源最多 300 首；短時間重新開啟影片會直接還原並略過立即遠端查詢。完整第三方
-  HTML、Cookie、驗證內容及請求資料不會寫入快取。
-- 同一供應者若有多個可信曲目候選，TRACKLIST 標題旁的來源按鈕會標示 `(1)`、
-  `(2)`、`(3)`。從預設 `(1)` 開始，每次點擊依序切換並立即使用下一份曲目；
-  到達最後一個候選後，再點一次才會開啟該候選的來源頁。單一候選維持直接開頁。
+## 專案結構
 
-### v5.10.1
+| 路徑 | 用途 |
+| --- | --- |
+| `src/youtube-cd-hud.user.js` | 共用 Userscript 原始碼 |
+| `extension/` | Manifest V3 Chrome 擴充功能 |
+| `extension/options/` | 擴充功能設定介面 |
+| `extension/background/` | 背景請求處理 |
+| `extension/content/` | YouTube content script 與 1001 第一方橋接 |
+| `scripts/build-extension.mjs` | 將共用來源同步到 extension |
+| `tests/` | Node.js 測試 |
+| `docs/assets/readme/` | README 插圖與截圖 |
+| `archive/` | 歷史專案資料 |
 
-- 只有從遭阻擋的搜尋或候選頁按下 `OPEN 1001` 時，才啟用一次性的驗證返回
-  偵測；完成驗證並回到同一支 YouTube 影片後，會清除 cooldown 並自動重試一次。
-- 驗證返回後若成功取得曲目，會立即切換至 1001 來源，即使影片已有 YouTube
-  章節；一般自動搜尋與手動 RETRY 仍遵循原有來源偏好設定。
+---
 
-### v5.10.0
+## 備註
 
-- 將較大的拖拉命中區固定在 HUD 右下角，並支援聚焦後以方向鍵縮放。
-- 直接量測目前實際呈現的曲名；從長曲名切換至短曲名時 HUD 會重新縮窄，寬度
-  上限只由唱片、文字、控制元件、間距與側邊工具列的合計需要決定。
-- 預設改用更具機械／數位感的 Cascadia Mono，設定頁新增受控的本機 Mono 字體
-  選單，可切換 Cascadia、OCR A、JetBrains Mono、IBM Plex Mono、Source Code Pro
-  與 Consolas 字體堆疊。
-
-### v5.9.4
-
-- 當 1001Tracklists 阻擋搜尋 POST 並要求瀏覽器驗證時，`OPEN 1001` 會在新分頁
-  重送相同的影片標題與曲目表搜尋類型，不再開啟無關的空白搜尋首頁。
-- 若驗證阻擋發生在已知候選曲目頁，仍會開啟該筆候選的確切網址。
-
-### v5.9.3
-
-- 1001Tracklists 同活動候選改用查詢詞覆蓋率與候選標題精確度共同排序，避免
-  多出其他藝人或 Face-to-Face 類型的場次排在指定單人 set 前面。
-- 搜尋結果的播放長度只作為低權重排序訊號，讓經過裁短的 YouTube 錄影仍可
-  匹配完整活動曲目表。
-
-### v5.9.2
-
-- 將 1001Tracklists 現行 HTTP 206 JavaScript／Turnstile 轉送頁辨識為驗證阻擋，
-  不再把它誤判為五個候選都沒有時間戳並持續重試。
-- 保留被阻擋的候選連結，讓操作者在一般分頁完成驗證後手動重試。
-- 對短篇單曲影片，1001 候選的曲目列必須包含相符的藝人、核心曲名與具辨識力
-  的版本詞；選中的單曲會轉成從 00:00 開始的一筆 cue。
-
-### v5.9.1
-
-- 對 20 分鐘內且不像 DJ set／廣播節目的影片，在 TrackId.net audiostream
-  查無結果時，改查其公開單曲索引。
-- 單曲候選必須同時符合藝人、核心曲名與具辨識力的 remix／版本詞；泛用的
-  `Original Mix` 可以匹配其餘資訊完全一致但未標版本的資料。
-- 短篇單曲影片仍不接受 MixesDB 長篇 set 的時間軸，避免錯誤套用。
-
-### v5.9.0
-
-- 以獨立 adapter 新增可選的 MixesDB 與 TrackId.net 曲目來源。
-- 兩個補充來源都維持手動、唯讀查詢；候選結果會依來源 URL／YouTube ID，並以
-  標題、錄音長度與時間戳覆蓋範圍作保守驗證。
-- 各供應者曲目維持分離，由操作者明確選擇目前來源，不自動合併。
-
-### v5.8.3
-
-- 擴充背景的 1001 請求會使用 Chrome 已有的 1001Tracklists 網站驗證狀態，
-  解決一般分頁可閱讀、背景抓取卻仍收到 CAPTCHA 阻擋頁的差異。
-- 擴充沒有新增 `cookies` 權限，也不讀取、儲存或輸出 Cookie；Chrome 只會在
-  既有 HTTPS 1001 allowlist 請求上附帶該網站自己的 Cookie。
-
-### v5.8.2
-
-- 關閉「顯示唱片」現在只隱藏 CD 圖像與互動，保留原本占位及面板圓心左界，
-  因此曲名、控制列與整個 HUD 不會左右跳動；設定頁預覽亦採相同行為。
-- 1001 搜尋頁與候選曲目頁之間加入 1.2 秒節流，候選回退也不再連續瞬間發送。
-- 偵測到 1001 的 IP/CAPTCHA 阻擋頁後，自動查詢會暫停五分鐘；操作者完成
-  CAPTCHA 後仍可使用 `RETRY SEARCH` 立即重試。
-- 擴充背景請求恢復使用瀏覽器預設快取，避免反覆重載同一候選頁；該版仍採
-  匿名請求，已由 v5.8.3 的網站驗證狀態支援取代。Console 會附上失敗階段、
-  候選序號、HTTP 狀態與 URL。
-
-### v5.8.1
-
-- HUD 寬高改為鎖定完整內容的自然尺寸；右下角把手改為等比例縮放 HUD，
-  不再把面板拉成含大片空白的畫布。
-- 面板的不透明左界改為穿過 CD 圓心；CD 左半自然伸出面板，外接矩形區保持
-  完全透明並可讓滑鼠事件穿透。CD 同時貼合面板上下邊，形成內接的半懸浮構圖。
-- CD 預設會比右側曲名、時間與控制列總高度略高，並加入隨滑鼠位置移動的
-  唱片表面反光；拖曳唱片時反光會暫停，避免干擾快轉與短取樣操作。
-- 將 `SRC / YT / 1001` 與固定寬度的上一曲／下一曲按鈕整合為同一列，兩組
-  控制間保留細分隔線與間距。
-- 當目前來源為 1001 時，HUD 只使用 1001 的當前曲名，不再被 YouTube
-  播放器的「影片相關資訊」等系統章節標籤覆蓋。
-- 擴充版的 1001 背景橋接改用相容性較高的 callback 回應路徑，補上分階段
-  錯誤資訊與明確逾時。
-
-### v5.8.0
-
-- 在保留 Tampermonkey 版本的同時，新增 Manifest V3 Chrome 擴充版。
-- 新增獨立擴充控制頁，可開關 HUD、調整 1001 搜尋行為、曲名與時間字級、
-  CD 倍率、面板透明度、訊號色、個別控制列顯示，以及套用自訂 CSS；建議
-  使用 `#yt-cd-hud` 或 `.yt-tracklist-panel` 自行限定選擇器範圍。
-- 擴充設定只保存在 Chrome 本機，開啟中的 YouTube 分頁可即時套用。
-- 跨站權限只限 YouTube 與 1001Tracklists；不收集瀏覽紀錄、帳密、Cookie
-  值或分析資料。Chrome 可在 1001 請求中附帶該網站既有的驗證 Cookie，但
-  擴充不具備讀取 Cookie 的權限。
-
-### v5.7.1
-
-- 增加 CD 左右兩側留白，預設 CD 直徑調整為原本的 120%。
-- HUD 會依目前曲目文字、CD、來源控制、跳曲按鈕與右側工具列動態鎖定最小
-  完整寬高，避免使用縮放把手時裁切元件；最大尺寸仍限制於播放器可用範圍。
-
-### v5.7.0
-
-- 將 1001 狀態與來源控制整合成複合式展開按鈕；選單內提供「使用 1001」、
-  「重新搜尋」與「開啟 1001 原頁」。
-- 曲目面板按鈕移到右側垂直工具列，來源區下方新增上一曲／下一曲跳躍鍵。
-- CD 尺寸同時依視窗短邊與文字大小調整，並增加內距，避免唱片及元件貼邊。
-- 曲目面板新增標題列與右上角關閉按鈕。
-- HUD 與曲目面板皆可拖移，右下角另有滑鼠縮放把手，尺寸會限制在 YouTube
-  播放器範圍內。
-
-### v5.6.0
-
-- 修正曲目按鈕：面板改為明確切換 `display: block`／`display: none`，不再
-  因空白行內樣式回落到 CSS 的隱藏狀態。
-- 移除 CD 大小調整按鈕，改以視窗短邊自動計算，並限制在 44–64px。
-- 右上角改為垂直排列的關閉、縮小字級與放大字級工具列。
-- 將來源選擇改為常駐的 `SRC | YT | 1001` 分段控制，並與圓形 1001 狀態
-  燈、`1001↗` 連結及 `TRACKS` 曲目按鈕重組為單列操作區。無資料的來源仍
-  保持可見但停用，目前來源則明確高亮。
-
-### v5.5.2
-
-- 辨識 1001Tracklists 自有的限流 CAPTCHA 頁，包括 HTTP 200／206 回應中
-  出現的 `unblock_ip` 表單。
-- 偵測到封鎖頁時立即停止候選回退，改為提示需要瀏覽器驗證，不再誤報五個
-  候選曲目頁都沒有時間戳。
-
-### v5.5.1
-
-- 將狀態燈外觀恢復為圓形，保留待機、搜尋、成功、錯誤與鍵盤焦點狀態。
-- 1001Tracklists 回應只要是成功的 HTTP 2xx（包含 206）就繼續交由既有的
-  HTML、封鎖頁與時間戳驗證，不再直接誤判為載入失敗。
-- 新增唱片拖曳互動：按住時暫停、順時針快轉、逆時針循環播放 80 毫秒短
-  取樣，放開後自動恢復播放。
-- 右上角新增關閉按鈕；點擊後隱藏 HUD 與曲目面板，重新載入 YouTube 分頁
-  即可恢復顯示。
-
-### v5.5.0
-
-- 改用原生 16:9 YouTube 縮圖並以 `background-size: cover` 裁切，讓封面
-  完整填滿圓盤，不再露出邊緣或 4:3 信箱黑邊。
-- 套用緊湊的工業遙測設計系統：硬邊框、深灰藍玻璃面板、等寬數據、明確
-  狀態色與一致的控制按鈕狀態。
-- 封面取色只影響唱片邊緣微光，維持 HUD 的固定對比與資訊層級。
-- 新增鍵盤焦點樣式、減少動態偏好支援與窄螢幕收斂版面。
-
-### v5.4.1
-
-- 優先使用限定範圍的 Trusted Types policy 與惰性 DOM 解析器，再以 Chrome
-  的 `Document.parseHTML()` 安全解析器作為回退。Chrome 的安全解析器會移除
-  現行 1001Tracklists 曲目列，即使原始 HTML 含有有效 cue。
-
-### v5.4.0
-
-- 改用 1001Tracklists 現行 POST 搜尋格式。
-- 搜尋前移除 YouTube 標題中常見的 Official、Live、4K、Full Set 等後綴。
-- 依標題關鍵字相似度排列搜尋結果。
-- 前一個結果沒有時間戳時，自動嘗試最多五個候選曲目頁。
-- 可從畫面時間、隱藏的 `cue_seconds` 欄位或 cue 操作資料讀取時間戳。
-- YouTube 單頁換片時中止舊請求並清除舊計時器。
-- Trusted Types 解析維持在限定範圍，第三方解析 DOM 不會插入 YouTube 頁面。
+YouTube、1001Tracklists、MixesDB、TrackId.net、Chrome 與 Tampermonkey 均為第三方產品或服務。YouTube CD HUD 是獨立的原始碼專案，不代表上述服務的官方整合。
