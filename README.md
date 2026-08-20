@@ -39,19 +39,19 @@ There is no Chrome Web Store package documented by this repository. The Chrome b
 
 ## What It Does
 
-The core of YouTube CD HUD is **tracklist discovery and playback-time synchronization**.
+YouTube CD HUD discovers, organizes, and switches between multiple tracklist sources, then synchronizes the active track with the current YouTube playback position.
 
 It can:
 
 - Use YouTube's own native chapter title or timestamped tracks from the video description.
 - Search or query additional tracklist sources including **1001Tracklists**, **MixesDB**, and **TrackId.net**.
-- Keep each provider's result separate instead of silently merging unrelated data.
+- Keep an independent result set for each provider and rank credible candidates using the evidence available from that source.
 - Match the selected tracklist to the current YouTube playback position.
 - Highlight the active track and provide previous / next track navigation.
-- Switch data sources without changing the current playback time.
+- Preserve the current playback position while switching data sources.
 - Present the synchronized result in a compact, draggable CD-style HUD and tracklist panel.
 
-When YouTube already provides usable track information, the `YT` source remains the default. External providers supplement that data rather than automatically replacing it.
+When YouTube already provides usable track information, the `YT` source remains the default. Other services are added as independent, switchable sources.
 
 ---
 
@@ -104,7 +104,7 @@ When one provider returns multiple credible candidates, the source action displa
 
 ## Track Sources and Matching
 
-YouTube CD HUD treats source matching as a data problem, not just a visual overlay. A similar title alone is not considered sufficient for every provider.
+YouTube CD HUD evaluates each source with the evidence it provides, including YouTube IDs, titles, video duration, timestamps, and cue coverage, then ranks candidates by confidence.
 
 | Source | Primary evidence | Matching / fallback behavior |
 | --- | --- | --- |
@@ -113,7 +113,7 @@ YouTube CD HUD treats source matching as a data problem, not just a visual overl
 | `MIXESDB` | Exact YouTube ID when available | Fallback candidates must satisfy conservative title, duration, and cue-coverage checks |
 | `TRACKID` | Exact YouTube ID when available | Fallback candidates use title and duration checks; short single-track videos may use artist / title / version matching against the public music-track index |
 
-Provider tracklists remain independent. The project does not combine two providers merely because some text happens to match.
+Each provider's tracklist remains independent so users can switch between sources and compare results.
 
 <p align="center">
   <img src="docs/assets/readme/youtube-cd-hud-cue-fox-provider-banner-v1.png" width="880" alt="Cue Fox comparing several tracklist-provider signals before selecting a synchronized source." />
@@ -128,7 +128,7 @@ Provider tracklists remain independent. The project does not combine two provide
 | 1001Tracklists returns a usable timestamped tracklist | Adds a selectable `1001` source synchronized to the same playback time |
 | MixesDB or TrackId.net returns a trusted match | Adds that provider as a separate selectable source |
 | More than one source is available | Keeps `YT` active by default unless the saved preference selects 1001 after a successful search |
-| A remote provider is blocked or has no credible result | Keeps the available local / YouTube source instead of replacing it with a weak match |
+| A remote provider is blocked or has no credible result | Continues using the available local / YouTube data and preserves the current synchronized result |
 
 ---
 
@@ -151,7 +151,7 @@ Automatic 1001 retries pause after a detected block, while manual retry remains 
 
 ## Interface and Controls
 
-The HUD is presentation for the synchronized data rather than the data source itself.
+The HUD brings the current track, selected source, and playback synchronization state into one view, with controls for navigation, scrubbing, and appearance.
 
 Key interface features include:
 
