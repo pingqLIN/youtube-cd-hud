@@ -126,6 +126,8 @@ test('shows the tracklist explicitly and uses the redesigned compound controls',
   assert.match(source, /createControlButton\('YT'/);
   assert.match(source, /youtubeSourceBtn\.disabled\s*=\s*!hasYouTube/);
   assert.match(source, /tracklistSource1001Btn\.disabled\s*=\s*!has1001/);
+  assert.match(source, /replaceProviderCandidates\('mixesdb',\s*matchedCandidates\);[\s\S]*?setActiveSource\('mixesdb'\)/);
+  assert.match(source, /replaceProviderCandidates\('trackid',\s*matchedCandidates\);[\s\S]*?setActiveSource\('trackid'\)/);
   assert.match(source, /className\s*=\s*'tracklist-header'/);
   assert.match(source, /headerTitle\.textContent\s*=\s*'TRACKLIST'/);
   assert.match(source, /className\s*=\s*'tracklist-source-link tracklist-header-action'/);

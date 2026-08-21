@@ -48,7 +48,9 @@ const {
   getContentBalancedDiscSize,
   getGoogleTrackSearchUrl,
   getCandidateActionState,
+  getMixesDbExactSourceLookupUrl,
   getTracklistSourcePage,
+  getTrackIdAudioSearchQueries,
   getTrackIdMusicFallbackQuery,
   isSuccessfulHttpStatus,
   isLikelySingleTrackVideo,
@@ -436,6 +438,29 @@ test('normalizes common YouTube presentation suffixes', () => {
   assert.equal(
     normalizeSearchTitle('Hardwell - Tomorrowland 2026 (Official Video) [4K]'),
     'Hardwell - Tomorrowland 2026',
+  );
+  assert.equal(
+    normalizeSearchTitle('Hardwell WE2 | Tomorrowland 2025 Official'),
+    'Hardwell WE2 | Tomorrowland 2025',
+  );
+});
+
+test('builds exact MixesDB lookups and progressively relaxed TrackId queries', () => {
+  const mixesDbUrl = new URL(getMixesDbExactSourceLookupUrl('78wL4FmhuRc'));
+  assert.equal(mixesDbUrl.origin, 'https://www.mixesdb.com');
+  assert.equal(mixesDbUrl.searchParams.get('list'), 'exturlusage');
+  assert.equal(mixesDbUrl.searchParams.get('euquery'), 'www.youtube.com/watch?v=78wL4FmhuRc');
+  assert.equal(getMixesDbExactSourceLookupUrl('invalid'), '');
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(getTrackIdAudioSearchQueries(
+      'Hardwell WE2 | Tomorrowland 2025 Official Mainstage Weekend Area One Rotterdam',
+    ))),
+    [
+      'Hardwell WE2 | Tomorrowland 2025 Mainstage Weekend Area One Rotterdam',
+      'hardwell we2 tomorrowland 2025 mainstage weekend area one rotterdam',
+      'hardwell we2 tomorrowland 2025 mainstage weekend area one',
+    ],
   );
 });
 

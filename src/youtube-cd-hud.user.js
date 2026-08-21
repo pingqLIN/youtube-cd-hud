@@ -526,7 +526,7 @@
         return trim(String(title || '')
             .normalize('NFKC')
             .replace(/[\[(]\s*(?:official(?:\s+(?:music\s+)?video)?|live|hd|4k|8k|lyrics?|full\s+set|audio)\s*[\])]/gi, ' ')
-            .replace(/\b(?:official\s+(?:music\s+)?video|official\s+audio|full\s+set|lyrics?\s+video)\b/gi, ' ')
+            .replace(/\b(?:official(?:\s+(?:music\s+)?(?:video|audio))?|full\s+set|lyrics?\s+video)\b/gi, ' ')
             .replace(/\s*[|｜]\s*(?:youtube|official)\s*$/i, ' ')
             .replace(/\s+/g, ' '));
     }
@@ -923,6 +923,30 @@
 
     function getTrackIdMusicFallbackQuery(title) {
         return trim(normalizeSearchTitle(title).replace(/[[(][^\])]*[\])]/g, ' ').replace(/\s+/g, ' '));
+    }
+
+    function getTrackIdAudioSearchQueries(title) {
+        const exactQuery = normalizeSearchTitle(title) || trim(title);
+        const tokens = getTitleTokens(exactQuery);
+        const tokenQuery = tokens.join(' ');
+        const conciseQuery = tokens.length > 8 ? tokens.slice(0, 8).join(' ') : '';
+        return [...new Set([exactQuery, tokenQuery, conciseQuery].filter(Boolean))];
+    }
+
+    function getMixesDbExactSourceLookupUrl(videoId) {
+        if (!/^[\w-]{11}$/.test(String(videoId || ''))) return '';
+        const apiUrl = new URL('https://www.mixesdb.com/w/api.php');
+        apiUrl.search = new URLSearchParams({
+            action: 'query',
+            list: 'exturlusage',
+            euprotocol: 'https',
+            euquery: `www.youtube.com/watch?v=${videoId}`,
+            eunamespace: '0',
+            eulimit: 'max',
+            format: 'json',
+            formatversion: '2',
+        }).toString();
+        return apiUrl.href;
     }
 
     function getDurationDifferenceSeconds(durationText, videoDuration) {
@@ -1599,14 +1623,36 @@
         }).toString();
 
         try {
+            const exactSourceLookupUrl = getMixesDbExactSourceLookupUrl(videoId);
+            let exactSourcePayload = null;
+            if (exactSourceLookupUrl) {
+                try {
+                    exactSourcePayload = await requestJson(exactSourceLookupUrl);
+                } catch (error) {
+                    console.warn('[CD HUD] MixesDB exact-source lookup failed; continuing with title search.', error);
+                }
+            }
+            if (getVideoId() !== videoId) return;
             const searchPayload = await requestJson(apiUrl.href);
             if (getVideoId() !== videoId) return;
-            const candidates = (searchPayload.query && searchPayload.query.search || [])
+            const exactSourceCandidates = (
+                exactSourcePayload && exactSourcePayload.query && exactSourcePayload.query.exturlusage || []
+            ).map(candidate => ({
+                title: candidate.title,
+                score: 1,
+                exactSource: true,
+            }));
+            const titleCandidates = (searchPayload.query && searchPayload.query.search || [])
                 .map(candidate => ({
                     title: candidate.title,
                     score: getTitleMatchScore(searchTitle, candidate.title),
+                    exactSource: false,
                 }))
-                .filter(candidate => candidate.score >= 0.35)
+                .filter(candidate => candidate.score >= 0.35);
+            const candidates = [...new Map(
+                [...titleCandidates, ...exactSourceCandidates]
+                    .map(candidate => [candidate.title, candidate])
+            ).values()]
                 .sort((left, right) => right.score - left.score)
                 .slice(0, runtimeSettings.maxCandidates);
 
@@ -1630,7 +1676,7 @@
                 const wikitext = revision && revision.slots && revision.slots.main && revision.slots.main.content || '';
                 const tracks = parseMixesDbWikitext(wikitext);
                 const externalUrls = (page && page.extlinks || []).map(link => link.url || link['*'] || '');
-                const exactSource = externalUrls.some(url => String(url).includes(videoId));
+                const exactSource = candidate.exactSource || externalUrls.some(url => String(url).includes(videoId));
                 const lastCue = tracks.length ? tracks[tracks.length - 1].time : 0;
                 const duration = Number(currentVideo && currentVideo.duration) || 0;
                 const plausibleCoverage = !duration || (lastCue <= duration + 300 && lastCue >= duration * 0.45);
@@ -1645,7 +1691,7 @@
             replaceProviderCandidates('mixesdb', matchedCandidates);
             searchState = 'success';
             searchStateDetail = `MixesDB：${matchedCandidates.length} 個候選`;
-            if (!tracksFromYouTube.length && !tracksFrom1001.length) setActiveSource('mixesdb');
+            setActiveSource('mixesdb');
             updateSourceButtons();
             updateLinkButton();
             updateStatusLight();
@@ -1692,9 +1738,7 @@
         replaceProviderCandidates('trackid', matchedCandidates);
         searchState = 'success';
         searchStateDetail = `TrackId.net：${matchedCandidates.length} 個單曲候選`;
-        if (!tracksFromYouTube.length && !tracksFrom1001.length && !tracksFromMixesDb.length) {
-            setActiveSource('trackid');
-        }
+        setActiveSource('trackid');
         updateSourceButtons();
         updateLinkButton();
         updateStatusLight();
@@ -1709,26 +1753,39 @@
         searchStateDetail = '正在搜尋 TrackId.net…';
         updateStatusLight();
         const searchTitle = normalizeSearchTitle(title) || title;
-        const query = new URLSearchParams({
-            keywords: searchTitle,
-            pageSize: String(runtimeSettings.maxCandidates),
-            currentPage: '0',
-            sortField: '',
-            sortDirection: '',
-            audioStreamType: '',
-            status: '3',
-            styles: '',
-            minAddedOn: '',
-            maxAddedOn: '',
-            username: '',
-            channel: '',
-        });
 
         try {
-            const payload = await requestJson(`https://trackid.net/api/public/audiostreams?${query}`);
+            const rawCandidates = [];
+            const seenCandidateKeys = new Set();
+            for (const keywords of getTrackIdAudioSearchQueries(searchTitle)) {
+                const query = new URLSearchParams({
+                    keywords,
+                    pageSize: String(Math.max(runtimeSettings.maxCandidates, 10)),
+                    currentPage: '0',
+                    sortField: '',
+                    sortDirection: '',
+                    audioStreamType: '',
+                    status: '3',
+                    styles: '',
+                    minAddedOn: '',
+                    maxAddedOn: '',
+                    username: '',
+                    channel: '',
+                });
+                const payload = await requestJson(`https://trackid.net/api/public/audiostreams?${query}`);
+                (payload.result && payload.result.audiostreams || []).forEach(candidate => {
+                    const key = String(candidate.slug || candidate.externalId || candidate.url || '');
+                    if (!key || seenCandidateKeys.has(key)) return;
+                    seenCandidateKeys.add(key);
+                    rawCandidates.push(candidate);
+                });
+                if (rawCandidates.some(candidate => (
+                    candidate.externalId === videoId || String(candidate.url || '').includes(videoId)
+                ))) break;
+            }
             if (getVideoId() !== videoId) return;
             const duration = Number(currentVideo && currentVideo.duration) || 0;
-            const candidates = (payload.result && payload.result.audiostreams || [])
+            const candidates = rawCandidates
                 .map(candidate => {
                     const exactSource = candidate.externalId === videoId || String(candidate.url || '').includes(videoId);
                     const titleScore = getTitleMatchScore(searchTitle, candidate.title);
@@ -1769,13 +1826,15 @@
                     console.warn('[CD HUD] Could not load an additional TrackId.net candidate.', error);
                 }
             }
+            if (!matchedCandidates.length && isLikelySingleTrackVideo(searchTitle, duration)) {
+                const matchedMusicTrack = await fetchTrackIdMusicTrack(searchTitle, videoId);
+                if (matchedMusicTrack) return;
+            }
             if (!matchedCandidates.length) throw new Error('候選頁沒有可用的時間戳曲目。');
             replaceProviderCandidates('trackid', matchedCandidates);
             searchState = 'success';
             searchStateDetail = `TrackId.net：${matchedCandidates.length} 個候選`;
-            if (!tracksFromYouTube.length && !tracksFrom1001.length && !tracksFromMixesDb.length) {
-                setActiveSource('trackid');
-            }
+            setActiveSource('trackid');
             updateSourceButtons();
             updateLinkButton();
             updateStatusLight();
@@ -3974,7 +4033,9 @@
             getContentBalancedDiscSize,
             getGoogleTrackSearchUrl,
             getCandidateActionState,
+            getMixesDbExactSourceLookupUrl,
             getTracklistSourcePage,
+            getTrackIdAudioSearchQueries,
             getTrackIdMusicFallbackQuery,
             isSuccessfulHttpStatus,
             isLikelySingleTrackVideo,
