@@ -96,6 +96,10 @@
     let tracklistCache = {};
     let cachePersistTimer = null;
     let cacheHitVideoId = '';
+    let youtubeTrackOrigin = '';
+    let youtubeCommentsObserver = null;
+    let youtubeCommentsRoot = null;
+    let youtubeLocalRefreshTimer = null;
 
     let tracklistPanel = null;
     let tracklistVisible = false;
@@ -1082,7 +1086,70 @@
         }
     }
 
-    function parseDescriptionTracks() {
+    function parseTimestampPlaylistText(text) {
+        const tracks = [];
+        const seenTracks = new Set();
+        const seenTimes = new Set();
+        String(text || '').split(/\r?\n/).forEach(rawLine => {
+            const line = trim(String(rawLine || '').replace(/\u00a0/g, ' '));
+            if (!line) return;
+            const match = line.match(
+                /^\s*(?:[#*•▶►▪▫-]\s*)?(?:\d{1,3}[.)]\s*)?[\[(]?\s*(\d{1,3}:[0-5]\d(?::[0-5]\d)?)\s*[\])]?\s*(?:[-–—:|.)\]]\s*)?(.+?)\s*$/
+            );
+            if (!match) return;
+            const time = parseTimestampToSeconds(match[1]);
+            const title = trim(match[2].replace(/^[\s\-–—:|.)\]]+/, '').replace(/\s+/g, ' ')).slice(0, 300);
+            if (!Number.isFinite(time) || !title || seenTimes.has(time)) return;
+            const trackKey = `${time}\u0000${title.toLowerCase()}`;
+            if (seenTracks.has(trackKey)) return;
+            seenTracks.add(trackKey);
+            seenTimes.add(time);
+            tracks.push({ time, title });
+        });
+        return tracks.sort((left, right) => left.time - right.time);
+    }
+
+    function isCredibleTimestampPlaylist(tracks) {
+        if (!Array.isArray(tracks) || tracks.length < 2) return false;
+        for (let index = 1; index < tracks.length; index++) {
+            if (!Number.isFinite(tracks[index - 1].time) || !Number.isFinite(tracks[index].time)) return false;
+            if (tracks[index].time <= tracks[index - 1].time) return false;
+        }
+        return true;
+    }
+
+    function chooseYouTubeTimestampPlaylist(descriptionText, commentTexts) {
+        const descriptionTracks = parseTimestampPlaylistText(descriptionText);
+        if (isCredibleTimestampPlaylist(descriptionTracks)) {
+            return { origin: 'description', commentIndex: -1, tracks: descriptionTracks };
+        }
+
+        const commentCandidates = (Array.isArray(commentTexts) ? commentTexts : [])
+            .map((text, index) => {
+                const tracks = parseTimestampPlaylistText(text);
+                const coverage = tracks.length > 1
+                    ? tracks[tracks.length - 1].time - tracks[0].time
+                    : 0;
+                return { index, tracks, coverage };
+            })
+            .filter(candidate => isCredibleTimestampPlaylist(candidate.tracks))
+            .sort((left, right) => (
+                right.tracks.length - left.tracks.length ||
+                right.coverage - left.coverage ||
+                left.index - right.index
+            ));
+
+        if (commentCandidates.length) {
+            const selected = commentCandidates[0];
+            return { origin: 'comments', commentIndex: selected.index, tracks: selected.tracks };
+        }
+        if (descriptionTracks.length) {
+            return { origin: 'description', commentIndex: -1, tracks: descriptionTracks };
+        }
+        return { origin: '', commentIndex: -1, tracks: [] };
+    }
+
+    function getYouTubeDescriptionText() {
         const description = document.querySelector([
             'ytd-watch-metadata #description-inline-expander',
             'ytd-watch-metadata #description',
@@ -1090,31 +1157,71 @@
             '#description-inline-expander',
             '#description',
         ].join(', '));
-        tracksFromYouTube = [];
-        if (!description) {
-            console.log('[CD HUD] No description element found.');
-            return;
-        }
-        const text = description.innerText || '';
-        const regex = /(\d{1,2}:\d{2}(?::\d{2})?)\s*[-\u2013/) ]*\s*([^\r\n]+)/g;
-        let match;
-        let found = 0;
-        const seenTracks = new Set();
-        while ((match = regex.exec(text)) !== null) {
-            const title = trim(match[2].replace(/^[-\u2013/)\s]+/, ''));
-            const time = parseTimestampToSeconds(match[1]);
-            const trackKey = `${time}\u0000${title}`;
-            if (title && Number.isFinite(time) && !seenTracks.has(trackKey)) {
-                seenTracks.add(trackKey);
-                tracksFromYouTube.push({ time, title });
-                found++;
-            }
-        }
-        tracksFromYouTube.sort((a, b) => a.time - b.time);
-        console.log(`[CD HUD] Parsed ${found} tracks from description.`);
+        return description ? (description.innerText || description.textContent || '') : '';
+    }
+
+    function getLoadedYouTubeCommentTexts() {
+        if (!document || typeof document.querySelectorAll !== 'function') return [];
+        const nodes = document.querySelectorAll([
+            '#comments ytd-comment-thread-renderer #content-text',
+            '#comments ytd-comment-view-model #content-text',
+            '#comments ytd-comment-renderer #content-text',
+            '#comments #content-text',
+        ].join(', '));
+        const seenTexts = new Set();
+        return Array.from(nodes).map(node => trim(node.innerText || node.textContent || ''))
+            .filter(text => {
+                if (!text || seenTexts.has(text)) return false;
+                seenTexts.add(text);
+                return true;
+            });
+    }
+
+    function disconnectYouTubeCommentObserver() {
+        if (youtubeCommentsObserver) youtubeCommentsObserver.disconnect();
+        youtubeCommentsObserver = null;
+        youtubeCommentsRoot = null;
+    }
+
+    function parseYouTubeLocalTracks() {
+        const selection = chooseYouTubeTimestampPlaylist(
+            getYouTubeDescriptionText(),
+            getLoadedYouTubeCommentTexts()
+        );
+        tracksFromYouTube = selection.tracks;
+        youtubeTrackOrigin = selection.origin;
+        const originLabel = selection.origin === 'comments'
+            ? `comment ${selection.commentIndex + 1}`
+            : (selection.origin || 'page');
+        console.log(`[CD HUD] Parsed ${tracksFromYouTube.length} YouTube tracks from ${originLabel}.`);
         if (currentSource === 'youtube' || !getAvailableRemoteSource()) {
             setActiveSource('youtube');
+        } else {
+            updateSourceButtons();
         }
+    }
+
+    function scheduleYouTubeLocalSourceRefresh() {
+        if (youtubeLocalRefreshTimer !== null) clearTimeout(youtubeLocalRefreshTimer);
+        youtubeLocalRefreshTimer = setTimeout(() => {
+            youtubeLocalRefreshTimer = null;
+            parseYouTubeLocalTracks();
+            bindYouTubeCommentObserver();
+        }, 300);
+    }
+
+    function bindYouTubeCommentObserver() {
+        if (typeof MutationObserver !== 'function') return;
+        const commentsRoot = document.querySelector('#comments');
+        if (!commentsRoot || commentsRoot === youtubeCommentsRoot) return;
+        disconnectYouTubeCommentObserver();
+        youtubeCommentsRoot = commentsRoot;
+        youtubeCommentsObserver = new MutationObserver(() => scheduleYouTubeLocalSourceRefresh());
+        youtubeCommentsObserver.observe(commentsRoot, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+        });
     }
 
     function getAvailableRemoteSource() {
@@ -3450,7 +3557,12 @@
         tracklistSource1001Btn.setAttribute('aria-pressed', String(currentSource === '1001' && has1001));
         tracklistSourceMixesDbBtn.setAttribute('aria-pressed', String(currentSource === 'mixesdb' && hasMixesDb));
         tracklistSourceTrackIdBtn.setAttribute('aria-pressed', String(currentSource === 'trackid' && hasTrackId));
-        youtubeSourceBtn.title = hasYouTube ? '使用 YouTube 章節曲目' : '目前沒有 YouTube 章節曲目';
+        const youtubeOriginLabel = youtubeTrackOrigin === 'comments'
+            ? 'YouTube 留言時間戳曲目'
+            : youtubeTrackOrigin === 'description'
+                ? 'YouTube 說明欄時間戳曲目'
+                : 'YouTube 時間戳曲目';
+        youtubeSourceBtn.title = hasYouTube ? `使用 ${youtubeOriginLabel}` : '目前沒有可用的 YouTube 說明欄／留言時間戳曲目';
         tracklistSource1001Btn.title = has1001 ? '使用 1001Tracklists 曲目' : '目前沒有可用的 1001Tracklists 曲目';
         tracklistSourceMixesDbBtn.title = hasMixesDb ? '使用 MixesDB 曲目' : '目前沒有可用的 MixesDB 曲目';
         tracklistSourceTrackIdBtn.title = hasTrackId ? '使用 TrackId.net 曲目' : '目前沒有可用的 TrackId.net 曲目';
@@ -3705,7 +3817,7 @@
             const sourceCaption = document.createElement('span');
             sourceCaption.className = 'hud-source-caption';
             sourceCaption.textContent = 'SRC';
-            youtubeSourceBtn = createControlButton('YT', '使用 YouTube 章節曲目', () => {
+            youtubeSourceBtn = createControlButton('YT', '使用 YouTube 說明欄／留言時間戳曲目', () => {
                 set1001MenuExpanded(false);
                 setActiveSource('youtube');
             });
@@ -3925,10 +4037,13 @@
             lastVideoIdFor1001 = videoId;
             lastSearchTitle = '';
             cacheHitVideoId = '';
+            youtubeTrackOrigin = '';
+            disconnectYouTubeCommentObserver();
             restoredCacheSource = restoreCachedTracklists(videoId);
         }
 
-        parseDescriptionTracks();
+        parseYouTubeLocalTracks();
+        bindYouTubeCommentObserver();
         if (restoredCacheSource === 'youtube' && tracksFromYouTube.length) {
             setActiveSource('youtube');
         }
@@ -3955,9 +4070,10 @@
 
     function scheduleMetadataRefresh(videoId) {
         metadataRefreshTimers.forEach(timer => clearTimeout(timer));
-        metadataRefreshTimers = [1000, 3000, 7000].map(delay => setTimeout(() => {
+        metadataRefreshTimers = [1000, 3000, 7000, 15000].map(delay => setTimeout(() => {
             if (!videoId || getVideoId() !== videoId) return;
-            parseDescriptionTracks();
+            parseYouTubeLocalTracks();
+            bindYouTubeCommentObserver();
             const refreshedTitle = getVideoTitle();
             if (
                 runtimeSettings.enable1001 &&
@@ -4011,12 +4127,18 @@
         }
         metadataRefreshTimers.forEach(timer => clearTimeout(timer));
         metadataRefreshTimers = [];
+        if (youtubeLocalRefreshTimer !== null) {
+            clearTimeout(youtubeLocalRefreshTimer);
+            youtubeLocalRefreshTimer = null;
+        }
+        disconnectYouTubeCommentObserver();
         if (cachePersistTimer !== null) {
             clearTimeout(cachePersistTimer);
             cachePersistTimer = null;
             void persistTracklistCache();
         }
         window.removeEventListener('resize', applySizing, false);
+        window.removeEventListener('scroll', scheduleYouTubeLocalSourceRefresh, false);
         window.removeEventListener('focus', handle1001VerificationReturn, false);
         document.removeEventListener('visibilitychange', handle1001VerificationReturn, false);
         if (globalThis.chrome?.runtime?.onMessage?.removeListener) {
@@ -4057,6 +4179,9 @@
             submit1001SearchVerification,
             parseMixesDbWikitext,
             parseTrackIdDetail,
+            parseTimestampPlaylistText,
+            isCredibleTimestampPlaylist,
+            chooseYouTubeTimestampPlaylist,
             parseTimestampToSeconds,
             parseTracklistDocument,
             rankTrackIdMusicCandidates,
@@ -4073,6 +4198,7 @@
         document.addEventListener('yt-navigate-finish', scheduleInitialization, false);
         window.addEventListener('load', scheduleInitialization, false);
         window.addEventListener('resize', applySizing, false);
+        window.addEventListener('scroll', scheduleYouTubeLocalSourceRefresh, { passive: true });
         window.addEventListener('focus', handle1001VerificationReturn, false);
         document.addEventListener('visibilitychange', handle1001VerificationReturn, false);
         if (globalThis.chrome?.runtime?.onMessage?.addListener) {
