@@ -680,6 +680,28 @@
         }, 350);
     }
 
+    function handle1001BridgeReadyMessage(message) {
+        if (!message || message.type !== 'YT_CD_HUD_1001_BRIDGE_READY') return false;
+        if (!awaiting1001VerificationReturn) return false;
+        if (!awaiting1001VerificationVideoId || getVideoId() !== awaiting1001VerificationVideoId) {
+            clear1001VerificationReturn();
+            return false;
+        }
+
+        awaiting1001VerificationReturn = false;
+        automaticSearchBlockedUntil = 0;
+        searchStateDetail = '1001 驗證已完成，正在重新讀取曲目…';
+        updateStatusLight();
+        if (verificationReturnRetryTimer !== null) clearTimeout(verificationReturnRetryTimer);
+        verificationReturnRetryTimer = setTimeout(() => {
+            verificationReturnRetryTimer = null;
+            awaiting1001VerificationVideoId = '';
+            verificationPageOpenedAt = 0;
+            retrySearch(true);
+        }, 100);
+        return false;
+    }
+
     function collectTracklistCandidates(doc, title, expectedDuration = 0, limit = 5) {
         if (!doc || typeof doc.querySelectorAll !== 'function') return [];
         const queryTokens = [...new Set(getTitleTokens(title))];
@@ -3997,6 +4019,9 @@
         window.removeEventListener('resize', applySizing, false);
         window.removeEventListener('focus', handle1001VerificationReturn, false);
         document.removeEventListener('visibilitychange', handle1001VerificationReturn, false);
+        if (globalThis.chrome?.runtime?.onMessage?.removeListener) {
+            globalThis.chrome.runtime.onMessage.removeListener(handle1001BridgeReadyMessage);
+        }
         if (currentVideo) {
             currentVideo.removeEventListener('timeupdate', updateHud);
             currentVideo.removeEventListener('durationchange', updateHud);
@@ -4050,6 +4075,9 @@
         window.addEventListener('resize', applySizing, false);
         window.addEventListener('focus', handle1001VerificationReturn, false);
         document.addEventListener('visibilitychange', handle1001VerificationReturn, false);
+        if (globalThis.chrome?.runtime?.onMessage?.addListener) {
+            globalThis.chrome.runtime.onMessage.addListener(handle1001BridgeReadyMessage);
+        }
         window.addEventListener('pagehide', cleanup, { once: true });
         scheduleInitialization();
     }

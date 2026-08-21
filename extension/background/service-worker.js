@@ -150,6 +150,26 @@ async function attachBridgeSession(token, sender) {
     return { ok: true };
 }
 
+async function notifyYouTubeBridgeReady(sender) {
+    if (!isSenderOnHost(sender, /^https:\/\/(?:www\.)?1001tracklists\.com\//i)) {
+        return { ok: false, phase: 'validation', error: 'Invalid 1001 bridge readiness sender.' };
+    }
+    const sessions = discardExpiredSessions(await getBridgeSessions());
+    await setBridgeSessions(sessions);
+    const session = Object.values(sessions).find(candidate => (
+        candidate && candidate.bridgeTabId === sender.tab.id && Number.isInteger(candidate.youtubeTabId)
+    ));
+    if (!session) return { ok: true, notified: false };
+    try {
+        await chrome.tabs.sendMessage(session.youtubeTabId, {
+            type: 'YT_CD_HUD_1001_BRIDGE_READY',
+        });
+        return { ok: true, notified: true };
+    } catch (error) {
+        return { ok: false, phase: 'notify', error: String(error && error.message || error) };
+    }
+}
+
 async function findAttachedBridgeTabs(youtubeTabId) {
     if (!Number.isInteger(youtubeTabId) || !chrome.tabs || !chrome.tabs.sendMessage) return [];
     const sessions = discardExpiredSessions(await getBridgeSessions());
@@ -337,6 +357,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         'YT_CD_HUD_CANCEL_REMOTE_REQUEST',
         'YT_CD_HUD_REGISTER_1001_BRIDGE',
         'YT_CD_HUD_ATTACH_1001_BRIDGE',
+        'YT_CD_HUD_1001_BRIDGE_READY',
     ].includes(message.type)) return false;
 
     (async () => {
@@ -350,6 +371,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         if (message.type === 'YT_CD_HUD_ATTACH_1001_BRIDGE') {
             sendResponse(await attachBridgeSession(String(message.token || ''), sender));
+            return;
+        }
+        if (message.type === 'YT_CD_HUD_1001_BRIDGE_READY') {
+            sendResponse(await notifyYouTubeBridgeReady(sender));
             return;
         }
         sendResponse(await handleRemoteRequest(message, sender));

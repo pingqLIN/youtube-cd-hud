@@ -127,6 +127,7 @@ test('routes a YouTube 1001 request through the attached first-party result tab'
   let storedSessions = {};
   let directFetchCount = 0;
   let bridgedRequest = null;
+  let readyNotification = null;
   const context = {
     AbortController,
     clearTimeout,
@@ -151,6 +152,10 @@ test('routes a YouTube 1001 request through the attached first-party result tab'
       },
       tabs: {
         async sendMessage(tabId, message) {
+          if (message.type === 'YT_CD_HUD_1001_BRIDGE_READY') {
+            readyNotification = { tabId, message };
+            return { ok: true };
+          }
           bridgedRequest = { tabId, message };
           return {
             ok: true,
@@ -195,6 +200,22 @@ test('routes a YouTube 1001 request through the attached first-party result tab'
   );
   assert.equal(replacementAttachment.response.ok, true);
   assert.equal(Object.keys(storedSessions).length, 1);
+
+  const ready = await invoke(
+    { type: 'YT_CD_HUD_1001_BRIDGE_READY' },
+    { url: 'https://www.1001tracklists.com/tracklist/example', tab: { id: 78 } },
+  );
+  assert.equal(ready.response.ok, true);
+  assert.equal(ready.response.notified, true);
+  assert.equal(readyNotification.tabId, 41);
+  assert.equal(readyNotification.message.type, 'YT_CD_HUD_1001_BRIDGE_READY');
+
+  const rejectedReady = await invoke(
+    { type: 'YT_CD_HUD_1001_BRIDGE_READY' },
+    { url: 'https://www.youtube.com/watch?v=test', tab: { id: 41 } },
+  );
+  assert.equal(rejectedReady.response.ok, false);
+  assert.equal(rejectedReady.response.phase, 'validation');
 
   const result = await invoke({
     type: 'YT_CD_HUD_REMOTE_REQUEST',
@@ -404,6 +425,7 @@ test('uses the rendered 1001 search result once instead of repeating its POST', 
 test('uses a rendered 1001 candidate GET after manual browser verification', async () => {
   let bridgeListener = null;
   let fetchCount = 0;
+  const sentMessages = [];
   const renderedHtml = '<html><body><div class="tlpTog">Verified candidate</div></body></html>';
   const context = {
     AbortController,
@@ -411,7 +433,10 @@ test('uses a rendered 1001 candidate GET after manual browser verification', asy
     URLSearchParams,
     clearTimeout,
     console,
-    document: { documentElement: { outerHTML: renderedHtml } },
+    document: {
+      documentElement: { outerHTML: renderedHtml },
+      querySelector() { return {}; },
+    },
     fetch: async () => { fetchCount += 1; throw new Error('rendered GET must not refetch'); },
     history: { state: null, replaceState() {} },
     location: {
@@ -426,7 +451,10 @@ test('uses a rendered 1001 candidate GET after manual browser verification', asy
       runtime: {
         lastError: undefined,
         onMessage: { addListener(listener) { bridgeListener = listener; } },
-        sendMessage(_message, callback) { callback({ ok: true }); },
+        sendMessage(message, callback) {
+          sentMessages.push(message);
+          callback({ ok: true });
+        },
       },
     },
   };
@@ -441,6 +469,48 @@ test('uses a rendered 1001 candidate GET after manual browser verification', asy
   assert.equal(result.source, 'rendered-document');
   assert.equal(result.responseText, renderedHtml);
   assert.equal(fetchCount, 0);
+  assert.deepEqual(sentMessages.map(message => message.type), [
+    'YT_CD_HUD_ATTACH_1001_BRIDGE',
+    'YT_CD_HUD_1001_BRIDGE_READY',
+  ]);
+});
+
+test('announces a verified rendered 1001 tracklist after the session fragment is removed', () => {
+  const sentMessages = [];
+  const context = {
+    AbortController,
+    URL,
+    URLSearchParams,
+    clearTimeout,
+    console,
+    document: {
+      documentElement: { outerHTML: '<html><div class="tlpTog">Track</div></html>' },
+      querySelector() { return {}; },
+    },
+    fetch: async () => { throw new Error('ready notification must not fetch'); },
+    history: { state: null, replaceState() {} },
+    location: {
+      hash: '',
+      href: 'https://www.1001tracklists.com/tracklist/example',
+      origin: 'https://www.1001tracklists.com',
+      pathname: '/tracklist/example',
+      search: '',
+    },
+    setTimeout,
+    chrome: {
+      runtime: {
+        lastError: undefined,
+        onMessage: { addListener() {} },
+        sendMessage(message, callback) {
+          sentMessages.push(message);
+          callback({ ok: true });
+        },
+      },
+    },
+  };
+
+  vm.runInNewContext(read('extension/content/1001-session-bridge.js'), context);
+  assert.deepEqual(sentMessages.map(message => message.type), ['YT_CD_HUD_1001_BRIDGE_READY']);
 });
 
 test('maps extension messaging success and runtime failures to GM callbacks', () => {

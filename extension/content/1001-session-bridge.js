@@ -19,6 +19,18 @@
         history.replaceState(history.state, '', `${location.pathname}${location.search}`);
     }
 
+    function hasRenderedTracklist() {
+        return /^\/tracklist\//i.test(location.pathname)
+            && Boolean(document.querySelector('.tlpTog, tr.tlpItem, [id^="tlp_"]'));
+    }
+
+    function notifyBridgeReady() {
+        if (!hasRenderedTracklist()) return;
+        chrome.runtime.sendMessage({ type: 'YT_CD_HUD_1001_BRIDGE_READY' }, () => {
+            void chrome.runtime.lastError;
+        });
+    }
+
     function validateRequest(request) {
         const method = String(request && request.method || 'GET').toUpperCase();
         const url = String(request && request.url || '');
@@ -138,7 +150,12 @@
     if (token) {
         chrome.runtime.sendMessage({ type: 'YT_CD_HUD_ATTACH_1001_BRIDGE', token }, result => {
             if (chrome.runtime.lastError) return;
-            if (result && result.ok) removeBridgeTokenFromAddress();
+            if (result && result.ok) {
+                removeBridgeTokenFromAddress();
+                notifyBridgeReady();
+            }
         });
+    } else {
+        notifyBridgeReady();
     }
 })();

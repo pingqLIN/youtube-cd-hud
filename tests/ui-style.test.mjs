@@ -78,6 +78,8 @@ test('paces 1001 candidate requests and cools down automatic retries after a blo
   assert.match(source, /fetchTracklistFrom1001\(title,\s*id,\s*true,\s*true,\s*activateOnSuccess\)/);
   assert.match(source, /window\.addEventListener\('focus',\s*handle1001VerificationReturn/);
   assert.match(source, /document\.addEventListener\('visibilitychange',\s*handle1001VerificationReturn/);
+  assert.match(source, /runtime\.onMessage\.addListener\(handle1001BridgeReadyMessage\)/);
+  assert.match(source, /message\.type\s*!==\s*'YT_CD_HUD_1001_BRIDGE_READY'/);
   assert.match(source, /retrySearch\(true\)/);
   assert.match(source, /activateOnSuccess\s*\|\|\s*runtimeSettings\.prefer1001/);
 });
