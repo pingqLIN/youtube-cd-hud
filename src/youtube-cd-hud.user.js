@@ -67,6 +67,8 @@
     const AUTOMATIC_SEARCH_BLOCK_COOLDOWN_MS = 5 * 60 * 1000;
     const SINGLE_TRACK_MAX_DURATION_SECONDS = 20 * 60;
     const TRACKLIST_CACHE_STORAGE_KEY = 'ytCdHudTracklistCacheV1';
+    const AUTOMATIC_1001_GUARD_STORAGE_KEY = 'ytCdHud1001SearchGuardV1';
+    const AUTOMATIC_1001_ATTEMPT_TTL_MS = 15 * 60 * 1000;
     const TRACKLIST_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
     const TRACKLIST_CACHE_MAX_ENTRIES = 30;
     const TRACKLIST_CACHE_MAX_TRACKS_PER_SOURCE = 300;
@@ -81,6 +83,7 @@
     let tracksFromMixesDb = [];
     let tracksFromTrackId = [];
     let currentSource = 'youtube';
+    let sourceSelectionMode = 'auto';
     let searchState = 'idle';
     let searchStateDetail = '';
     let tracklistUrl1001 = '';
@@ -115,6 +118,7 @@
     let youtubeCommentsObserver = null;
     let youtubeCommentsRoot = null;
     let youtubeLocalRefreshTimer = null;
+    let automatic1001SearchGuard = { blockedUntil: 0, attempts: {} };
 
     let tracklistPanel = null;
     let tracklistVisible = false;
@@ -346,15 +350,15 @@
             pending1001VerificationRequest = null;
             clear1001VerificationReturn();
             lastSearchTitle = '';
-            if (currentSource === '1001') setActiveSource(tracksFromYouTube.length ? 'youtube' : 'none');
+            if (currentSource === '1001') reconcileActiveSource();
         }
         if (!runtimeSettings.enableMixesDb) {
             resetProviderCandidates('mixesdb');
-            if (currentSource === 'mixesdb') setActiveSource('none');
+            if (currentSource === 'mixesdb') reconcileActiveSource();
         }
         if (!runtimeSettings.enableTrackId) {
             resetProviderCandidates('trackid');
-            if (currentSource === 'trackid') setActiveSource('none');
+            if (currentSource === 'trackid') reconcileActiveSource();
         }
 
         applyRuntimeAppearance();
@@ -568,6 +572,7 @@
             globalThis.chrome.runtime.sendMessage({
                 type: 'YT_CD_HUD_REGISTER_1001_BRIDGE',
                 token,
+                videoId: getVideoId(),
             }, result => {
                 if (globalThis.chrome.runtime.lastError || !result?.ok) {
                     resolve('');
@@ -699,7 +704,83 @@
         }, 350);
     }
 
-    function handle1001BridgeReadyMessage(message) {
+    function normalize1001SearchGuard(value, now = Date.now()) {
+        const source = value && typeof value === 'object' ? value : {};
+        const attempts = Object.fromEntries(Object.entries(source.attempts || {})
+            .filter(([videoId, attemptedAt]) => (
+                /^[A-Za-z0-9_-]{6,20}$/.test(videoId) &&
+                Number(attemptedAt) > now - AUTOMATIC_1001_ATTEMPT_TTL_MS &&
+                Number(attemptedAt) <= now
+            ))
+            .sort((left, right) => Number(right[1]) - Number(left[1]))
+            .slice(0, 30));
+        return {
+            blockedUntil: Math.min(
+                Math.max(Number(source.blockedUntil) || 0, 0),
+                now + AUTOMATIC_SEARCH_BLOCK_COOLDOWN_MS
+            ),
+            attempts,
+        };
+    }
+
+    async function load1001SearchGuard() {
+        try {
+            let stored = null;
+            if (globalThis.chrome?.storage?.local) {
+                const result = await globalThis.chrome.storage.local.get(AUTOMATIC_1001_GUARD_STORAGE_KEY);
+                stored = result && result[AUTOMATIC_1001_GUARD_STORAGE_KEY];
+            } else if (typeof globalThis.GM_getValue === 'function') {
+                stored = await globalThis.GM_getValue(AUTOMATIC_1001_GUARD_STORAGE_KEY, null);
+            }
+            automatic1001SearchGuard = normalize1001SearchGuard(stored);
+            automaticSearchBlockedUntil = automatic1001SearchGuard.blockedUntil;
+        } catch (error) {
+            console.warn('[CD HUD] Could not load the 1001 automatic-search guard.', error);
+        }
+    }
+
+    async function persist1001SearchGuard() {
+        automatic1001SearchGuard = normalize1001SearchGuard(automatic1001SearchGuard);
+        try {
+            if (globalThis.chrome?.storage?.local) {
+                await globalThis.chrome.storage.local.set({
+                    [AUTOMATIC_1001_GUARD_STORAGE_KEY]: automatic1001SearchGuard,
+                });
+            } else if (typeof globalThis.GM_setValue === 'function') {
+                await globalThis.GM_setValue(AUTOMATIC_1001_GUARD_STORAGE_KEY, automatic1001SearchGuard);
+            }
+        } catch (error) {
+            console.warn('[CD HUD] Could not persist the 1001 automatic-search guard.', error);
+        }
+    }
+
+    function apply1001TracklistPacket(message) {
+        if (!message || message.type !== 'YT_CD_HUD_1001_PACKET_V1') return false;
+        const packetApi = globalThis.YtCdHud1001Packet;
+        const packet = packetApi?.normalizePacket(message.packet);
+        const videoId = getVideoId();
+        if (!packet || !videoId || message.videoId !== videoId) return false;
+        replaceProviderCandidates('1001', [{ tracks: packet.tracks, url: packet.canonicalUrl }]);
+        pending1001VerificationRequest = null;
+        automaticSearchBlockedUntil = 0;
+        automatic1001SearchGuard.blockedUntil = 0;
+        void persist1001SearchGuard();
+        clear1001VerificationReturn();
+        searchState = 'success';
+        searchStateDetail = `1001Tracklists 驗證資料包：${packet.tracks.length} 首`;
+        reconcileActiveSource();
+        updateStatusLight();
+        updateLinkButton();
+        cacheCurrentTracklists(videoId);
+        return true;
+    }
+
+    function handle1001BridgeReadyMessage(message, _sender, sendResponse) {
+        if (message?.type === 'YT_CD_HUD_1001_PACKET_V1') {
+            const accepted = apply1001TracklistPacket(message);
+            if (typeof sendResponse === 'function') sendResponse({ ok: true, accepted });
+            return false;
+        }
         if (!message || message.type !== 'YT_CD_HUD_1001_BRIDGE_READY') return false;
         if (!awaiting1001VerificationReturn) return false;
         if (!awaiting1001VerificationVideoId || getVideoId() !== awaiting1001VerificationVideoId) {
@@ -1133,7 +1214,7 @@
         return true;
     }
 
-    function chooseYouTubeTimestampPlaylist(descriptionText, commentTexts) {
+    function chooseYouTubeTimestampPlaylist(descriptionText, commentTexts, recognizedTexts = []) {
         const descriptionTracks = parseTimestampPlaylistText(descriptionText);
         if (isCredibleTimestampPlaylist(descriptionTracks)) {
             return { origin: 'description', commentIndex: -1, tracks: descriptionTracks };
@@ -1160,6 +1241,24 @@
         }
         if (descriptionTracks.length) {
             return { origin: 'description', commentIndex: -1, tracks: descriptionTracks };
+        }
+
+        const recognizedCandidates = (Array.isArray(recognizedTexts) ? recognizedTexts : [])
+            .map((text, index) => {
+                const tracks = parseTimestampPlaylistText(text);
+                const coverage = tracks.length > 1
+                    ? tracks[tracks.length - 1].time - tracks[0].time
+                    : 0;
+                return { index, tracks, coverage };
+            })
+            .filter(candidate => isCredibleTimestampPlaylist(candidate.tracks))
+            .sort((left, right) => (
+                right.tracks.length - left.tracks.length ||
+                right.coverage - left.coverage ||
+                left.index - right.index
+            ));
+        if (recognizedCandidates.length) {
+            return { origin: 'recognized', commentIndex: -1, tracks: recognizedCandidates[0].tracks };
         }
         return { origin: '', commentIndex: -1, tracks: [] };
     }
@@ -1192,6 +1291,23 @@
             });
     }
 
+    function getLoadedYouTubeRecognizedTexts() {
+        if (!document || typeof document.querySelectorAll !== 'function') return [];
+        const nodes = document.querySelectorAll([
+            'ytd-transcript-renderer #segments-container',
+            'ytd-transcript-search-panel-renderer #segments-container',
+            'ytd-transcript-segment-list-renderer',
+            '#transcript ytd-transcript-segment-renderer',
+        ].join(', '));
+        const seenTexts = new Set();
+        return Array.from(nodes).map(node => trim(node.innerText || node.textContent || ''))
+            .filter(text => {
+                if (!text || seenTexts.has(text)) return false;
+                seenTexts.add(text);
+                return true;
+            });
+    }
+
     function disconnectYouTubeCommentObserver() {
         if (youtubeCommentsObserver) youtubeCommentsObserver.disconnect();
         youtubeCommentsObserver = null;
@@ -1201,7 +1317,8 @@
     function parseYouTubeLocalTracks() {
         const selection = chooseYouTubeTimestampPlaylist(
             getYouTubeDescriptionText(),
-            getLoadedYouTubeCommentTexts()
+            getLoadedYouTubeCommentTexts(),
+            getLoadedYouTubeRecognizedTexts()
         );
         tracksFromYouTube = selection.tracks;
         youtubeTrackOrigin = selection.origin;
@@ -1209,11 +1326,7 @@
             ? `comment ${selection.commentIndex + 1}`
             : (selection.origin || 'page');
         console.log(`[CD HUD] Parsed ${tracksFromYouTube.length} YouTube tracks from ${originLabel}.`);
-        if (currentSource === 'youtube' || !getAvailableRemoteSource()) {
-            setActiveSource('youtube');
-        } else {
-            updateSourceButtons();
-        }
+        reconcileActiveSource();
     }
 
     function scheduleYouTubeLocalSourceRefresh() {
@@ -1241,9 +1354,47 @@
 
     function getAvailableRemoteSource() {
         if (tracksFrom1001.length) return '1001';
-        if (tracksFromMixesDb.length) return 'mixesdb';
         if (tracksFromTrackId.length) return 'trackid';
+        if (tracksFromMixesDb.length) return 'mixesdb';
         return '';
+    }
+
+    function choosePreferredTracklistSource(availability, youtubeOrigin = '', prefer1001 = false) {
+        const available = availability || {};
+        const youtubeIsRecognized = youtubeOrigin === 'recognized';
+        if (prefer1001 && available['1001']) return '1001';
+        if (available.youtube && !youtubeIsRecognized) return 'youtube';
+        if (available['1001']) return '1001';
+        if (available.trackid) return 'trackid';
+        if (available.mixesdb) return 'mixesdb';
+        if (available.youtube) return 'youtube';
+        return 'none';
+    }
+
+    function getPreferredTracklistSource() {
+        return choosePreferredTracklistSource({
+            youtube: tracksFromYouTube.length > 0,
+            '1001': tracksFrom1001.length > 0,
+            trackid: tracksFromTrackId.length > 0,
+            mixesdb: tracksFromMixesDb.length > 0,
+        }, youtubeTrackOrigin, runtimeSettings.prefer1001);
+    }
+
+    function reconcileActiveSource() {
+        if (sourceSelectionMode === 'manual') {
+            const manualSourceAvailable = (
+                (currentSource === 'youtube' && tracksFromYouTube.length) ||
+                (currentSource === '1001' && tracksFrom1001.length) ||
+                (currentSource === 'trackid' && tracksFromTrackId.length) ||
+                (currentSource === 'mixesdb' && tracksFromMixesDb.length)
+            );
+            if (manualSourceAvailable) {
+                setActiveSource(currentSource);
+                return;
+            }
+            sourceSelectionMode = 'auto';
+        }
+        setActiveSource(getPreferredTracklistSource());
     }
 
     function applyProviderCandidate(source, index, activate = false) {
@@ -1361,17 +1512,9 @@
         if (runtimeSettings.enableTrackId) {
             restoreCandidates('trackid', cached.candidatesTrackId, cached.tracksTrackId, cached.urlTrackId, cached.candidateIndexTrackId);
         }
-        const availableSource = (
-            cached.activeSource === '1001' && tracksFrom1001.length ? '1001' :
-            cached.activeSource === 'mixesdb' && tracksFromMixesDb.length ? 'mixesdb' :
-            cached.activeSource === 'trackid' && tracksFromTrackId.length ? 'trackid' :
-            getAvailableRemoteSource()
-        );
-        if (!availableSource) return false;
-        currentSource = availableSource;
-        parsedTracks = availableSource === '1001'
-            ? tracksFrom1001
-            : availableSource === 'mixesdb' ? tracksFromMixesDb : tracksFromTrackId;
+        const availableSource = getPreferredTracklistSource();
+        if (availableSource === 'none') return false;
+        setActiveSource(availableSource);
         cacheHitVideoId = videoId;
         searchState = 'success';
         searchStateDetail = `快取：${availableSource.toUpperCase()}（${parsedTracks.length} 首）`;
@@ -1380,7 +1523,8 @@
         return cached.activeSource || availableSource;
     }
 
-    function setActiveSource(source) {
+    function setActiveSource(source, manual = false) {
+        if (manual) sourceSelectionMode = 'manual';
         if (source === 'youtube' && tracksFromYouTube.length) {
             parsedTracks = tracksFromYouTube;
             currentSource = 'youtube';
@@ -1394,18 +1538,10 @@
             parsedTracks = tracksFromTrackId;
             currentSource = 'trackid';
         } else {
-            if (tracksFromYouTube.length) {
-                parsedTracks = tracksFromYouTube;
-                currentSource = 'youtube';
-            } else if (tracksFrom1001.length) {
-                parsedTracks = tracksFrom1001;
-                currentSource = '1001';
-            } else if (tracksFromMixesDb.length) {
-                parsedTracks = tracksFromMixesDb;
-                currentSource = 'mixesdb';
-            } else if (tracksFromTrackId.length) {
-                parsedTracks = tracksFromTrackId;
-                currentSource = 'trackid';
+            const fallbackSource = getPreferredTracklistSource();
+            if (fallbackSource !== 'none' && fallbackSource !== source) {
+                setActiveSource(fallbackSource);
+                return;
             } else {
                 parsedTracks = [];
                 currentSource = 'none';
@@ -1428,6 +1564,12 @@
         if (!runtimeSettings.enable1001) return;
         if (!force && !runtimeSettings.autoSearch1001) return;
         if (!force && (videoId === lastVideoIdFor1001 && title === lastSearchTitle)) return;
+        const previousAutomaticAttempt = Number(automatic1001SearchGuard.attempts[videoId]) || 0;
+        if (!manual && previousAutomaticAttempt > Date.now() - AUTOMATIC_1001_ATTEMPT_TTL_MS) {
+            searchStateDetail = '已略過近期重複的 1001 自動查詢；需要時可按 RETRY SEARCH。';
+            updateStatusLight();
+            return;
+        }
         if (!manual && Date.now() < automaticSearchBlockedUntil) {
             searchState = 'error';
             searchStateDetail = '1001Tracklists 自動查詢已暫停 5 分鐘，避免持續觸發 IP 限制；完成 CAPTCHA 後可按 RETRY SEARCH。';
@@ -1435,6 +1577,10 @@
             updateStatusLight();
             updateLinkButton();
             return;
+        }
+        if (!manual) {
+            automatic1001SearchGuard.attempts[videoId] = Date.now();
+            void persist1001SearchGuard();
         }
         lastVideoIdFor1001 = videoId;
         lastSearchTitle = title;
@@ -1455,7 +1601,11 @@
             if (!isCurrentSearch()) return;
             if (details) console.warn(`[CD HUD] ${message}`, details);
             else console.warn(`[CD HUD] ${message}`);
-            if (blocked) automaticSearchBlockedUntil = Date.now() + AUTOMATIC_SEARCH_BLOCK_COOLDOWN_MS;
+            if (blocked) {
+                automaticSearchBlockedUntil = Date.now() + AUTOMATIC_SEARCH_BLOCK_COOLDOWN_MS;
+                automatic1001SearchGuard.blockedUntil = automaticSearchBlockedUntil;
+                void persist1001SearchGuard();
+            }
             searchState = 'error';
             searchStateDetail = message;
             if (!tracklistUrl1001) tracklistUrl1001 = searchPageUrl;
@@ -1544,7 +1694,7 @@
                     searchTitle,
                     Number(currentVideo && currentVideo.duration) || 0
                 )
-                    .slice(0, runtimeSettings.maxCandidates);
+                    .slice(0, manual ? runtimeSettings.maxCandidates : Math.min(runtimeSettings.maxCandidates, 2));
                 if (!candidates.length) {
                     markSearchError('搜尋完成，但找不到符合的 1001Tracklists 曲目頁。');
                     return;
@@ -1675,17 +1825,14 @@
                             searchState = 'success';
                             searchStateDetail = `1001Tracklists：${tracklistCandidates['1001'].length} 個候選`;
                             automaticSearchBlockedUntil = 0;
-                            if (isFirstCandidate && (activateOnSuccess || runtimeSettings.prefer1001 || !tracksFromYouTube.length)) {
-                                setActiveSource('1001');
-                            } else if (isFirstCandidate && currentSource === '1001') {
-                                setActiveSource('1001');
-                            } else {
-                                updateSourceButtons();
-                            }
+                            automatic1001SearchGuard.blockedUntil = 0;
+                            void persist1001SearchGuard();
+                            if (isFirstCandidate && activateOnSuccess) setActiveSource('1001', true);
+                            else reconcileActiveSource();
                             updateLinkButton();
                             updateStatusLight();
                             cacheCurrentTracklists(videoId);
-                            scheduleCandidate(candidateIndex + 1);
+                            // A valid first result is sufficient; extra candidate GETs raise anti-bot risk.
                         },
                         onerror: function (err) {
                             activeTracklistRequest = null;
@@ -1820,7 +1967,7 @@
             replaceProviderCandidates('mixesdb', matchedCandidates);
             searchState = 'success';
             searchStateDetail = `MixesDB：${matchedCandidates.length} 個候選`;
-            setActiveSource('mixesdb');
+            reconcileActiveSource();
             updateSourceButtons();
             updateLinkButton();
             updateStatusLight();
@@ -1867,7 +2014,7 @@
         replaceProviderCandidates('trackid', matchedCandidates);
         searchState = 'success';
         searchStateDetail = `TrackId.net：${matchedCandidates.length} 個單曲候選`;
-        setActiveSource('trackid');
+        reconcileActiveSource();
         updateSourceButtons();
         updateLinkButton();
         updateStatusLight();
@@ -1963,7 +2110,7 @@
             replaceProviderCandidates('trackid', matchedCandidates);
             searchState = 'success';
             searchStateDetail = `TrackId.net：${matchedCandidates.length} 個候選`;
-            setActiveSource('trackid');
+            reconcileActiveSource();
             updateSourceButtons();
             updateLinkButton();
             updateStatusLight();
@@ -3576,6 +3723,8 @@
             ? 'YouTube 留言時間戳曲目'
             : youtubeTrackOrigin === 'description'
                 ? 'YouTube 說明欄時間戳曲目'
+                : youtubeTrackOrigin === 'recognized'
+                    ? 'YouTube 系統辨識／字幕時間戳曲目（低優先）'
                 : 'YouTube 時間戳曲目';
         youtubeSourceBtn.title = hasYouTube ? `使用 ${youtubeOriginLabel}` : '目前沒有可用的 YouTube 說明欄／留言時間戳曲目';
         tracklistSource1001Btn.title = has1001 ? '使用 1001Tracklists 曲目' : '目前沒有可用的 1001Tracklists 曲目';
@@ -3834,7 +3983,7 @@
             sourceCaption.textContent = 'SRC';
             youtubeSourceBtn = createControlButton('YT', '使用 YouTube 說明欄／留言時間戳曲目', () => {
                 set1001MenuExpanded(false);
-                setActiveSource('youtube');
+                setActiveSource('youtube', true);
             });
             youtubeSourceBtn.classList.add('hud-source-option', 'hud-source-youtube');
             sourceSelector.appendChild(sourceCaption);
@@ -3866,17 +4015,17 @@
             oneThousandMenu = document.createElement('div');
             oneThousandMenu.className = 'hud-1001-menu';
             tracklistSource1001Btn = createControlButton('USE 1001', '使用 1001Tracklists 曲目', () => {
-                setActiveSource('1001');
+                setActiveSource('1001', true);
                 set1001MenuExpanded(false);
             });
             tracklistSource1001Btn.classList.add('hud-source-1001');
             tracklistSourceMixesDbBtn = createControlButton('USE MIXESDB', '使用 MixesDB 曲目', () => {
-                setActiveSource('mixesdb');
+                setActiveSource('mixesdb', true);
                 set1001MenuExpanded(false);
             });
             tracklistSourceMixesDbBtn.classList.add('hud-source-mixesdb');
             tracklistSourceTrackIdBtn = createControlButton('USE TRACKID', '使用 TrackId.net 曲目', () => {
-                setActiveSource('trackid');
+                setActiveSource('trackid', true);
                 set1001MenuExpanded(false);
             });
             tracklistSourceTrackIdBtn.classList.add('hud-source-trackid');
@@ -4045,6 +4194,7 @@
             resetProviderCandidates('trackid');
             parsedTracks = [];
             currentSource = 'none';
+            sourceSelectionMode = 'auto';
             searchState = 'idle';
             searchStateDetail = '';
             pending1001VerificationRequest = null;
@@ -4059,9 +4209,7 @@
 
         parseYouTubeLocalTracks();
         bindYouTubeCommentObserver();
-        if (restoredCacheSource === 'youtube' && tracksFromYouTube.length) {
-            setActiveSource('youtube');
-        }
+        reconcileActiveSource();
         if (restoredCacheSource) {
             searchStateDetail = `快取：${currentSource.toUpperCase()}（${parsedTracks.length} 首）`;
         }
@@ -4187,6 +4335,7 @@
             isSuccessfulHttpStatus,
             isLikelySingleTrackVideo,
             normalizeSearchTitle,
+            normalize1001SearchGuard,
             normalizeTracklistCache,
             normalizeAngleDelta,
             parseRemoteHtml,
@@ -4197,6 +4346,7 @@
             parseTimestampPlaylistText,
             isCredibleTimestampPlaylist,
             chooseYouTubeTimestampPlaylist,
+            choosePreferredTracklistSource,
             parseTimestampToSeconds,
             parseTracklistDocument,
             rankTrackIdMusicCandidates,
@@ -4210,6 +4360,7 @@
     async function boot() {
         await prepareExtensionSettings();
         await loadTracklistCache();
+        await load1001SearchGuard();
         document.addEventListener('yt-navigate-finish', scheduleInitialization, false);
         window.addEventListener('load', scheduleInitialization, false);
         window.addEventListener('resize', applySizing, false);

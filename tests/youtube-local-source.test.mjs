@@ -36,8 +36,10 @@ vm.createContext(sandbox);
 vm.runInContext(source, sandbox, { filename: sourcePath });
 
 const {
+  choosePreferredTracklistSource,
   chooseYouTubeTimestampPlaylist,
   isCredibleTimestampPlaylist,
+  normalize1001SearchGuard,
   parseTimestampPlaylistText,
 } = sandbox.__YT_CD_HUD_TEST_EXPORTS__;
 
@@ -45,6 +47,7 @@ test('exports YouTube local timestamp playlist helpers', () => {
   assert.equal(typeof parseTimestampPlaylistText, 'function');
   assert.equal(typeof isCredibleTimestampPlaylist, 'function');
   assert.equal(typeof chooseYouTubeTimestampPlaylist, 'function');
+  assert.equal(typeof choosePreferredTracklistSource, 'function');
 });
 
 test('parses timestamp-first playlist lines and de-duplicates cue times', () => {
@@ -99,4 +102,60 @@ test('does not promote a single timestamp comment to a playlist source', () => {
   assert.equal(selection.origin, '');
   assert.deepEqual(JSON.parse(JSON.stringify(selection.tracks)), []);
   assert.equal(isCredibleTimestampPlaylist([{ time: 0, title: 'Only cue' }]), false);
+});
+
+test('uses the default priority YT, 1001, TrackId, then MixesDB', () => {
+  const allAvailable = { youtube: true, '1001': true, trackid: true, mixesdb: true };
+  assert.equal(choosePreferredTracklistSource(allAvailable, 'description'), 'youtube');
+  assert.equal(choosePreferredTracklistSource({ ...allAvailable, youtube: false }), '1001');
+  assert.equal(choosePreferredTracklistSource({ trackid: true, mixesdb: true }), 'trackid');
+  assert.equal(choosePreferredTracklistSource({ mixesdb: true }), 'mixesdb');
+});
+
+test('demotes explicitly system-recognized YouTube text behind every provider', () => {
+  const recognizedSelection = chooseYouTubeTimestampPlaylist(
+    '',
+    [],
+    ['00:00 Recognized intro\n04:20 Recognized second track'],
+  );
+
+  assert.equal(recognizedSelection.origin, 'recognized');
+  assert.equal(
+    choosePreferredTracklistSource({ youtube: true, mixesdb: true }, recognizedSelection.origin),
+    'mixesdb',
+  );
+  assert.equal(
+    choosePreferredTracklistSource({ youtube: true, trackid: true }, recognizedSelection.origin),
+    'trackid',
+  );
+  assert.equal(
+    choosePreferredTracklistSource({ youtube: true, '1001': true }, recognizedSelection.origin),
+    '1001',
+  );
+  assert.equal(
+    choosePreferredTracklistSource({ youtube: true }, recognizedSelection.origin),
+    'youtube',
+  );
+});
+
+test('explicit prefer-1001 setting remains an override over normal YouTube data', () => {
+  assert.equal(
+    choosePreferredTracklistSource({ youtube: true, '1001': true }, 'description', true),
+    '1001',
+  );
+});
+
+test('keeps only recent bounded automatic 1001 attempts and cooldown state', () => {
+  const now = 2_000_000;
+  const normalized = normalize1001SearchGuard({
+    blockedUntil: now + 10_000_000,
+    attempts: {
+      video12345: now - 1000,
+      expired1234: now - (16 * 60 * 1000),
+      '../invalid': now - 1000,
+    },
+  }, now);
+
+  assert.deepEqual(JSON.parse(JSON.stringify(normalized.attempts)), { video12345: now - 1000 });
+  assert.equal(normalized.blockedUntil, now + (5 * 60 * 1000));
 });

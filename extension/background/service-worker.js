@@ -5,6 +5,10 @@ const BRIDGE_SESSION_TTL_MS = 10 * 60 * 1000;
 const MAX_RESPONSE_TEXT_LENGTH = 8 * 1024 * 1024;
 const BRIDGE_TOKEN_PATTERN = /^[a-f0-9-]{32,64}$/i;
 const REQUEST_ID_PATTERN = /^[a-z0-9-]{16,100}$/i;
+const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/;
+const PACKET_URL_PATTERN = /^https:\/\/(?:www\.)?1001tracklists\.com\/tracklist\//i;
+const MAX_PACKET_TRACKS = 300;
+const MAX_PACKET_BYTES = 128 * 1024;
 const activeDirectControllers = new Map();
 const activeBridgeRoutes = new Map();
 const remoteRequestOwners = new Map();
@@ -115,7 +119,7 @@ function discardExpiredSessions(sessions, now = Date.now()) {
     )));
 }
 
-async function registerBridgeSession(token, sender) {
+async function registerBridgeSession(token, videoId, sender) {
     if (!BRIDGE_TOKEN_PATTERN.test(token) || !isSenderOnHost(sender, /^https:\/\/www\.youtube\.com\//i)) {
         return { ok: false, phase: 'validation', error: 'Invalid 1001 bridge registration.' };
     }
@@ -127,12 +131,66 @@ async function registerBridgeSession(token, sender) {
     sessions[token] = {
         youtubeTabId: sender.tab.id,
         bridgeTabId: null,
+        videoId: VIDEO_ID_PATTERN.test(videoId) ? videoId : '',
         registeredAt: now,
         attachedAt: 0,
         expiresAt: now + BRIDGE_SESSION_TTL_MS,
     };
     await setBridgeSessions(sessions);
     return { ok: true };
+}
+
+function normalize1001Packet(value) {
+    if (!value || value.version !== 1 || value.provider !== '1001tracklists') return null;
+    const rawCanonicalUrl = String(value.canonicalUrl || '').slice(0, 2048);
+    if (!PACKET_URL_PATTERN.test(rawCanonicalUrl) || !Array.isArray(value.tracks)) return null;
+    let canonicalUrl = '';
+    try {
+        const parsedUrl = new URL(rawCanonicalUrl);
+        parsedUrl.hash = '';
+        canonicalUrl = parsedUrl.href;
+    } catch (error) {
+        return null;
+    }
+    const tracks = value.tracks.slice(0, MAX_PACKET_TRACKS).map(track => ({
+        time: Math.max(0, Math.floor(Number(track && track.time))),
+        title: String(track && track.title || '').replace(/\s+/g, ' ').trim().slice(0, 300),
+    })).filter(track => Number.isFinite(track.time) && track.title);
+    if (!tracks.length) return null;
+    const packet = {
+        version: 1,
+        provider: '1001tracklists',
+        canonicalUrl,
+        capturedAt: Math.max(0, Math.floor(Number(value.capturedAt) || Date.now())),
+        tracks,
+    };
+    const packetBytes = new TextEncoder().encode(JSON.stringify(packet)).byteLength;
+    return packetBytes <= MAX_PACKET_BYTES ? packet : null;
+}
+
+async function deliver1001Packet(message, sender) {
+    if (!isSenderOnHost(sender, /^https:\/\/(?:www\.)?1001tracklists\.com\//i)) {
+        return { ok: false, phase: 'validation', error: 'Invalid 1001 packet sender.' };
+    }
+    const packet = normalize1001Packet(message.packet);
+    if (!packet) return { ok: false, phase: 'validation', error: 'Invalid 1001 packet.' };
+    const sessions = discardExpiredSessions(await getBridgeSessions());
+    await setBridgeSessions(sessions);
+    const session = Object.values(sessions).find(candidate => (
+        candidate && candidate.bridgeTabId === sender.tab.id &&
+        Number.isInteger(candidate.youtubeTabId) && VIDEO_ID_PATTERN.test(candidate.videoId)
+    ));
+    if (!session) return { ok: true, delivered: false };
+    try {
+        const acknowledgement = await chrome.tabs.sendMessage(session.youtubeTabId, {
+            type: 'YT_CD_HUD_1001_PACKET_V1',
+            videoId: session.videoId,
+            packet,
+        });
+        return { ok: true, delivered: Boolean(acknowledgement && acknowledgement.accepted) };
+    } catch (error) {
+        return { ok: false, phase: 'notify', delivered: false, error: String(error && error.message || error) };
+    }
 }
 
 async function attachBridgeSession(token, sender) {
@@ -262,8 +320,14 @@ async function handleRemoteRequest(message, sender) {
     }
     if (requestId) {
         const existingOwner = remoteRequestOwners.get(requestId);
-        if (Number.isInteger(existingOwner) && existingOwner !== senderTabId) {
-            return { ok: false, phase: 'validation', error: 'Remote request ID belongs to another tab.' };
+        if (Number.isInteger(existingOwner)) {
+            return {
+                ok: false,
+                phase: 'validation',
+                error: existingOwner === senderTabId
+                    ? 'Duplicate active remote request ID.'
+                    : 'Remote request ID belongs to another tab.',
+            };
         }
         remoteRequestOwners.set(requestId, senderTabId);
     }
@@ -358,6 +422,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         'YT_CD_HUD_REGISTER_1001_BRIDGE',
         'YT_CD_HUD_ATTACH_1001_BRIDGE',
         'YT_CD_HUD_1001_BRIDGE_READY',
+        'YT_CD_HUD_1001_PACKET_V1',
     ].includes(message.type)) return false;
 
     (async () => {
@@ -366,7 +431,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return;
         }
         if (message.type === 'YT_CD_HUD_REGISTER_1001_BRIDGE') {
-            sendResponse(await registerBridgeSession(String(message.token || ''), sender));
+            sendResponse(await registerBridgeSession(
+                String(message.token || ''),
+                String(message.videoId || ''),
+                sender
+            ));
             return;
         }
         if (message.type === 'YT_CD_HUD_ATTACH_1001_BRIDGE') {
@@ -375,6 +444,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         if (message.type === 'YT_CD_HUD_1001_BRIDGE_READY') {
             sendResponse(await notifyYouTubeBridgeReady(sender));
+            return;
+        }
+        if (message.type === 'YT_CD_HUD_1001_PACKET_V1') {
+            sendResponse(await deliver1001Packet(message, sender));
             return;
         }
         sendResponse(await handleRemoteRequest(message, sender));

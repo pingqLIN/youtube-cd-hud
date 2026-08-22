@@ -26,6 +26,22 @@
 
     function notifyBridgeReady() {
         if (!hasRenderedTracklist()) return;
+        const packet = globalThis.YtCdHud1001Packet?.extractRenderedTracklist(
+            document,
+            `${location.origin}${location.pathname}${location.search}`
+        );
+        if (packet) {
+            chrome.runtime.sendMessage({
+                type: globalThis.YtCdHud1001Packet.PACKET_TYPE,
+                packet,
+            }, result => {
+                if (!chrome.runtime.lastError && result?.ok && result?.delivered) return;
+                chrome.runtime.sendMessage({ type: 'YT_CD_HUD_1001_BRIDGE_READY' }, () => {
+                    void chrome.runtime.lastError;
+                });
+            });
+            return;
+        }
         chrome.runtime.sendMessage({ type: 'YT_CD_HUD_1001_BRIDGE_READY' }, () => {
             void chrome.runtime.lastError;
         });

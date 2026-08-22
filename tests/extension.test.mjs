@@ -27,6 +27,7 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
   assert.ok(manifest.action);
   assert.deepEqual(manifest.content_scripts[0].js, [
     'shared/settings.js',
+    'shared/1001-packet.js',
     'content/gm-xmlhttp-request.js',
     'content/youtube-cd-hud.js',
   ]);
@@ -35,7 +36,7 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
       'https://1001tracklists.com/*',
       'https://www.1001tracklists.com/*',
     ],
-    js: ['content/1001-session-bridge.js'],
+    js: ['shared/1001-packet.js', 'content/1001-session-bridge.js'],
     run_at: 'document_idle',
   });
 });
@@ -128,8 +129,11 @@ test('routes a YouTube 1001 request through the attached first-party result tab'
   let directFetchCount = 0;
   let bridgedRequest = null;
   let readyNotification = null;
+  let packetNotification = null;
   const context = {
     AbortController,
+    TextEncoder,
+    URL,
     clearTimeout,
     console,
     Date,
@@ -155,6 +159,10 @@ test('routes a YouTube 1001 request through the attached first-party result tab'
           if (message.type === 'YT_CD_HUD_1001_BRIDGE_READY') {
             readyNotification = { tabId, message };
             return { ok: true };
+          }
+          if (message.type === 'YT_CD_HUD_1001_PACKET_V1') {
+            packetNotification = { tabId, message };
+            return { ok: true, accepted: true };
           }
           bridgedRequest = { tabId, message };
           return {
@@ -190,7 +198,7 @@ test('routes a YouTube 1001 request through the attached first-party result tab'
 
   const replacementToken = 'abcdefab-cdef-abcd-efab-cdefabcdefab';
   const replacementRegistration = await invoke(
-    { type: 'YT_CD_HUD_REGISTER_1001_BRIDGE', token: replacementToken },
+    { type: 'YT_CD_HUD_REGISTER_1001_BRIDGE', token: replacementToken, videoId: 'video12345' },
     { url: 'https://www.youtube.com/watch?v=test', tab: { id: 41 } },
   );
   assert.equal(replacementRegistration.response.ok, true);
@@ -200,6 +208,29 @@ test('routes a YouTube 1001 request through the attached first-party result tab'
   );
   assert.equal(replacementAttachment.response.ok, true);
   assert.equal(Object.keys(storedSessions).length, 1);
+
+  const packetDelivery = await invoke(
+    {
+      type: 'YT_CD_HUD_1001_PACKET_V1',
+      packet: {
+        version: 1,
+        provider: '1001tracklists',
+        canonicalUrl: 'https://www.1001tracklists.com/tracklist/example#session-fragment',
+        capturedAt: Date.now(),
+        tracks: [{ time: 0, title: 'Artist - Intro' }],
+      },
+    },
+    { url: 'https://www.1001tracklists.com/tracklist/example', tab: { id: 78 } },
+  );
+  assert.equal(packetDelivery.response.ok, true);
+  assert.equal(packetDelivery.response.delivered, true);
+  assert.equal(packetNotification.tabId, 41);
+  assert.equal(packetNotification.message.videoId, 'video12345');
+  assert.equal(packetNotification.message.packet.canonicalUrl.includes('#'), false);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(packetNotification.message.packet.tracks)),
+    [{ time: 0, title: 'Artist - Intro' }],
+  );
 
   const ready = await invoke(
     { type: 'YT_CD_HUD_1001_BRIDGE_READY' },
@@ -729,7 +760,7 @@ test('keeps the generated extension HUD synchronized with the userscript source'
   assert.match(generated, /chrome\.storage\.local\.set\(\{\s*\[TRACKLIST_CACHE_STORAGE_KEY\]/);
   assert.match(generated, /await loadTracklistCache\(\);[\s\S]*?scheduleInitialization\(\)/);
   assert.match(generated, /cacheHitVideoId\s*!==\s*videoId[\s\S]*?refreshedTitle/);
-  assert.match(generated, /restoredCacheSource\s*===\s*'youtube'[\s\S]*?setActiveSource\('youtube'\)/);
+  assert.match(generated, /parseYouTubeLocalTracks\(\);[\s\S]*?reconcileActiveSource\(\)/);
   assert.match(generated, /sourceLink\.addEventListener\('click'[\s\S]*?cycleTracklistCandidate\(currentSource\)/);
   assert.match(generated, /candidates1001:\s*tracklistCandidates\['1001'\]/);
   assert.match(generated, /scheduleCandidate\(candidateIndex \+ 1\)/);

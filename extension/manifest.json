@@ -27,6 +27,7 @@
       ],
       "js": [
         "shared/settings.js",
+        "shared/1001-packet.js",
         "content/gm-xmlhttp-request.js",
         "content/youtube-cd-hud.js"
       ],
@@ -38,6 +39,7 @@
         "https://www.1001tracklists.com/*"
       ],
       "js": [
+        "shared/1001-packet.js",
         "content/1001-session-bridge.js"
       ],
       "run_at": "document_idle"

@@ -70,18 +70,20 @@ test('hides only the disc artwork without moving the HUD layout anchor', () => {
   assert.doesNotMatch(source, /ytcd-hide-disc\s+\.hud-panel-surface\s*\{[^}]*left:\s*0/);
 });
 
-test('paces 1001 candidate requests and cools down automatic retries after a block page', () => {
+test('paces 1001 candidate requests and suppresses repeated automatic requests after a block page', () => {
   assert.match(source, /CANDIDATE_REQUEST_DELAY_MS\s*=\s*1200/);
   assert.match(source, /AUTOMATIC_SEARCH_BLOCK_COOLDOWN_MS\s*=\s*5\s*\*\s*60\s*\*\s*1000/);
   assert.match(source, /activeCandidateTimer\s*=\s*setTimeout\(\(\)\s*=>/);
-  assert.match(source, /scheduleCandidate\(candidateIndex\s*\+\s*1\)/);
+  assert.match(source, /manual\s*\?\s*runtimeSettings\.maxCandidates\s*:\s*Math\.min\(runtimeSettings\.maxCandidates,\s*2\)/);
+  assert.match(source, /extra candidate GETs raise anti-bot risk/);
+  assert.match(source, /AUTOMATIC_1001_ATTEMPT_TTL_MS\s*=\s*15\s*\*\s*60\s*\*\s*1000/);
   assert.match(source, /fetchTracklistFrom1001\(title,\s*id,\s*true,\s*true,\s*activateOnSuccess\)/);
   assert.match(source, /window\.addEventListener\('focus',\s*handle1001VerificationReturn/);
   assert.match(source, /document\.addEventListener\('visibilitychange',\s*handle1001VerificationReturn/);
   assert.match(source, /runtime\.onMessage\.addListener\(handle1001BridgeReadyMessage\)/);
-  assert.match(source, /message\.type\s*!==\s*'YT_CD_HUD_1001_BRIDGE_READY'/);
+  assert.match(source, /message\?\.type\s*===\s*'YT_CD_HUD_1001_PACKET_V1'/);
   assert.match(source, /retrySearch\(true\)/);
-  assert.match(source, /activateOnSuccess\s*\|\|\s*runtimeSettings\.prefer1001/);
+  assert.match(source, /isFirstCandidate\s*&&\s*activateOnSuccess/);
 });
 
 test('keeps the lower-right HUD resize handle interactive and content-bounds the width', () => {
@@ -128,8 +130,8 @@ test('shows the tracklist explicitly and uses the redesigned compound controls',
   assert.match(source, /createControlButton\('YT'/);
   assert.match(source, /youtubeSourceBtn\.disabled\s*=\s*!hasYouTube/);
   assert.match(source, /tracklistSource1001Btn\.disabled\s*=\s*!has1001/);
-  assert.match(source, /replaceProviderCandidates\('mixesdb',\s*matchedCandidates\);[\s\S]*?setActiveSource\('mixesdb'\)/);
-  assert.match(source, /replaceProviderCandidates\('trackid',\s*matchedCandidates\);[\s\S]*?setActiveSource\('trackid'\)/);
+  assert.match(source, /replaceProviderCandidates\('mixesdb',\s*matchedCandidates\);[\s\S]*?reconcileActiveSource\(\)/);
+  assert.match(source, /replaceProviderCandidates\('trackid',\s*matchedCandidates\);[\s\S]*?reconcileActiveSource\(\)/);
   assert.match(source, /className\s*=\s*'tracklist-header'/);
   assert.match(source, /headerTitle\.textContent\s*=\s*'TRACKLIST'/);
   assert.match(source, /className\s*=\s*'tracklist-source-link tracklist-header-action'/);
