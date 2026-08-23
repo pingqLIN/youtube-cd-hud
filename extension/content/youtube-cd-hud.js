@@ -80,6 +80,7 @@
     });
     const DISC_SCRUB_SECONDS_PER_REVOLUTION = 24;
     const DISC_SAMPLE_SECONDS = 0.08;
+    const HOVER_MARQUEE_DELAY_MS = 300;
     const CANDIDATE_REQUEST_DELAY_MS = 1200;
     const AUTOMATIC_SEARCH_BLOCK_COOLDOWN_MS = 5 * 60 * 1000;
     const SINGLE_TRACK_MAX_DURATION_SECONDS = 20 * 60;
@@ -2749,6 +2750,23 @@
                 margin: 0;
                 text-align: left;
             }
+            .hud-1001-menu .hud-hover-marquee {
+                overflow: hidden;
+                text-overflow: clip;
+                white-space: nowrap;
+            }
+            .hud-marquee-label {
+                display: inline-block;
+                white-space: nowrap;
+                will-change: transform;
+            }
+            .hud-hover-marquee.hud-hover-marquee-active .hud-marquee-label {
+                animation: hud-hover-marquee var(--hud-marquee-duration) linear infinite alternate;
+            }
+            @keyframes hud-hover-marquee {
+                from { transform: translateX(0); }
+                to { transform: translateX(calc(-1 * var(--hud-marquee-distance))); }
+            }
             .hud-transport-controls {
                 display: inline-flex;
                 align-items: center;
@@ -2938,7 +2956,8 @@
                     transition: none;
                 }
                 .cd-art,
-                .status-light.searching {
+                .status-light.searching,
+                .hud-hover-marquee.hud-hover-marquee-active .hud-marquee-label {
                     animation: none;
                 }
                 .cd-disc:before { transition: none; }
@@ -3691,6 +3710,45 @@
         return btn;
     }
 
+    function bindHoverMarquee(button) {
+        if (!button || button._ytCdHoverMarqueeBound) return;
+        const label = document.createElement('span');
+        label.className = 'hud-marquee-label';
+        label.textContent = button.textContent;
+        button.replaceChildren(label);
+        button.classList.add('hud-hover-marquee');
+
+        let startTimer = null;
+        const stop = () => {
+            if (startTimer !== null) {
+                clearTimeout(startTimer);
+                startTimer = null;
+            }
+            button.classList.remove('hud-hover-marquee-active');
+            label.style.removeProperty('--hud-marquee-distance');
+            label.style.removeProperty('--hud-marquee-duration');
+        };
+        const start = () => {
+            startTimer = null;
+            if (!button.matches(':hover') || button.disabled || button.scrollWidth <= button.clientWidth + 1) return;
+            const distance = Math.ceil(button.scrollWidth - button.clientWidth + 8);
+            label.style.setProperty('--hud-marquee-distance', `${distance}px`);
+            label.style.setProperty('--hud-marquee-duration', `${Math.min(8, Math.max(2.4, distance / 22))}s`);
+            button.classList.add('hud-hover-marquee-active');
+        };
+
+        button.addEventListener('pointerenter', event => {
+            if (event.pointerType && event.pointerType !== 'mouse') return;
+            stop();
+            startTimer = setTimeout(start, HOVER_MARQUEE_DELAY_MS);
+        });
+        button.addEventListener('pointerleave', stop);
+        button.addEventListener('pointercancel', stop);
+        button.addEventListener('blur', stop);
+        button._ytCdHoverMarqueeBound = true;
+        button._ytCdStopHoverMarquee = stop;
+    }
+
     function set1001MenuExpanded(expanded) {
         if (!oneThousandMenu || !statusBtn) return;
         oneThousandMenu.classList.toggle('expanded', expanded);
@@ -3724,7 +3782,10 @@
         const setButtonCopy = (selector, label, title = label) => {
             const button = hud?.querySelector(selector);
             if (!button) return;
-            button.textContent = label;
+            button._ytCdStopHoverMarquee?.();
+            const marqueeLabel = button.querySelector('.hud-marquee-label');
+            if (marqueeLabel) marqueeLabel.textContent = label;
+            else button.textContent = label;
             button.title = title;
             button.setAttribute('aria-label', title);
         };
@@ -3747,12 +3808,7 @@
         setButtonCopy('.hud-close-button', '×', t('closeHud'));
         setButtonCopy('.hud-text-size-button', 'T±', t('textSize'));
         setButtonCopy('.hud-resize-handle', '', t('resize'));
-        const retry = hud?.querySelector('.hud-1001-menu button:nth-of-type(4)');
-        if (retry) {
-            retry.textContent = t('retry1001');
-            retry.title = t('retry1001');
-            retry.setAttribute('aria-label', t('retry1001'));
-        }
+        setButtonCopy('.hud-1001-menu button:nth-of-type(4)', t('retry1001'));
         const header = document.querySelector('#yt-tracklist-panel .tracklist-heading-title');
         if (header) header.textContent = t('tracklist');
         updateStatusLight();
@@ -4226,6 +4282,7 @@
         if (!tracklistBtn) tracklistBtn = document.querySelector('#yt-cd-hud .hud-tracklist-button');
         if (!previousTrackBtn) previousTrackBtn = document.querySelector('#yt-cd-hud .hud-previous-track');
         if (!nextTrackBtn) nextTrackBtn = document.querySelector('#yt-cd-hud .hud-next-track');
+        oneThousandMenu?.querySelectorAll('.hud-control-button').forEach(bindHoverMarquee);
         applyRuntimeAppearance();
         updateStatusLight();
         updateSourceButtons();

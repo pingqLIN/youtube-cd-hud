@@ -48,6 +48,18 @@ test('keeps the status lamp circular and exposes disc scrubbing states', () => {
   assert.match(source, /addEventListener\('pointerenter',\s*updateReflection/);
 });
 
+test('starts an overflow marquee only after a sustained mouse hover', () => {
+  assert.match(source, /HOVER_MARQUEE_DELAY_MS\s*=\s*300/);
+  assert.match(source, /function bindHoverMarquee\(button\)/);
+  assert.match(source, /button\.scrollWidth\s*<=\s*button\.clientWidth\s*\+\s*1/);
+  assert.match(source, /setTimeout\(start,\s*HOVER_MARQUEE_DELAY_MS\)/);
+  assert.match(source, /event\.pointerType\s*&&\s*event\.pointerType\s*!==\s*'mouse'/);
+  assert.match(source, /button\.addEventListener\('pointerleave',\s*stop\)/);
+  assert.match(source, /oneThousandMenu\?\.querySelectorAll\('\.hud-control-button'\)\.forEach\(bindHoverMarquee\)/);
+  assert.match(source, /@keyframes hud-hover-marquee/);
+  assert.match(source, /prefers-reduced-motion:[\s\S]*?hud-hover-marquee-active/);
+});
+
 test('uses the disc center as the opaque panel boundary with a pointer-through overhang', () => {
   const hudRule = source.match(/#yt-cd-hud\s*\{[\s\S]*?\n\s*\}/)?.[0] || '';
   const surfaceRule = source.match(/\.hud-panel-surface\s*\{[\s\S]*?\n\s*\}/)?.[0] || '';
