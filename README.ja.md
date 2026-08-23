@@ -215,6 +215,7 @@ npm test
 | --- | --- |
 | `src/youtube-cd-hud.user.js` | 共有 Userscript ソース |
 | `extension/` | Manifest V3 Chrome 拡張機能 |
+| `extension/icons/` | Chrome 拡張機能アイコン（16、32、48、128 px） |
 | `extension/options/` | 拡張機能設定インターフェース |
 | `extension/background/` | バックグラウンド要求処理 |
 | `extension/content/` | YouTube コンテンツスクリプトと 1001 第一者タブブリッジ |

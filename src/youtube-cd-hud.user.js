@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         YouTube CD Album & HUD Overlay (with selectable tracklist providers) v5.11.0
+// @name         YouTube CD Album & HUD Overlay (with selectable tracklist providers) v5.12.0
 // @namespace    http://tampermonkey.net/
-// @version      5.11.0
+// @version      5.12.0
 // @description  Tampermonkey／Chrome 擴充雙版本、可選 1001Tracklists、MixesDB、TrackId.net 與 HUD 外觀
 // @author       You
 // @match        https://www.youtube.com/*

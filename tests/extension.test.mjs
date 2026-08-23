@@ -14,6 +14,19 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
 
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.version, '5.12.0');
+  assert.deepEqual(manifest.icons, {
+    16: 'icons/icon16.png',
+    32: 'icons/icon32.png',
+    48: 'icons/icon48.png',
+    128: 'icons/icon128.png',
+  });
+  assert.deepEqual(manifest.action.default_icon, {
+    16: 'icons/icon16.png',
+    32: 'icons/icon32.png',
+  });
+  for (const iconPath of Object.values(manifest.icons)) {
+    assert.equal(fs.existsSync(path.join(projectRoot, 'extension', iconPath)), true);
+  }
   assert.deepEqual(manifest.permissions, ['storage']);
   assert.deepEqual(manifest.host_permissions, [
     'https://www.youtube.com/*',

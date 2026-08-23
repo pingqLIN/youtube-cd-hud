@@ -275,6 +275,7 @@ These checks validate the repository, but final acceptance still requires a visi
 | --- | --- |
 | `src/youtube-cd-hud.user.js` | Shared userscript source |
 | `extension/` | Manifest V3 Chrome extension |
+| `extension/icons/` | Chrome extension icons (16, 32, 48, and 128 px) |
 | `extension/options/` | Extension settings UI |
 | `extension/shared/i18n.js` | Extension-interface locale catalogs and translation helper |
 | `extension/background/` | Background request handling |

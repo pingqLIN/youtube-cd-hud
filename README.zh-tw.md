@@ -275,6 +275,7 @@ npm test
 | --- | --- |
 | `src/youtube-cd-hud.user.js` | 共用 Userscript 原始碼 |
 | `extension/` | Manifest V3 Chrome 擴充功能 |
+| `extension/icons/` | Chrome 擴充功能圖示（16、32、48、128 px） |
 | `extension/options/` | 擴充功能設定介面 |
 | `extension/shared/i18n.js` | 擴充功能介面的語言目錄與翻譯輔助工具 |
 | `extension/background/` | 背景請求處理 |
