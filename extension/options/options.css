@@ -70,6 +70,14 @@ h2, p { margin-top: 0; }
 
 .header-readout span { color: var(--muted); font-size: 10px; letter-spacing: .12em; }
 .header-readout strong { text-align: right; font-size: 12px; }
+.project-link {
+    color: var(--signal);
+    font: 700 10px/1 var(--mono);
+    letter-spacing: .08em;
+    text-decoration: none;
+}
+.project-link:hover,
+.project-link:focus-visible { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
 main { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
 
@@ -420,7 +428,7 @@ input:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-
 @media (max-width: 560px) {
     .console-header, main { width: min(100% - 28px, 1120px); }
     .console-header { display: block; padding: 20px 0; }
-    .header-readout { margin-top: 18px; }
+    .header-readout, .project-link { margin-top: 18px; }
     .master-strip { align-items: start; }
     .language-strip { align-items: start; flex-direction: column; gap: 16px; }
     .language-select, .language-select select { width: 100%; }

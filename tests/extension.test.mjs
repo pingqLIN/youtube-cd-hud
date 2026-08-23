@@ -89,6 +89,8 @@ test('uses external scripts and exposes the complete control surface', () => {
   assert.doesNotMatch(html, /唱片 HUD|校準台/);
   assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>/i);
   assert.doesNotMatch(html, /\son[a-z]+\s*=/i);
+  assert.match(html, /href="https:\/\/github\.com\/pingqLIN\/youtube-cd-hud"/);
+  assert.match(html, /target="_blank"\s+rel="noopener noreferrer"/);
   for (const setting of [
     'enabled',
     'language',

@@ -18,13 +18,13 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 
 - [Project Status](#project-status)
 - [What It Does](#what-it-does)
+- [In-use Preview](#in-use-preview)
 - [Choose an Installation](#choose-an-installation)
 - [Quick Start](#quick-start)
 - [Track Sources and Matching](#track-sources-and-matching)
 - [1001Tracklists Verification](#1001tracklists-verification)
 - [Interface and Controls](#interface-and-controls)
 - [Interface Language](#interface-language)
-- [In-use Preview](#in-use-preview)
 - [Privacy, Permissions, and Cache](#privacy-permissions-and-cache)
 - [Development and Verification](#development-and-verification)
 - [Project Layout](#project-layout)
@@ -54,6 +54,49 @@ It can:
 - Present the synchronized result in a compact, draggable CD-style HUD and tracklist panel.
 
 When YouTube already provides usable track information, the `YT` source remains the default. Other services are added as independent, switchable sources.
+
+---
+
+## In-use Preview
+
+The extension keeps the HUD and tracklist panel visible while YouTube playback continues. These snapshots show the interface across different DJ sets and tracklist sources; they are visual previews, not a substitute for the live browser acceptance check described in [Development and Verification](#development-and-verification).
+
+<table>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-01.png" width="100%" alt="YouTube CD HUD showing an active track in a TrackId.net result." />
+      <br />
+      <sub>01 · Active-track highlight with a TrackId.net result</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-02.png" width="100%" alt="YouTube CD HUD showing a YouTube timestamp tracklist over video playback." />
+      <br />
+      <sub>02 · YouTube timestamp tracklist in sync with playback</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-03.png" width="100%" alt="YouTube CD HUD showing a 1001Tracklists result with a highlighted current track." />
+      <br />
+      <sub>03 · Source indicator and current-track state</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-04.png" width="100%" alt="YouTube CD HUD and tracklist panel over a live DJ video." />
+      <br />
+      <sub>04 · Compact HUD over a live DJ set</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-05.png" width="100%" alt="Large YouTube CD HUD and tracklist panel with the current track highlighted." />
+      <br />
+      <sub>05 · Expanded tracklist view for longer sets</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-06.png" width="100%" alt="YouTube CD HUD showing the current track and a scrollable tracklist." />
+      <br />
+      <sub>06 · Scrollable tracklist with synchronized HUD state</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -181,49 +224,6 @@ For custom CSS, scope selectors to `#yt-cd-hud` or `.yt-tracklist-panel` where p
 
 ---
 
-## In-use Preview
-
-The extension keeps the HUD and tracklist panel visible while YouTube playback continues. These snapshots show the interface across different DJ sets and tracklist sources; they are visual previews, not a substitute for the live browser acceptance check described in [Development and Verification](#development-and-verification).
-
-<table>
-  <tr>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-01.png" width="100%" alt="YouTube CD HUD showing an active track in a TrackId.net result." />
-      <br />
-      <sub>01 · Active-track highlight with a TrackId.net result</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-02.png" width="100%" alt="YouTube CD HUD showing a YouTube timestamp tracklist over video playback." />
-      <br />
-      <sub>02 · YouTube timestamp tracklist in sync with playback</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-03.png" width="100%" alt="YouTube CD HUD showing a 1001Tracklists result with a highlighted current track." />
-      <br />
-      <sub>03 · Source indicator and current-track state</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-04.png" width="100%" alt="YouTube CD HUD and tracklist panel over a live DJ video." />
-      <br />
-      <sub>04 · Compact HUD over a live DJ set</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-05.png" width="100%" alt="Large YouTube CD HUD and tracklist panel with the current track highlighted." />
-      <br />
-      <sub>05 · Expanded tracklist view for longer sets</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-06.png" width="100%" alt="YouTube CD HUD showing the current track and a scrollable tracklist." />
-      <br />
-      <sub>06 · Scrollable tracklist with synchronized HUD state</sub>
-    </td>
-  </tr>
-</table>
-
----
-
 ## Privacy, Permissions, and Cache
 
 The Chrome extension requests only the `storage` permission and limits host access to:
@@ -240,12 +240,6 @@ When Chrome sends an allowlisted request to 1001Tracklists, the browser may atta
 MixesDB and TrackId.net requests are anonymous and read-only. The project does not upload audio or submit a new recognition job.
 
 Parsed track data and source links may be cached locally for up to **six hours**, bounded to **30 recent videos** and **300 tracks per provider**. Third-party HTML, cookies, and challenge data are not stored in that cache.
-
-<p align="center">
-  <img src="docs/assets/readme/youtube-cd-hud-cue-fox-cache-banner-v1.png" width="880" alt="Cue Fox guarding a bounded local tracklist cache while remote provider data stays outside the cache." />
-</p>
-
----
 
 ## Development and Verification
 

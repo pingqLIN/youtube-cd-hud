@@ -18,13 +18,13 @@
 
 - [專案狀態](#專案狀態)
 - [這個專案在做什麼](#這個專案在做什麼)
+- [實際操作預覽](#實際操作預覽)
 - [如何選擇安裝方式](#如何選擇安裝方式)
 - [快速開始](#快速開始)
 - [曲目來源與比對方式](#曲目來源與比對方式)
 - [1001Tracklists 的瀏覽器驗證](#1001tracklists-的瀏覽器驗證)
 - [介面與控制](#介面與控制)
 - [介面語言](#介面語言)
-- [實際操作預覽](#實際操作預覽)
 - [隱私、權限與快取](#隱私權限與快取)
 - [開發與驗證](#開發與驗證)
 - [專案結構](#專案結構)
@@ -54,6 +54,49 @@ YouTube CD HUD 會搜尋、整理並切換多個曲目資料來源，再依 YouT
 - 透過可拖移的 CD 風格 HUD 與曲目列表面板呈現同步結果。
 
 如果 YouTube 本身已有可用的章節或時間戳曲目，`YT` 會作為預設來源；其他服務則以獨立、可切換的資料來源加入。
+
+---
+
+## 實際操作預覽
+
+以下截圖展示 Chrome 擴充功能在不同 DJ Set／音樂影片畫面中的 HUD 與曲目列表面板。這些圖片是介面視覺預覽，不取代[開發與驗證](#開發與驗證)中所述的實際瀏覽器驗收。
+
+<table>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-01.png" width="100%" alt="YouTube CD HUD 在 TrackId.net 曲目結果中醒目標示目前曲目。" />
+      <br />
+      <sub>01 · TrackId.net 結果與目前曲目醒目標示</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-02.png" width="100%" alt="YouTube CD HUD 在影片播放畫面上顯示 YouTube 時間戳曲目列表。" />
+      <br />
+      <sub>02 · YouTube 時間戳曲目與播放進度同步</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-03.png" width="100%" alt="YouTube CD HUD 顯示 1001Tracklists 結果與目前曲目。" />
+      <br />
+      <sub>03 · 資料來源指示與目前曲目狀態</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-04.png" width="100%" alt="YouTube CD HUD 與曲目列表面板顯示在 DJ 影片上方。" />
+      <br />
+      <sub>04 · 顯示在 DJ Set 上方的精簡 HUD</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-05.png" width="100%" alt="YouTube CD HUD 與曲目列表面板醒目標示目前曲目。" />
+      <br />
+      <sub>05 · 適合較長 Set 的展開曲目列表</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-06.png" width="100%" alt="YouTube CD HUD 顯示目前曲目與可捲動的曲目列表。" />
+      <br />
+      <sub>06 · 可捲動曲目列表與同步中的 HUD 狀態</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -181,49 +224,6 @@ Chrome 擴充功能介面支援繁體中文（台灣）、英文與日文。可�
 
 ---
 
-## 實際操作預覽
-
-以下截圖展示 Chrome 擴充功能在不同 DJ Set／音樂影片畫面中的 HUD 與曲目列表面板。這些圖片是介面視覺預覽，不取代[開發與驗證](#開發與驗證)中所述的實際瀏覽器驗收。
-
-<table>
-  <tr>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-01.png" width="100%" alt="YouTube CD HUD 在 TrackId.net 曲目結果中醒目標示目前曲目。" />
-      <br />
-      <sub>01 · TrackId.net 結果與目前曲目醒目標示</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-02.png" width="100%" alt="YouTube CD HUD 在影片播放畫面上顯示 YouTube 時間戳曲目列表。" />
-      <br />
-      <sub>02 · YouTube 時間戳曲目與播放進度同步</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-03.png" width="100%" alt="YouTube CD HUD 顯示 1001Tracklists 結果與目前曲目。" />
-      <br />
-      <sub>03 · 資料來源指示與目前曲目狀態</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-04.png" width="100%" alt="YouTube CD HUD 與曲目列表面板顯示在 DJ 影片上方。" />
-      <br />
-      <sub>04 · 顯示在 DJ Set 上方的精簡 HUD</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-05.png" width="100%" alt="YouTube CD HUD 與曲目列表面板醒目標示目前曲目。" />
-      <br />
-      <sub>05 · 適合較長 Set 的展開曲目列表</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-06.png" width="100%" alt="YouTube CD HUD 顯示目前曲目與可捲動的曲目列表。" />
-      <br />
-      <sub>06 · 可捲動曲目列表與同步中的 HUD 狀態</sub>
-    </td>
-  </tr>
-</table>
-
----
-
 ## 隱私、權限與快取
 
 Chrome 擴充功能僅要求 `storage` 權限；可存取的網站範圍限制在：
@@ -240,12 +240,6 @@ Chrome 對白名單內的 1001Tracklists 發出請求時，瀏覽器可能會自
 MixesDB 與 TrackId.net 查詢皆為匿名、唯讀請求。專案不會上傳音訊，也不會建立新的音訊辨識任務。
 
 解析完成的曲目資料與來源連結，最長可在本機快取 **6 小時**；快取上限為**最近 30 部影片**，且**每個資料來源最多 300 首曲目**。第三方 HTML、Cookie 與驗證挑戰（challenge）資料不會寫入這份快取。
-
-<p align="center">
-  <img src="docs/assets/readme/youtube-cd-hud-cue-fox-cache-banner-v1.png" width="880" alt="Cue Fox 守護具有容量與保存時間限制的本機曲目快取。" />
-</p>
-
----
 
 ## 開發與驗證
 
