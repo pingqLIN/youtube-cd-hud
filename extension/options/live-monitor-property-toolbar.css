@@ -1,0 +1,23 @@
+.lm-property-toolbar {
+    position: absolute;
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid var(--preview-accent, #4aa3ff);
+    background: rgba(0,0,0,.8);
+    border-radius: 6px;
+    z-index: 20;
+}
+
+.lm-property-toolbar button {
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+    color: white;
+    font-size: 14px;
+}
+
+.lm-selected {
+    outline: 2px solid var(--preview-accent, #4aa3ff);
+    outline-offset: 4px;
+}
