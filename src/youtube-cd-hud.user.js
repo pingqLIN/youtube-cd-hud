@@ -3757,8 +3757,8 @@
         setButtonCopy('.hud-mixesdb-link', t('openMixesDb'));
         setButtonCopy('.hud-trackid-link', t('openTrackId'));
         setButtonCopy('.hud-tracklist-button', '≡', t('toggleTracklist'));
-        setButtonCopy('.hud-previous-track', t('previousTrack'));
-        setButtonCopy('.hud-next-track', t('nextTrack'));
+        setButtonCopy('.hud-previous-track', '◀ PREV', t('previousTrack'));
+        setButtonCopy('.hud-next-track', 'NEXT ▶', t('nextTrack'));
         setButtonCopy('.hud-close-button', '×', t('closeHud'));
         setButtonCopy('.hud-text-size-button', 'T±', t('textSize'));
         setButtonCopy('.hud-resize-handle', '', t('resize'));
@@ -4160,9 +4160,9 @@
 
             const transportControls = document.createElement('div');
             transportControls.className = 'hud-transport-controls';
-            previousTrackBtn = createControlButton(t('previousTrack'), t('previousTrack'), () => jumpTrack(-1));
+            previousTrackBtn = createControlButton('◀ PREV', t('previousTrack'), () => jumpTrack(-1));
             previousTrackBtn.classList.add('hud-previous-track');
-            nextTrackBtn = createControlButton(t('nextTrack'), t('nextTrack'), () => jumpTrack(1));
+            nextTrackBtn = createControlButton('NEXT ▶', t('nextTrack'), () => jumpTrack(1));
             nextTrackBtn.classList.add('hud-next-track');
             transportControls.appendChild(previousTrackBtn);
             transportControls.appendChild(nextTrackBtn);

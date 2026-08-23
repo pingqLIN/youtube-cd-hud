@@ -124,8 +124,8 @@ test('shows the tracklist explicitly and uses the redesigned compound controls',
   assert.match(source, /createControlButton\('≡'/);
   assert.match(source, /sourceSelector\.appendChild\(oneThousandMenu\);[\s\S]*?sourceSelector\.appendChild\(tracklistBtn\)/);
   assert.doesNotMatch(source, /sideControls\.appendChild\(tracklistBtn\)/);
-  assert.match(source, /createControlButton\(t\('previousTrack'\)/);
-  assert.match(source, /createControlButton\(t\('nextTrack'\)/);
+  assert.match(source, /createControlButton\('◀ PREV', t\('previousTrack'\)/);
+  assert.match(source, /createControlButton\('NEXT ▶', t\('nextTrack'\)/);
   assert.match(source, /className\s*=\s*'hud-source-selector'/);
   assert.match(source, /createControlButton\('YT'/);
   assert.match(source, /youtubeSourceBtn\.disabled\s*=\s*!hasYouTube/);
