@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>YouTube CD HUD 控制台</title>
+    <title data-i18n="options.title">YouTube CD HUD 控制台</title>
     <link rel="stylesheet" href="options.css">
 </head>
 <body>
@@ -11,9 +11,9 @@
     <header class="console-header">
         <div>
             <p class="eyebrow">YOUTUBE CD HUD / SETTINGS</p>
-            <p class="header-summary">擴充功能與顯示設定</p>
+            <p class="header-summary" data-i18n="options.settings">擴充功能與顯示設定</p>
         </div>
-        <div class="header-readout" aria-label="擴充版本資訊">
+        <div class="header-readout" aria-label="擴充版本資訊" data-i18n-aria-label="options.versionInfo">
             <span>BUILD</span>
             <strong>5.12.0</strong>
             <span>MODE</span>
@@ -25,14 +25,31 @@
         <form id="settings-form" autocomplete="off">
             <section class="master-strip" aria-labelledby="master-title">
                 <div>
-                    <p class="section-index">00 / MASTER</p>
-                    <h2 id="master-title">擴充總開關</h2>
-                    <p>所有設定只保存在這個 Chrome 使用者資料中。</p>
+                    <p class="section-index" data-i18n="options.masterIndex">00 / 總開關</p>
+                    <h2 id="master-title" data-i18n="options.masterTitle">擴充總開關</h2>
+                    <p data-i18n="options.masterDescription">所有設定只保存在這個 Chrome 使用者資料中。</p>
                 </div>
                 <label class="power-switch">
                     <input id="enabled" name="enabled" type="checkbox">
                     <span aria-hidden="true"></span>
-                    <b>HUD ON</b>
+                    <b data-i18n="options.enabled">HUD 開啟</b>
+                </label>
+            </section>
+
+            <section class="language-strip" aria-labelledby="language-title">
+                <div>
+                    <p class="section-index" data-i18n="options.languageIndex">語言</p>
+                    <h2 id="language-title" data-i18n="options.languageTitle">介面語言</h2>
+                    <p data-i18n="options.languageDescription">自動會依系統語言切換；未支援的系統語言會使用繁體中文。</p>
+                </div>
+                <label class="language-select">
+                    <span class="sr-only" data-i18n="options.languageTitle">介面語言</span>
+                    <select id="language" name="language">
+                        <option value="auto" data-i18n="options.languageAuto">自動（系統語言）</option>
+                        <option value="zh-TW">繁體中文</option>
+                        <option value="en">English</option>
+                        <option value="ja">日本語</option>
+                    </select>
                 </label>
             </section>
 
@@ -40,34 +57,34 @@
                 <div class="settings-rail">
                     <section class="control-section" aria-labelledby="source-title">
                         <div class="section-heading">
-                            <p class="section-index">01 / SOURCE</p>
-                            <h2 id="source-title">曲目資料來源</h2>
+                            <p class="section-index" data-i18n="options.sourceIndex">01 / 資料來源</p>
+                            <h2 id="source-title" data-i18n="options.sourceTitle">曲目資料來源</h2>
                             <span class="status-lamp" aria-hidden="true"></span>
                         </div>
 
                         <div class="switch-list">
                             <label class="switch-row">
-                                <span><b>啟用 1001</b><small>顯示來源控制並允許遠端查詢</small></span>
+                                <span><b data-i18n="options.enable1001">啟用 1001</b><small data-i18n="options.enable1001Help">顯示來源控制並允許遠端查詢</small></span>
                                 <input id="enable1001" name="enable1001" type="checkbox">
                                 <i aria-hidden="true"></i>
                             </label>
                             <label class="switch-row">
-                                <span><b>自動搜尋</b><small>影片切換後自動比對 1001Tracklists</small></span>
+                                <span><b data-i18n="options.autoSearch1001">自動搜尋</b><small data-i18n="options.autoSearch1001Help">影片切換後自動比對 1001Tracklists</small></span>
                                 <input id="autoSearch1001" name="autoSearch1001" type="checkbox">
                                 <i aria-hidden="true"></i>
                             </label>
                             <label class="switch-row">
-                                <span><b>優先採用 1001</b><small>搜尋成功後自動切換曲目來源</small></span>
+                                <span><b data-i18n="options.prefer1001">優先採用 1001</b><small data-i18n="options.prefer1001Help">搜尋成功後自動切換曲目來源</small></span>
                                 <input id="prefer1001" name="prefer1001" type="checkbox">
                                 <i aria-hidden="true"></i>
                             </label>
                             <label class="switch-row">
-                                <span><b>啟用 MixesDB</b><small>允許手動搜尋 MediaWiki 曲目資料</small></span>
+                                <span><b data-i18n="options.enableMixesDb">啟用 MixesDB</b><small data-i18n="options.enableMixesDbHelp">允許手動搜尋 MediaWiki 曲目資料</small></span>
                                 <input id="enableMixesDb" name="enableMixesDb" type="checkbox">
                                 <i aria-hidden="true"></i>
                             </label>
                             <label class="switch-row">
-                                <span><b>啟用 TrackId.net</b><small>允許手動搜尋既有公開 tracklist／單曲資料</small></span>
+                                <span><b data-i18n="options.enableTrackId">啟用 TrackId.net</b><small data-i18n="options.enableTrackIdHelp">允許手動搜尋既有公開曲目清單或單曲資料</small></span>
                                 <input id="enableTrackId" name="enableTrackId" type="checkbox">
                                 <i aria-hidden="true"></i>
                             </label>
@@ -75,12 +92,12 @@
 
                         <div class="dial-grid">
                             <label class="field-block">
-                                <span>逾時秒數</span>
+                                <span data-i18n="options.timeout">逾時秒數</span>
                                 <output id="requestTimeoutMs-output" for="requestTimeoutMs">15s</output>
                                 <input id="requestTimeoutMs" name="requestTimeoutMs" type="range" min="5000" max="30000" step="1000">
                             </label>
                             <label class="field-block">
-                                <span>候選頁上限</span>
+                                <span data-i18n="options.maxCandidates">候選頁上限</span>
                                 <output id="maxCandidates-output" for="maxCandidates">5</output>
                                 <input id="maxCandidates" name="maxCandidates" type="range" min="1" max="10" step="1">
                             </label>
@@ -89,18 +106,18 @@
 
                     <section class="control-section" aria-labelledby="visual-title">
                         <div class="section-heading">
-                            <p class="section-index">02 / VISUAL</p>
-                            <h2 id="visual-title">HUD 外觀</h2>
+                            <p class="section-index" data-i18n="options.visualIndex">02 / 外觀</p>
+                            <h2 id="visual-title" data-i18n="options.visualTitle">HUD 外觀</h2>
                         </div>
 
                         <div class="switch-list compact">
                             <label class="switch-row">
-                                <span><b>顯示唱片</b><small>保留封面唱片與拖曳播放</small></span>
+                                <span><b data-i18n="options.showDisc">顯示唱片</b><small data-i18n="options.showDiscHelp">保留封面唱片與拖曳播放</small></span>
                                 <input id="showDisc" name="showDisc" type="checkbox">
                                 <i aria-hidden="true"></i>
                             </label>
                             <label class="switch-row">
-                                <span><b>顯示跳曲控制</b><small>顯示 PREV / NEXT 按鈕列</small></span>
+                                <span><b data-i18n="options.showTransport">顯示跳曲控制</b><small data-i18n="options.showTransportHelp">顯示上一首與下一首按鈕列</small></span>
                                 <input id="showTransport" name="showTransport" type="checkbox">
                                 <i aria-hidden="true"></i>
                             </label>
@@ -108,31 +125,31 @@
 
                         <div class="dial-grid visual-dials">
                             <label class="field-block">
-                                <span>曲名字級</span>
+                                <span data-i18n="options.titleFontSize">曲名字級</span>
                                 <output id="titleFontSize-output" for="titleFontSize">14px</output>
                                 <input id="titleFontSize" name="titleFontSize" type="range" min="9" max="28" step="1">
                             </label>
                             <label class="field-block">
-                                <span>時間字級</span>
+                                <span data-i18n="options.timeFontSize">時間字級</span>
                                 <output id="timeFontSize-output" for="timeFontSize">12px</output>
                                 <input id="timeFontSize" name="timeFontSize" type="range" min="10" max="29" step="1">
                             </label>
                             <label class="field-block">
-                                <span>唱片倍率</span>
+                                <span data-i18n="options.discScale">唱片倍率</span>
                                 <output id="discScale-output" for="discScale">100%</output>
                                 <input id="discScale" name="discScale" type="range" min="0.7" max="1.6" step="0.05">
                             </label>
                             <label class="field-block">
-                                <span>面板不透明度</span>
+                                <span data-i18n="options.surfaceOpacity">面板不透明度</span>
                                 <output id="surfaceOpacity-output" for="surfaceOpacity">85%</output>
                                 <input id="surfaceOpacity" name="surfaceOpacity" type="range" min="45" max="100" step="1">
                             </label>
                         </div>
 
                         <label class="font-field">
-                            <span><b>HUD 字體</b><small>使用本機已安裝字體；未安裝時自動回退至 Cascadia Mono／Consolas</small></span>
+                            <span><b data-i18n="options.fontFamily">HUD 字體</b><small data-i18n="options.fontFamilyHelp">使用本機已安裝字體；未安裝時自動回退至 Cascadia Mono 或 Consolas</small></span>
                             <select id="fontFamily" name="fontFamily">
-                                <option value="cascadia-mono">Cascadia Mono / Digital Grid（預設）</option>
+                                <option value="cascadia-mono" data-i18n="options.fontDefault">Cascadia Mono / Digital Grid（預設）</option>
                                 <option value="ocr-machine">OCR A / Machine Readout</option>
                                 <option value="jetbrains-mono">JetBrains Mono / Technical</option>
                                 <option value="ibm-plex-mono">IBM Plex Mono / Instrument</option>
@@ -142,19 +159,19 @@
                         </label>
 
                         <label class="color-field">
-                            <span><b>訊號色</b><small>焦點、作用中控制與刻度線</small></span>
+                            <span><b data-i18n="options.accentColor">訊號色</b><small data-i18n="options.accentColorHelp">焦點、作用中控制與刻度線</small></span>
                             <input id="accentColor" name="accentColor" type="color">
                         </label>
                     </section>
 
                     <section class="control-section css-section" aria-labelledby="css-title">
                         <div class="section-heading">
-                            <p class="section-index">03 / OVERRIDE</p>
-                            <h2 id="css-title">自訂 CSS</h2>
+                            <p class="section-index" data-i18n="options.overrideIndex">03 / 覆寫</p>
+                            <h2 id="css-title" data-i18n="options.customCss">自訂 CSS</h2>
                         </div>
-                        <p class="field-note">CSS 會直接套用到 YouTube 頁面。建議以 <code>#yt-cd-hud</code> 或 <code>.yt-tracklist-panel</code> 限定範圍。</p>
+                        <p class="field-note" data-i18n="options.customCssHelp">CSS 會直接套用到 YouTube 頁面。建議以 #yt-cd-hud 或 .yt-tracklist-panel 限定範圍。</p>
                         <label class="css-editor">
-                            <span class="sr-only">自訂 CSS</span>
+                            <span class="sr-only" data-i18n="options.customCss">自訂 CSS</span>
                             <textarea id="customCss" name="customCss" spellcheck="false" placeholder="#yt-cd-hud {&#10;  border-width: 2px;&#10;}"></textarea>
                         </label>
                     </section>
@@ -162,8 +179,8 @@
 
                 <aside class="preview-rail" aria-labelledby="preview-title">
                     <div class="preview-heading">
-                        <p class="section-index">LIVE MONITOR</p>
-                        <h2 id="preview-title">即時預覽</h2>
+                        <p class="section-index" data-i18n="options.previewIndex">即時監看</p>
+                        <h2 id="preview-title" data-i18n="options.previewTitle">即時預覽</h2>
                     </div>
                     <div class="preview-stage">
                         <div class="preview-grid" aria-hidden="true"></div>
@@ -180,27 +197,28 @@
                             <div class="preview-tools"><b>×</b><b>T±</b></div>
                             <i class="preview-resize" aria-hidden="true"></i>
                         </div>
-                        <p class="preview-caption">YOUTUBE PLAYER / 1280×720</p>
+                        <p class="preview-caption" data-i18n="options.previewCaption">YOUTUBE 播放器 / 1280×720</p>
                     </div>
                     <dl class="scope-list">
-                        <div><dt>資料儲存</dt><dd>Chrome 本機</dd></div>
-                        <div><dt>頁面權限</dt><dd>YouTube</dd></div>
-                        <div><dt>遠端查詢</dt><dd>1001Tracklists / MixesDB / TrackId.net</dd></div>
+                        <div><dt data-i18n="options.storage">資料儲存</dt><dd data-i18n="options.storageValue">Chrome 本機</dd></div>
+                        <div><dt data-i18n="options.permissions">頁面權限</dt><dd data-i18n="options.permissionValue">YouTube</dd></div>
+                        <div><dt data-i18n="options.remoteRequests">遠端查詢</dt><dd>1001Tracklists / MixesDB / TrackId.net</dd></div>
                     </dl>
                 </aside>
             </div>
 
             <footer class="action-bar">
-                <p id="save-status" role="status" aria-live="polite">等待調整</p>
+                <p id="save-status" role="status" aria-live="polite" data-i18n="options.waiting">等待調整</p>
                 <div>
-                    <button id="reset-button" class="secondary-button" type="button">恢復預設</button>
-                    <button class="primary-button" type="submit">儲存並套用</button>
+                    <button id="reset-button" class="secondary-button" type="button" data-i18n="options.reset">恢復預設</button>
+                    <button class="primary-button" type="submit" data-i18n="options.save">儲存並套用</button>
                 </div>
             </footer>
         </form>
     </main>
 
     <script src="../shared/settings.js"></script>
+    <script src="../shared/i18n.js"></script>
     <script src="options.js"></script>
 </body>
 </html>

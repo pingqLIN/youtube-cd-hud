@@ -2,6 +2,7 @@
     'use strict';
 
     const STORAGE_KEY = 'ytCdHudSettings';
+    const SUPPORTED_LANGUAGES = Object.freeze(['auto', 'zh-TW', 'en', 'ja']);
     const FONT_STACKS = Object.freeze({
         'cascadia-mono': '"Cascadia Mono", "Cascadia Code", "Lucida Console", Consolas, monospace',
         'ocr-machine': '"OCR A Extended", "OCR A Std", "Lucida Console", "Cascadia Mono", Consolas, monospace',
@@ -28,6 +29,7 @@
         showDisc: true,
         showTransport: true,
         customCss: '',
+        language: 'auto',
     });
 
     function clampNumber(value, fallback, minimum, maximum, integer = false) {
@@ -45,6 +47,30 @@
     function normalizeFontFamily(value) {
         const key = String(value || '');
         return Object.hasOwn(FONT_STACKS, key) ? key : DEFAULTS.fontFamily;
+    }
+
+    function normalizeLanguage(value) {
+        const normalized = String(value || '').trim().toLowerCase().replace(/_/g, '-');
+        if (normalized === 'auto') return 'auto';
+        if (normalized === 'ja' || normalized.startsWith('ja-')) return 'ja';
+        if (normalized === 'en' || normalized.startsWith('en-')) return 'en';
+        if (normalized === 'zh' || normalized.startsWith('zh-')) return 'zh-TW';
+        return DEFAULTS.language;
+    }
+
+    function resolveLanguage(preference = DEFAULTS.language, systemLanguages) {
+        const requested = normalizeLanguage(preference);
+        if (requested !== 'auto') return requested;
+        const candidates = Array.isArray(systemLanguages)
+            ? systemLanguages
+            : typeof navigator !== 'undefined'
+                ? navigator.languages || [navigator.language]
+                : [];
+        for (const candidate of candidates) {
+            const resolved = normalizeLanguage(candidate);
+            if (resolved !== 'auto') return resolved;
+        }
+        return 'zh-TW';
     }
 
     function normalize(value = {}) {
@@ -66,6 +92,7 @@
             showDisc: value.showDisc !== false,
             showTransport: value.showTransport !== false,
             customCss: String(value.customCss || '').slice(0, 20000),
+            language: normalizeLanguage(value.language),
         };
     }
 
@@ -73,6 +100,9 @@
         STORAGE_KEY,
         DEFAULTS,
         FONT_STACKS,
+        SUPPORTED_LANGUAGES,
+        normalizeLanguage,
+        resolveLanguage,
         normalize,
     });
 })();

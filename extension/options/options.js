@@ -2,10 +2,13 @@
     'use strict';
 
     const settingsApi = globalThis.YtCdHudSettings;
+    const i18n = globalThis.YtCdHudI18n;
     const form = document.getElementById('settings-form');
     const status = document.getElementById('save-status');
     const preview = document.getElementById('hud-preview');
     const fields = Array.from(form.elements).filter(element => element.name);
+    let statusKey = 'options.waiting';
+    let statusState = '';
 
     const outputFormatters = {
         requestTimeoutMs: value => `${Math.round(value / 1000)}s`,
@@ -58,29 +61,45 @@
             else field.value = String(settings[field.name]);
         }
         updatePreview(settings);
+        applyLocale(settings.language);
     }
 
-    function setStatus(message, state = '') {
-        status.textContent = message;
-        status.className = state;
+    function applyLocale(preference) {
+        if (!i18n) return;
+        i18n.localizeDocument(document, preference);
+        renderStatus();
+    }
+
+    function renderStatus() {
+        status.textContent = i18n
+            ? i18n.translate(statusKey, i18n.resolveLanguage(getFormSettings().language))
+            : statusKey;
+        status.className = statusState;
+    }
+
+    function setStatus(key, state = '') {
+        statusKey = key;
+        statusState = state;
+        renderStatus();
     }
 
     async function load() {
         try {
             const stored = await chrome.storage.local.get(settingsApi.STORAGE_KEY);
             populate(settingsApi.normalize(stored[settingsApi.STORAGE_KEY]));
-            setStatus('設定已載入');
+            setStatus('options.loaded');
         } catch (error) {
             console.error('[CD HUD] Could not load settings.', error);
             populate(settingsApi.DEFAULTS);
-            setStatus('無法讀取設定，已顯示預設值', 'error');
+            setStatus('options.loadFailed', 'error');
         }
     }
 
-    form.addEventListener('input', () => {
+    form.addEventListener('input', event => {
         const settings = getFormSettings();
         updatePreview(settings);
-        setStatus('尚未儲存的調整');
+        if (event.target.name === 'language') applyLocale(settings.language);
+        setStatus('options.unsaved');
     });
 
     form.addEventListener('submit', async event => {
@@ -89,16 +108,16 @@
             const settings = getFormSettings();
             await chrome.storage.local.set({ [settingsApi.STORAGE_KEY]: settings });
             populate(settings);
-            setStatus('已儲存，開啟中的 YouTube 分頁會立即套用', 'saved');
+            setStatus('options.saved', 'saved');
         } catch (error) {
             console.error('[CD HUD] Could not save settings.', error);
-            setStatus('儲存失敗，請重新開啟控制頁再試', 'error');
+            setStatus('options.saveFailed', 'error');
         }
     });
 
     document.getElementById('reset-button').addEventListener('click', () => {
         populate(settingsApi.DEFAULTS);
-        setStatus('已載入預設值；按「儲存並套用」後生效');
+        setStatus('options.resetLoaded');
     });
 
     void load();

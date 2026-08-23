@@ -26,6 +26,7 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
   assert.equal(manifest.background.service_worker, 'background/service-worker.js');
   assert.ok(manifest.action);
   assert.deepEqual(manifest.content_scripts[0].js, [
+    'shared/i18n.js',
     'shared/settings.js',
     'shared/1001-packet.js',
     'content/gm-xmlhttp-request.js',
@@ -52,6 +53,7 @@ test('keeps extension settings normalized and bounded', () => {
     accentColor: 'not-a-color',
     customCss: 'x'.repeat(22000),
     fontFamily: 'untrusted-font); color: red',
+    language: 'invalid-locale',
   });
 
   assert.equal(normalized.requestTimeoutMs, 5000);
@@ -61,7 +63,24 @@ test('keeps extension settings normalized and bounded', () => {
   assert.equal(normalized.accentColor, '#63b3ed');
   assert.equal(normalized.customCss.length, 20000);
   assert.equal(normalized.fontFamily, 'cascadia-mono');
+  assert.equal(normalized.language, 'auto');
+  assert.equal(context.YtCdHudSettings.resolveLanguage('auto', ['ja-JP']), 'ja');
+  assert.equal(context.YtCdHudSettings.resolveLanguage('auto', ['en-GB']), 'en');
+  assert.equal(context.YtCdHudSettings.resolveLanguage('auto', ['ko-KR']), 'zh-TW');
+  assert.equal(context.YtCdHudSettings.resolveLanguage('zh', ['en-US']), 'zh-TW');
   assert.match(context.YtCdHudSettings.FONT_STACKS['cascadia-mono'], /Cascadia Mono/);
+});
+
+test('provides complete zh-TW, English, and Japanese UI messages', () => {
+  const context = { navigator: { languages: ['en-US'], language: 'en-US' } };
+  vm.runInNewContext(read('extension/shared/settings.js'), context);
+  vm.runInNewContext(read('extension/shared/i18n.js'), context);
+
+  assert.equal(context.YtCdHudI18n.resolveLanguage('auto', ['ja-JP']), 'ja');
+  assert.equal(context.YtCdHudI18n.resolveLanguage('auto', ['fr-FR']), 'zh-TW');
+  assert.equal(context.YtCdHudI18n.translate('options.save', 'en'), 'Save and apply');
+  assert.equal(context.YtCdHudI18n.translate('options.save', 'ja'), '保存して適用');
+  assert.equal(context.YtCdHudI18n.translate('hud.noTracklist', 'zh-TW'), '找不到曲目清單');
 });
 
 test('uses external scripts and exposes the complete control surface', () => {
@@ -72,6 +91,7 @@ test('uses external scripts and exposes the complete control surface', () => {
   assert.doesNotMatch(html, /\son[a-z]+\s*=/i);
   for (const setting of [
     'enabled',
+    'language',
     'enable1001',
     'autoSearch1001',
     'prefer1001',

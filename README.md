@@ -2,13 +2,13 @@
 
 Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD with switchable data sources.
 
-[繁體中文](README.zh-tw.md)
+[繁體中文](README.zh-tw.md) · [日本語](README.ja.md) · [Interface language guide](docs/i18n.md)
 
 ![Cue Fox synchronizing timestamp cards around a circular playback timeline](docs/assets/readme/youtube-cd-hud-cue-fox-sync-banner-v1.png)
 
 > Find the tracklist. Match the timeline. Stay on the current track.
 
-[![Version 5.11.0](https://img.shields.io/badge/version-5.11.0-2563eb)](package.json)
+[![Version 5.12.0](https://img.shields.io/badge/version-5.12.0-2563eb)](package.json)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
 
@@ -23,6 +23,7 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 - [Track Sources and Matching](#track-sources-and-matching)
 - [1001Tracklists Verification](#1001tracklists-verification)
 - [Interface and Controls](#interface-and-controls)
+- [Interface Language](#interface-language)
 - [In-use Preview](#in-use-preview)
 - [Privacy, Permissions, and Cache](#privacy-permissions-and-cache)
 - [Development and Verification](#development-and-verification)
@@ -32,7 +33,7 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 
 ## Project Status
 
-YouTube CD HUD is currently distributed as a **source-only beta**. The current source version is **5.11.0** for both the userscript and the Manifest V3 Chrome extension.
+YouTube CD HUD is currently distributed as a **source-only beta**. The current source version is **5.12.0** for both the userscript and the Manifest V3 Chrome extension.
 
 There is no Chrome Web Store package documented by this repository. The Chrome build is loaded as an unpacked extension; the userscript is installed through Tampermonkey.
 
@@ -166,6 +167,14 @@ Key interface features include:
 - Adjustable HUD width and text size.
 - Dedicated extension options page for provider switches, typography, disc scale, panel opacity, accent color, visible controls, and custom CSS.
 
+## Interface Language
+
+The Chrome extension interface supports Traditional Chinese (Taiwan), English, and Japanese. In the options page, choose **Automatic** to use the browser's preferred language, or select one of the supported languages to keep it fixed for the current Chrome profile. Automatic mode falls back to Traditional Chinese (Taiwan) when no supported language is available.
+
+The translated extension surfaces include the options page and the HUD's visible controls, status text, and accessibility labels. Provider names, commands, source identifiers, and custom CSS are not translated.
+
+See the [interface language guide](docs/i18n.md) for the exact detection order, persistence behavior, and contributor guidance. This repository's local checks do not replace a visible Chrome, Tampermonkey, and YouTube acceptance check.
+
 ![YouTube CD HUD control page showing the default local settings and live HUD preview](docs/assets/readme/youtube-cd-hud-options-overview.png)
 
 For custom CSS, scope selectors to `#yt-cd-hud` or `.yt-tracklist-panel` where practical so overrides stay inside the project UI.
@@ -273,6 +282,7 @@ These checks validate the repository, but final acceptance still requires a visi
 | `src/youtube-cd-hud.user.js` | Shared userscript source |
 | `extension/` | Manifest V3 Chrome extension |
 | `extension/options/` | Extension settings UI |
+| `extension/shared/i18n.js` | Extension-interface locale catalogs and translation helper |
 | `extension/background/` | Background request handling |
 | `extension/content/` | YouTube content script and 1001 first-party bridge |
 | `scripts/build-extension.mjs` | Keeps extension output synchronized with the shared source |

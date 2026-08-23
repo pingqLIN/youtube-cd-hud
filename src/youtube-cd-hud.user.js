@@ -28,6 +28,37 @@
         consolas: 'Consolas, "Lucida Console", monospace',
     });
 
+    function createUserScriptI18n() {
+        const messages = {
+            'zh-TW': {
+                albumMode: '專輯模式', fullTrackSet: '完整曲目集', tracklist: '曲目清單', noTracklist: '找不到曲目清單', source: '曲目來源',
+                searchGoogle: '使用 Google 搜尋：{track}', searchGoogleAria: '使用 Google 搜尋曲目：{track}', discScrub: '按住唱片：順時針快轉，逆時針循環短取樣；放開後繼續播放',
+                idle: '尚未搜尋', searching: '搜尋中…', success: '已取得曲目', error: '搜尋失敗', expandSources: '{status}；展開曲目資料來源控制',
+                youtubeComments: 'YouTube 留言時間戳曲目', youtubeDescription: 'YouTube 說明欄時間戳曲目', youtubeRecognized: 'YouTube 系統辨識或字幕時間戳曲目（低優先）', youtubeTimestamp: 'YouTube 時間戳曲目',
+                useSource: '使用 {source}', unavailableYouTube: '目前沒有可用的 YouTube 說明欄或留言時間戳曲目', unavailableSource: '目前沒有可用的 {source}', viewSource: '在 {source} 查看原頁面', openVerify: '開啟 1001Tracklists 檢查或完成瀏覽器驗證', candidateNext: '切換至 {source} 候選 {next}，共 {count} 個候選', openSource: '開啟 {source} 曲目來源頁面', unavailablePage: '{source} 尚無可用來源頁面',
+                closeTracklist: '關閉曲目清單', useYouTube: '使用 YouTube 說明欄或留言時間戳曲目', use1001: '使用 1001Tracklists 曲目', useMixesDb: '使用 MixesDB 曲目', useTrackId: '使用 TrackId.net 曲目', retry1001: '重新搜尋 1001Tracklists', open1001: '開啟 1001Tracklists 頁面', searchMixesDb: '搜尋 MixesDB', searchTrackId: '搜尋 TrackId.net 既有曲目', openMixesDb: '開啟 MixesDB 頁面', openTrackId: '開啟 TrackId.net 頁面', toggleTracklist: '顯示或隱藏曲目清單', previousTrack: '跳到上一首曲目', nextTrack: '跳到下一首曲目', closeHud: '關閉 HUD（重新載入後恢復）', textSize: '左鍵或 Enter 放大字級；右鍵縮小；方向鍵可增減', resize: '拖曳或使用左右方向鍵調整 HUD 寬度；Home 恢復自動寬度',
+                use1001Label: '使用 1001', useMixesDbLabel: '使用 MIXESDB', useTrackIdLabel: '使用 TRACKID', retry1001Label: '重新搜尋', open1001Label: '開啟 1001 ↗', searchMixesDbLabel: '搜尋 MIXESDB', searchTrackIdLabel: '搜尋 TRACKID', openMixesDbLabel: '開啟 MIXESDB ↗', openTrackIdLabel: '開啟 TRACKID ↗', previousLabel: '◀ 上一首', nextLabel: '下一首 ▶',
+            },
+            en: {
+                albumMode: 'Album mode', fullTrackSet: 'Full track set', tracklist: 'TRACKLIST', noTracklist: 'No tracklist found', source: 'Tracklist source', searchGoogle: 'Search Google: {track}', searchGoogleAria: 'Search Google for track: {track}', discScrub: 'Hold the disc: clockwise fast-forwards; counter-clockwise loops a short sample; release to resume playback.', idle: 'Not searched', searching: 'Searching…', success: 'Tracks loaded', error: 'Search failed', expandSources: '{status}; expand tracklist source controls', youtubeComments: 'YouTube comment timestamp tracks', youtubeDescription: 'YouTube description timestamp tracks', youtubeRecognized: 'YouTube recognized or caption timestamp tracks (lower priority)', youtubeTimestamp: 'YouTube timestamp tracks', useSource: 'Use {source}', unavailableYouTube: 'No YouTube description or comment timestamp tracks are available', unavailableSource: 'No {source} tracks are available', viewSource: 'View source page on {source}', openVerify: 'Open 1001Tracklists to check or complete browser verification', candidateNext: 'Switch to {source} candidate {next} of {count}', openSource: 'Open {source} tracklist source page', unavailablePage: 'No source page is available for {source}', closeTracklist: 'Close tracklist', useYouTube: 'Use YouTube description or comment timestamp tracks', use1001: 'Use 1001Tracklists tracks', useMixesDb: 'Use MixesDB tracks', useTrackId: 'Use TrackId.net tracks', retry1001: 'Search 1001Tracklists again', open1001: 'Open 1001Tracklists page', searchMixesDb: 'Search MixesDB', searchTrackId: 'Search existing TrackId.net tracks', openMixesDb: 'Open MixesDB page', openTrackId: 'Open TrackId.net page', toggleTracklist: 'Show or hide tracklist', previousTrack: 'Go to previous track', nextTrack: 'Go to next track', closeHud: 'Close HUD (returns after reload)', textSize: 'Left-click or Enter increases text size; right-click decreases it; arrow keys adjust it.', resize: 'Drag or use left and right arrow keys to resize the HUD; Home restores automatic width.', use1001Label: 'USE 1001', useMixesDbLabel: 'USE MIXESDB', useTrackIdLabel: 'USE TRACKID', retry1001Label: 'RETRY SEARCH', open1001Label: 'OPEN 1001 ↗', searchMixesDbLabel: 'SEARCH MIXESDB', searchTrackIdLabel: 'SEARCH TRACKID', openMixesDbLabel: 'OPEN MIXESDB ↗', openTrackIdLabel: 'OPEN TRACKID ↗', previousLabel: '◀ PREV', nextLabel: 'NEXT ▶',
+            },
+            ja: {
+                albumMode: 'アルバムモード', fullTrackSet: '全曲セット', tracklist: 'トラックリスト', noTracklist: 'トラックリストが見つかりません', source: 'トラックリストの情報源', searchGoogle: 'Google で検索：{track}', searchGoogleAria: 'Google で曲を検索：{track}', discScrub: 'ディスクを長押し：時計回りで早送り、反時計回りで短いサンプルをループ。離すと再生を再開します。', idle: '未検索', searching: '検索中…', success: '曲を取得しました', error: '検索失敗', expandSources: '{status}。トラックリストの情報源を展開', youtubeComments: 'YouTube コメントのタイムスタンプ曲目', youtubeDescription: 'YouTube 説明欄のタイムスタンプ曲目', youtubeRecognized: 'YouTube 認識または字幕のタイムスタンプ曲目（低優先）', youtubeTimestamp: 'YouTube タイムスタンプ曲目', useSource: '{source} を使用', unavailableYouTube: '使用可能な YouTube 説明欄またはコメントのタイムスタンプ曲目がありません', unavailableSource: '使用可能な {source} 曲目がありません', viewSource: '{source} で元のページを表示', openVerify: '1001Tracklists を開いてブラウザー認証を確認または完了します', candidateNext: '{source} の候補 {next}/{count} に切り替え', openSource: '{source} のトラックリストページを開く', unavailablePage: '{source} のページはまだ利用できません', closeTracklist: 'トラックリストを閉じる', useYouTube: 'YouTube の説明欄またはコメントのタイムスタンプ曲目を使用', use1001: '1001Tracklists の曲目を使用', useMixesDb: 'MixesDB の曲目を使用', useTrackId: 'TrackId.net の曲目を使用', retry1001: '1001Tracklists を再検索', open1001: '1001Tracklists ページを開く', searchMixesDb: 'MixesDB を検索', searchTrackId: '既存の TrackId.net 曲目を検索', openMixesDb: 'MixesDB ページを開く', openTrackId: 'TrackId.net ページを開く', toggleTracklist: 'トラックリストを表示または非表示', previousTrack: '前の曲へ', nextTrack: '次の曲へ', closeHud: 'HUD を閉じる（再読み込みで戻ります）', textSize: '左クリックまたは Enter で文字を大きく、右クリックで小さく、方向キーで調整します。', resize: 'ドラッグまたは左右キーで HUD の幅を調整します。Home で自動幅に戻ります。', use1001Label: '1001 を使用', useMixesDbLabel: 'MIXESDB を使用', useTrackIdLabel: 'TRACKID を使用', retry1001Label: '再検索', open1001Label: '1001 を開く ↗', searchMixesDbLabel: 'MIXESDB を検索', searchTrackIdLabel: 'TRACKID を検索', openMixesDbLabel: 'MIXESDB を開く ↗', openTrackIdLabel: 'TRACKID を開く ↗', previousLabel: '◀ 前へ', nextLabel: '次へ ▶',
+            },
+        };
+        const resolveLanguage = preference => {
+            if (preference === 'en' || preference === 'ja' || preference === 'zh-TW') return preference;
+            const languages = navigator.languages || [navigator.language];
+            const candidate = languages.find(language => /^(en|ja|zh)(-|$)/i.test(language));
+            if (/^en/i.test(candidate || '')) return 'en';
+            if (/^ja/i.test(candidate || '')) return 'ja';
+            return 'zh-TW';
+        };
+        return { resolveLanguage, translate: (key, language, values = {}) => (messages[resolveLanguage(language)]?.[key] || messages['zh-TW'][key] || key).replace(/\{(\w+)\}/g, (_, name) => String(values[name] ?? `{${name}}`)) };
+    }
+
+    const I18N_API = globalThis.YtCdHudI18n || createUserScriptI18n();
+
     let remoteHtmlPolicy = null;
     if (window.trustedTypes && typeof window.trustedTypes.createPolicy === 'function') {
         try {
@@ -60,6 +91,7 @@
         showDisc: true,
         showTransport: true,
         customCss: '',
+        language: 'auto',
     });
     const DISC_SCRUB_SECONDS_PER_REVOLUTION = 24;
     const DISC_SAMPLE_SECONDS = 0.08;
@@ -75,6 +107,10 @@
     let runtimeSettings = SETTINGS_API
         ? SETTINGS_API.normalize(SETTINGS_API.DEFAULTS)
         : { ...RUNTIME_DEFAULTS };
+
+    function t(key, values) {
+        return I18N_API.translate(`hud.${key}`, I18N_API.resolveLanguage(runtimeSettings.language), values);
+    }
 
     let currentVideo = null;
     let parsedTracks = [];
@@ -362,6 +398,7 @@
         }
 
         applyRuntimeAppearance();
+        updateHudLocale();
         updateStatusLight();
         updateSourceButtons();
         updateLinkButton();
@@ -423,7 +460,7 @@
     function chooseHudTitle(source, currentTrack, officialChapter) {
         const trackTitle = trim(currentTrack);
         if (source === '1001') return trackTitle || '1001 Tracklist';
-        return trim(officialChapter) || trackTitle || 'Full Track Set';
+        return trim(officialChapter) || trackTitle || t('fullTrackSet');
     }
 
     function getGoogleTrackSearchUrl(trackTitle) {
@@ -2941,8 +2978,8 @@
         );
         chapterEl.textContent = displayedTrack;
         chapterEl.href = getGoogleTrackSearchUrl(displayedTrack);
-        chapterEl.title = `使用 Google 搜尋：${displayedTrack}`;
-        chapterEl.setAttribute('aria-label', `使用 Google 搜尋曲目：${displayedTrack}`);
+        chapterEl.title = t('searchGoogle', { track: displayedTrack });
+        chapterEl.setAttribute('aria-label', t('searchGoogleAria', { track: displayedTrack }));
         updateTracklistHighlight(video.currentTime);
         syncHudContentBounds();
     }
@@ -2994,7 +3031,7 @@
     function bindDiscScrubbing(wrapper) {
         if (!wrapper || wrapper._ytCdScrubBound) return;
         wrapper._ytCdScrubBound = true;
-        wrapper.title = '按住唱片：順時針快轉，逆時針循環短取樣；放開後繼續播放';
+        wrapper.title = t('discScrub');
 
         let scrubState = null;
         let sampleFrame = null;
@@ -3683,18 +3720,60 @@
         else if (searchState === 'success') statusLight.classList.add('success');
         else if (searchState === 'error') statusLight.classList.add('error');
         const titles = {
-            idle: '尚未搜尋',
-            searching: '搜尋中...',
-            success: '已獲取曲目',
-            error: '搜尋失敗'
+            idle: t('idle'),
+            searching: t('searching'),
+            success: t('success'),
+            error: t('error')
         };
         const statusTitle = searchStateDetail || titles[searchState] || '';
         statusBtn = statusBtn || statusLight.closest('.hud-status-button');
         if (statusBtn) {
             statusBtn.title = statusTitle;
-            statusBtn.setAttribute('aria-label', `${statusTitle}；展開曲目資料來源控制`);
+            statusBtn.setAttribute('aria-label', t('expandSources', { status: statusTitle }));
             statusBtn.classList.toggle('has-error', searchState === 'error');
         }
+    }
+
+    function updateHudLocale() {
+        const hud = document.getElementById('yt-cd-hud');
+        const setButtonCopy = (selector, label, title = label) => {
+            const button = hud?.querySelector(selector);
+            if (!button) return;
+            button.textContent = label;
+            button.title = title;
+            button.setAttribute('aria-label', title);
+        };
+        const chapter = hud?.querySelector('.hud-chapter');
+        if (chapter) chapter.title = t('searchGoogle', { track: chapter.textContent });
+        const sourceSelector = hud?.querySelector('.hud-source-selector');
+        if (sourceSelector) sourceSelector.setAttribute('aria-label', t('source'));
+        setButtonCopy('.hud-source-youtube', 'YT', t('useYouTube'));
+        setButtonCopy('.hud-source-1001', t('use1001'));
+        setButtonCopy('.hud-source-mixesdb', t('useMixesDb'));
+        setButtonCopy('.hud-source-trackid', t('useTrackId'));
+        setButtonCopy('.hud-search-mixesdb', t('searchMixesDb'));
+        setButtonCopy('.hud-search-trackid', t('searchTrackId'));
+        setButtonCopy('.hud-1001-link', t('open1001'));
+        setButtonCopy('.hud-mixesdb-link', t('openMixesDb'));
+        setButtonCopy('.hud-trackid-link', t('openTrackId'));
+        setButtonCopy('.hud-tracklist-button', '≡', t('toggleTracklist'));
+        setButtonCopy('.hud-previous-track', t('previousTrack'));
+        setButtonCopy('.hud-next-track', t('nextTrack'));
+        setButtonCopy('.hud-close-button', '×', t('closeHud'));
+        setButtonCopy('.hud-text-size-button', 'T±', t('textSize'));
+        setButtonCopy('.hud-resize-handle', '', t('resize'));
+        const retry = hud?.querySelector('.hud-1001-menu button:nth-of-type(4)');
+        if (retry) {
+            retry.textContent = t('retry1001');
+            retry.title = t('retry1001');
+            retry.setAttribute('aria-label', t('retry1001'));
+        }
+        const header = document.querySelector('#yt-tracklist-panel .tracklist-heading-title');
+        if (header) header.textContent = t('tracklist');
+        updateStatusLight();
+        updateSourceButtons();
+        updateLinkButton();
+        if (tracklistPanel && tracklistVisible) renderTracklist(tracklistPanel);
     }
 
     function updateSourceButtons() {
@@ -3720,16 +3799,16 @@
         tracklistSourceMixesDbBtn.setAttribute('aria-pressed', String(currentSource === 'mixesdb' && hasMixesDb));
         tracklistSourceTrackIdBtn.setAttribute('aria-pressed', String(currentSource === 'trackid' && hasTrackId));
         const youtubeOriginLabel = youtubeTrackOrigin === 'comments'
-            ? 'YouTube 留言時間戳曲目'
+            ? t('youtubeComments')
             : youtubeTrackOrigin === 'description'
-                ? 'YouTube 說明欄時間戳曲目'
+                ? t('youtubeDescription')
                 : youtubeTrackOrigin === 'recognized'
-                    ? 'YouTube 系統辨識／字幕時間戳曲目（低優先）'
-                : 'YouTube 時間戳曲目';
-        youtubeSourceBtn.title = hasYouTube ? `使用 ${youtubeOriginLabel}` : '目前沒有可用的 YouTube 說明欄／留言時間戳曲目';
-        tracklistSource1001Btn.title = has1001 ? '使用 1001Tracklists 曲目' : '目前沒有可用的 1001Tracklists 曲目';
-        tracklistSourceMixesDbBtn.title = hasMixesDb ? '使用 MixesDB 曲目' : '目前沒有可用的 MixesDB 曲目';
-        tracklistSourceTrackIdBtn.title = hasTrackId ? '使用 TrackId.net 曲目' : '目前沒有可用的 TrackId.net 曲目';
+                    ? t('youtubeRecognized')
+                : t('youtubeTimestamp');
+        youtubeSourceBtn.title = hasYouTube ? t('useSource', { source: youtubeOriginLabel }) : t('unavailableYouTube');
+        tracklistSource1001Btn.title = has1001 ? t('use1001') : t('unavailableSource', { source: '1001Tracklists' });
+        tracklistSourceMixesDbBtn.title = hasMixesDb ? t('useMixesDb') : t('unavailableSource', { source: 'MixesDB' });
+        tracklistSourceTrackIdBtn.title = hasTrackId ? t('useTrackId') : t('unavailableSource', { source: 'TrackId.net' });
         if (mixesDbSearchBtn) mixesDbSearchBtn.style.display = runtimeSettings.enableMixesDb ? '' : 'none';
         if (trackIdSearchBtn) trackIdSearchBtn.style.display = runtimeSettings.enableTrackId ? '' : 'none';
         if (retryBtn) retryBtn.style.display = runtimeSettings.enable1001 ? '' : 'none';
@@ -3740,8 +3819,8 @@
         if (tracklistUrl1001 && (tracksFrom1001.length > 0 || searchState === 'error')) {
             linkBtn.style.display = 'flex';
             linkBtn.title = tracksFrom1001.length > 0
-                ? '在 1001Tracklists 查看原頁面'
-                : '開啟 1001Tracklists 檢查或完成瀏覽器驗證';
+                ? t('viewSource', { source: '1001Tracklists' })
+                : t('openVerify');
         } else {
             linkBtn.style.display = 'none';
         }
@@ -3784,7 +3863,7 @@
         if (!parsedTracks.length) {
             const noTrack = document.createElement('div');
             noTrack.className = 'tracklist-item';
-            noTrack.textContent = 'No tracklist found';
+            noTrack.textContent = t('noTracklist');
             list.appendChild(noTrack);
             return;
         }
@@ -3829,9 +3908,9 @@
         sourceLink.classList.toggle('is-unavailable', !sourcePage.url);
         sourceLink.setAttribute('aria-label', sourcePage.url
             ? action.count > 1 && !action.willOpen
-                ? `切換至 ${sourcePage.label} 候選 ${action.index + 2}，共 ${action.count} 個候選`
-                : `開啟 ${sourcePage.label} 曲目來源頁面`
-            : `${sourcePage.label} 尚無可用來源頁面`);
+                ? t('candidateNext', { source: sourcePage.label, next: action.index + 2, count: action.count })
+                : t('openSource', { source: sourcePage.label })
+            : t('unavailablePage', { source: sourcePage.label }));
         if (sourcePage.url) {
             sourceLink.href = sourcePage.url;
             sourceLink.removeAttribute('aria-disabled');
@@ -3844,7 +3923,7 @@
     function updateTracklistHighlight(currentTime) {
         if (!tracklistPanel || tracklistPanel.style.display === 'none') return;
         const items = tracklistPanel.querySelectorAll('.tracklist-item');
-        if (!items.length || (items.length === 1 && items[0].textContent === 'No tracklist found')) return;
+        if (!items.length || (items.length === 1 && items[0].textContent === t('noTracklist'))) return;
         let activeIndex = -1;
         for (let i = parsedTracks.length - 1; i >= 0; i--) {
             if (currentTime >= parsedTracks[i].time) {
@@ -3886,7 +3965,7 @@
             heading.className = 'tracklist-heading';
             const headerTitle = document.createElement('span');
             headerTitle.className = 'tracklist-heading-title';
-            headerTitle.textContent = 'TRACKLIST';
+            headerTitle.textContent = t('tracklist');
             const sourceLink = document.createElement('a');
             sourceLink.className = 'tracklist-source-link tracklist-header-action';
             sourceLink.target = '_blank';
@@ -3900,7 +3979,7 @@
             });
             heading.appendChild(headerTitle);
             heading.appendChild(sourceLink);
-            const closeButton = createControlButton('×', '關閉曲目清單', () => {
+            const closeButton = createControlButton('×', t('closeTracklist'), () => {
                 tracklistVisible = false;
                 panel.style.display = 'none';
                 if (tracklistBtn) {
@@ -3959,11 +4038,11 @@
             const chapter = document.createElement('a');
             chapter.className = 'hud-chapter';
             chapter.id = 'hud-chapter';
-            chapter.textContent = 'Album Mode';
+            chapter.textContent = t('albumMode');
             chapter.href = getGoogleTrackSearchUrl(chapter.textContent);
             chapter.target = '_blank';
             chapter.rel = 'noopener noreferrer';
-            chapter.title = '使用 Google 搜尋目前曲目';
+            chapter.title = t('searchGoogle', { track: chapter.textContent });
             const time = document.createElement('div');
             time.className = 'hud-time';
             time.id = 'hud-time';
@@ -3977,11 +4056,11 @@
             const sourceSelector = document.createElement('div');
             sourceSelector.className = 'hud-source-selector';
             sourceSelector.setAttribute('role', 'group');
-            sourceSelector.setAttribute('aria-label', '曲目來源');
+            sourceSelector.setAttribute('aria-label', t('source'));
             const sourceCaption = document.createElement('span');
             sourceCaption.className = 'hud-source-caption';
             sourceCaption.textContent = 'SRC';
-            youtubeSourceBtn = createControlButton('YT', '使用 YouTube 說明欄／留言時間戳曲目', () => {
+            youtubeSourceBtn = createControlButton('YT', t('useYouTube'), () => {
                 set1001MenuExpanded(false);
                 setActiveSource('youtube', true);
             });
@@ -4014,48 +4093,48 @@
 
             oneThousandMenu = document.createElement('div');
             oneThousandMenu.className = 'hud-1001-menu';
-            tracklistSource1001Btn = createControlButton('USE 1001', '使用 1001Tracklists 曲目', () => {
+            tracklistSource1001Btn = createControlButton(t('use1001'), t('use1001'), () => {
                 setActiveSource('1001', true);
                 set1001MenuExpanded(false);
             });
             tracklistSource1001Btn.classList.add('hud-source-1001');
-            tracklistSourceMixesDbBtn = createControlButton('USE MIXESDB', '使用 MixesDB 曲目', () => {
+            tracklistSourceMixesDbBtn = createControlButton(t('useMixesDb'), t('useMixesDb'), () => {
                 setActiveSource('mixesdb', true);
                 set1001MenuExpanded(false);
             });
             tracklistSourceMixesDbBtn.classList.add('hud-source-mixesdb');
-            tracklistSourceTrackIdBtn = createControlButton('USE TRACKID', '使用 TrackId.net 曲目', () => {
+            tracklistSourceTrackIdBtn = createControlButton(t('useTrackId'), t('useTrackId'), () => {
                 setActiveSource('trackid', true);
                 set1001MenuExpanded(false);
             });
             tracklistSourceTrackIdBtn.classList.add('hud-source-trackid');
-            retryBtn = createControlButton('RETRY SEARCH', '重新搜尋 1001Tracklists', () => {
+            retryBtn = createControlButton(t('retry1001'), t('retry1001'), () => {
                 set1001MenuExpanded(false);
                 retrySearch();
             });
-            linkBtn = createControlButton('OPEN 1001 ↗', '開啟 1001Tracklists 頁面', () => {
+            linkBtn = createControlButton(t('open1001'), t('open1001'), () => {
                 set1001MenuExpanded(false);
                 void open1001TracklistsPage();
             });
             linkBtn.classList.add('hud-1001-link');
             linkBtn.style.display = 'none';
-            mixesDbSearchBtn = createControlButton('SEARCH MIXESDB', '搜尋 MixesDB', () => {
+            mixesDbSearchBtn = createControlButton(t('searchMixesDb'), t('searchMixesDb'), () => {
                 set1001MenuExpanded(false);
                 void fetchTracklistFromMixesDb(getVideoTitle(), getVideoId());
             });
             mixesDbSearchBtn.classList.add('hud-search-mixesdb');
-            trackIdSearchBtn = createControlButton('SEARCH TRACKID', '搜尋 TrackId.net 既有曲目', () => {
+            trackIdSearchBtn = createControlButton(t('searchTrackId'), t('searchTrackId'), () => {
                 set1001MenuExpanded(false);
                 void fetchTracklistFromTrackId(getVideoTitle(), getVideoId());
             });
             trackIdSearchBtn.classList.add('hud-search-trackid');
-            mixesDbLinkBtn = createControlButton('OPEN MIXESDB ↗', '開啟 MixesDB 頁面', () => {
+            mixesDbLinkBtn = createControlButton(t('openMixesDb'), t('openMixesDb'), () => {
                 set1001MenuExpanded(false);
                 if (tracklistUrlMixesDb) window.open(tracklistUrlMixesDb, '_blank', 'noopener,noreferrer');
             });
             mixesDbLinkBtn.classList.add('hud-mixesdb-link');
             mixesDbLinkBtn.style.display = 'none';
-            trackIdLinkBtn = createControlButton('OPEN TRACKID ↗', '開啟 TrackId.net 頁面', () => {
+            trackIdLinkBtn = createControlButton(t('openTrackId'), t('openTrackId'), () => {
                 set1001MenuExpanded(false);
                 if (tracklistUrlTrackId) window.open(tracklistUrlTrackId, '_blank', 'noopener,noreferrer');
             });
@@ -4071,7 +4150,7 @@
             oneThousandMenu.appendChild(trackIdSearchBtn);
             oneThousandMenu.appendChild(trackIdLinkBtn);
             sourceSelector.appendChild(oneThousandMenu);
-            tracklistBtn = createControlButton('≡', '顯示／隱藏曲目清單', toggleTracklist);
+            tracklistBtn = createControlButton('≡', t('toggleTracklist'), toggleTracklist);
             tracklistBtn.classList.add('hud-tracklist-button');
             tracklistBtn.setAttribute('aria-expanded', 'false');
             sourceSelector.appendChild(tracklistBtn);
@@ -4081,9 +4160,9 @@
 
             const transportControls = document.createElement('div');
             transportControls.className = 'hud-transport-controls';
-            previousTrackBtn = createControlButton('◀ PREV', '跳到上一首曲目', () => jumpTrack(-1));
+            previousTrackBtn = createControlButton(t('previousTrack'), t('previousTrack'), () => jumpTrack(-1));
             previousTrackBtn.classList.add('hud-previous-track');
-            nextTrackBtn = createControlButton('NEXT ▶', '跳到下一首曲目', () => jumpTrack(1));
+            nextTrackBtn = createControlButton(t('nextTrack'), t('nextTrack'), () => jumpTrack(1));
             nextTrackBtn.classList.add('hud-next-track');
             transportControls.appendChild(previousTrackBtn);
             transportControls.appendChild(nextTrackBtn);
@@ -4092,7 +4171,7 @@
             const sideControls = document.createElement('div');
             sideControls.className = 'hud-side-controls';
 
-            const closeBtn = createControlButton('×', '關閉 HUD（重新載入後恢復）', () => {
+            const closeBtn = createControlButton('×', t('closeHud'), () => {
                 if (stopDiscScrubbing) stopDiscScrubbing(false);
                 tracklistVisible = false;
                 if (tracklistPanel) tracklistPanel.style.display = 'none';
@@ -4102,7 +4181,7 @@
 
             const textSizeBtn = createControlButton(
                 'T±',
-                '左鍵或 Enter 放大字級；右鍵縮小；方向鍵可增減',
+                t('textSize'),
                 () => adjustHudTextSize(1)
             );
             textSizeBtn.classList.add('hud-text-size-button');
@@ -4125,8 +4204,8 @@
             const resizeHandle = document.createElement('button');
             resizeHandle.type = 'button';
             resizeHandle.className = 'resize-handle hud-resize-handle';
-            resizeHandle.setAttribute('aria-label', '拖曳或使用左右方向鍵調整 HUD 寬度；Home 恢復自動寬度');
-            resizeHandle.title = '拖曳調整 HUD 寬度；Home 恢復自動寬度';
+            resizeHandle.setAttribute('aria-label', t('resize'));
+            resizeHandle.title = t('resize');
 
             hud.appendChild(panelSurface);
             hud.appendChild(wrapper);
@@ -4158,7 +4237,7 @@
         if (!trackIdLinkBtn) trackIdLinkBtn = document.querySelector('#yt-cd-hud .hud-trackid-link');
         if (!mixesDbSearchBtn) mixesDbSearchBtn = document.querySelector('#yt-cd-hud .hud-search-mixesdb');
         if (!trackIdSearchBtn) trackIdSearchBtn = document.querySelector('#yt-cd-hud .hud-search-trackid');
-        if (!retryBtn) retryBtn = document.querySelector('#yt-cd-hud [title*="重新搜尋 1001"]');
+        if (!retryBtn) retryBtn = document.querySelector('#yt-cd-hud .hud-1001-menu button:nth-of-type(4)');
         if (!tracklistBtn) tracklistBtn = document.querySelector('#yt-cd-hud .hud-tracklist-button');
         if (!previousTrackBtn) previousTrackBtn = document.querySelector('#yt-cd-hud .hud-previous-track');
         if (!nextTrackBtn) nextTrackBtn = document.querySelector('#yt-cd-hud .hud-next-track');

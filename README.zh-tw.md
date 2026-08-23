@@ -2,13 +2,13 @@
 
 為 YouTube DJ Set、Mix 與音樂影片加入**可切換資料來源、並隨播放進度同步的曲目 HUD**。
 
-[English](README.md)
+[English](README.md) · [日本語](README.ja.md) · [介面語言說明](docs/i18n.zh-tw.md)
 
 ![Cue Fox 沿著環形播放時間軸同步帶有時間戳的曲目卡片](docs/assets/readme/youtube-cd-hud-cue-fox-sync-banner-v1.png)
 
 > 找到曲目資料、對齊播放時間軸，讓 HUD 隨播放進度持續顯示正確曲目。
 
-[![Version 5.11.0](https://img.shields.io/badge/version-5.11.0-2563eb)](package.json)
+[![Version 5.12.0](https://img.shields.io/badge/version-5.12.0-2563eb)](package.json)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
 
@@ -23,6 +23,7 @@
 - [曲目來源與比對方式](#曲目來源與比對方式)
 - [1001Tracklists 的瀏覽器驗證](#1001tracklists-的瀏覽器驗證)
 - [介面與控制](#介面與控制)
+- [介面語言](#介面語言)
 - [實際操作預覽](#實際操作預覽)
 - [隱私、權限與快取](#隱私權限與快取)
 - [開發與驗證](#開發與驗證)
@@ -32,7 +33,7 @@
 
 ## 專案狀態
 
-YouTube CD HUD 目前以**原始碼 Beta 測試版**形式提供。Userscript 與 Manifest V3 Chrome 擴充功能的版本皆為 **5.11.0**。
+YouTube CD HUD 目前以**原始碼 Beta 測試版**形式提供。Userscript 與 Manifest V3 Chrome 擴充功能的版本皆為 **5.12.0**。
 
 目前尚未提供 Chrome 線上應用程式商店版本。Chrome 版需以「載入未封裝項目」方式安裝；Userscript 則透過 Tampermonkey 安裝。
 
@@ -166,6 +167,14 @@ HUD 集中呈現目前曲目、資料來源與播放同步狀態，並提供曲�
 - 可調整 HUD 寬度與文字大小。
 - Chrome 擴充功能提供獨立設定頁，可調整資料來源、字型、唱片比例、面板透明度、強調色、顯示控制項與自訂 CSS。
 
+## 介面語言
+
+Chrome 擴充功能介面支援繁體中文（台灣）、英文與日文。可在設定頁選擇「自動偵測」，依瀏覽器偏好的語言顯示；也可選擇其中一種支援語言，固定用於目前的 Chrome 使用者設定檔。若自動模式沒有可用的支援語言，會回退為繁體中文（台灣）。
+
+已翻譯的擴充功能範圍包含設定頁，以及 HUD 的可見控制項、狀態文字與無障礙標籤。資料來源名稱、指令、來源識別碼與自訂 CSS 不會翻譯。
+
+完整的偵測順序、儲存行為與貢獻者說明請見[介面語言說明](docs/i18n.zh-tw.md)。本機檢查不取代 Chrome、Tampermonkey 與 YouTube 的可見實機驗收。
+
 ![YouTube CD HUD 控制頁顯示預設本機設定與即時 HUD 預覽](docs/assets/readme/youtube-cd-hud-options-overview.png)
 
 若使用自訂 CSS，建議盡量將 CSS selector（選擇器）限制在 `#yt-cd-hud` 或 `.yt-tracklist-panel`，避免樣式影響 YouTube 的其他介面。
@@ -273,6 +282,7 @@ npm test
 | `src/youtube-cd-hud.user.js` | 共用 Userscript 原始碼 |
 | `extension/` | Manifest V3 Chrome 擴充功能 |
 | `extension/options/` | 擴充功能設定介面 |
+| `extension/shared/i18n.js` | 擴充功能介面的語言目錄與翻譯輔助工具 |
 | `extension/background/` | 背景請求處理 |
 | `extension/content/` | YouTube content script（內容指令碼）與 1001Tracklists 第一方分頁橋接 |
 | `scripts/build-extension.mjs` | 將共用原始碼同步至 `extension/` |
