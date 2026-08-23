@@ -23,6 +23,7 @@
 - [曲目來源與比對方式](#曲目來源與比對方式)
 - [1001Tracklists 的瀏覽器驗證](#1001tracklists-的瀏覽器驗證)
 - [介面與控制](#介面與控制)
+- [實際操作預覽](#實際操作預覽)
 - [隱私、權限與快取](#隱私權限與快取)
 - [開發與驗證](#開發與驗證)
 - [專案結構](#專案結構)
@@ -168,6 +169,49 @@ HUD 集中呈現目前曲目、資料來源與播放同步狀態，並提供曲�
 ![YouTube CD HUD 控制頁顯示預設本機設定與即時 HUD 預覽](docs/assets/readme/youtube-cd-hud-options-overview.png)
 
 若使用自訂 CSS，建議盡量將 CSS selector（選擇器）限制在 `#yt-cd-hud` 或 `.yt-tracklist-panel`，避免樣式影響 YouTube 的其他介面。
+
+---
+
+## 實際操作預覽
+
+以下截圖展示 Chrome 擴充功能在不同 DJ Set／音樂影片畫面中的 HUD 與曲目列表面板。這些圖片是介面視覺預覽，不取代[開發與驗證](#開發與驗證)中所述的實際瀏覽器驗收。
+
+<table>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-01.png" width="100%" alt="YouTube CD HUD 在 TrackId.net 曲目結果中醒目標示目前曲目。" />
+      <br />
+      <sub>01 · TrackId.net 結果與目前曲目醒目標示</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-02.png" width="100%" alt="YouTube CD HUD 在影片播放畫面上顯示 YouTube 時間戳曲目列表。" />
+      <br />
+      <sub>02 · YouTube 時間戳曲目與播放進度同步</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-03.png" width="100%" alt="YouTube CD HUD 顯示 1001Tracklists 結果與目前曲目。" />
+      <br />
+      <sub>03 · 資料來源指示與目前曲目狀態</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-04.png" width="100%" alt="YouTube CD HUD 與曲目列表面板顯示在 DJ 影片上方。" />
+      <br />
+      <sub>04 · 顯示在 DJ Set 上方的精簡 HUD</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-05.png" width="100%" alt="YouTube CD HUD 與曲目列表面板醒目標示目前曲目。" />
+      <br />
+      <sub>05 · 適合較長 Set 的展開曲目列表</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-06.png" width="100%" alt="YouTube CD HUD 顯示目前曲目與可捲動的曲目列表。" />
+      <br />
+      <sub>06 · 可捲動曲目列表與同步中的 HUD 狀態</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
