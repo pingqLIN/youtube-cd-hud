@@ -1,0 +1,18 @@
+.lm-selected {
+    outline: 2px solid var(--preview-accent, #2563eb);
+    outline-offset: 4px;
+    cursor: move;
+}
+
+.lm-selected::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border: 1px dashed currentColor;
+    pointer-events: none;
+}
+
+.preview-stage.lm-editing {
+    user-select: none;
+    cursor: crosshair;
+}
