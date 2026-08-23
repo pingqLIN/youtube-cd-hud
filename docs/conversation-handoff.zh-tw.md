@@ -68,6 +68,16 @@
     fetch 從 `credentials: 'omit'` 改為 `include`，使 Chrome 可對既有 HTTPS
     1001 allowlist 請求附帶網站自己的驗證 Cookie。Manifest 未新增 `cookies`
     權限，程式未呼叫 `chrome.cookies`，不讀取、儲存或輸出 Cookie 值。
+17. 後續版本加入 MixesDB 與 TrackId.net 作為獨立、可切換的補充曲目來源，
+    並強化候選排序、單曲匹配、來源切換、快取界限與 1001 驗證後續接流程。
+    各來源保留自己的候選與同步結果，不會把不同提供者的曲目混成同一份資料。
+18. v5.12.0 恢復並擴充 YouTube 本機時間戳來源：優先讀取說明欄中的可信
+    時間戳曲目，必要時再從已載入留言選取最完整的候選；系統辨識或字幕文字
+    保持較低優先序。Chrome 擴充介面同時支援繁體中文、英文與日文，公開
+    README 已加入實際操作截圖、安裝方式、權限與來源行為說明。
+19. Chrome 擴充已加入 16、32、48、128 px 的 sRGB／RGBA PNG 圖示，並在
+    `extension/manifest.json` 設定擴充與工具列圖示。Userscript metadata、
+    `package.json`、Manifest、選項頁與 README 的版本標示已統一為 5.12.0。
 
 ## 目前驗收邊界
 
