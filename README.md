@@ -18,7 +18,7 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 
 - [Project Status](#project-status)
 - [What It Does](#what-it-does)
-- [In-use Preview](#in-use-preview)
+- [Layout Editor Preview](#layout-editor-preview)
 - [Choose an Installation](#choose-an-installation)
 - [Quick Start](#quick-start)
 - [Track Sources and Matching](#track-sources-and-matching)
@@ -57,46 +57,11 @@ When YouTube already provides usable track information, the `YT` source remains 
 
 ---
 
-## In-use Preview
+## Layout Editor Preview
 
-The extension keeps the HUD and tracklist panel visible while YouTube playback continues. These snapshots show the interface across different DJ sets and tracklist sources; they are visual previews, not a substitute for the live browser acceptance check described in [Development and Verification](#development-and-verification).
+![Actual Live Monitor editor detail showing the selected panel base, border and corner controls, padding, and effects](docs/assets/readme/youtube-cd-hud-layout-editor-controls.png)
 
-<table>
-  <tr>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-01.png" width="100%" alt="YouTube CD HUD showing an active track in a TrackId.net result." />
-      <br />
-      <sub>01 · Active-track highlight with a TrackId.net result</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-02.png" width="100%" alt="YouTube CD HUD showing a YouTube timestamp tracklist over video playback." />
-      <br />
-      <sub>02 · YouTube timestamp tracklist in sync with playback</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-03.png" width="100%" alt="YouTube CD HUD showing a 1001Tracklists result with a highlighted current track." />
-      <br />
-      <sub>03 · Source indicator and current-track state</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-04.png" width="100%" alt="YouTube CD HUD and tracklist panel over a live DJ video." />
-      <br />
-      <sub>04 · Compact HUD over a live DJ set</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-05.png" width="100%" alt="Large YouTube CD HUD and tracklist panel with the current track highlighted." />
-      <br />
-      <sub>05 · Expanded tracklist view for longer sets</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-06.png" width="100%" alt="YouTube CD HUD showing the current track and a scrollable tracklist." />
-      <br />
-      <sub>06 · Scrollable tracklist with synchronized HUD state</sub>
-    </td>
-  </tr>
-</table>
+*Actual options-page detail: select a component to edit its properties below the canvas. The track text is sample preview content, not live YouTube playback; this crop illustrates editing controls rather than the current built-in panel arrangements.*
 
 ---
 
@@ -198,33 +163,35 @@ The HUD brings the current track, selected source, and playback synchronization 
 
 ![Concept artwork: Cue Fox at a turntable with a HUD on the left and a tracklist panel on the right](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg)
 
-*The two Cue Fox illustrations are concept artwork, supplied as original HDR JPEGs. See the interface screenshots above and the options screenshots below for actual UI.*
+*The two Cue Fox illustrations are concept artwork, supplied as original HDR JPEGs. See the layout editor screenshot above for actual UI.*
 
-The draggable HUD uses circular YouTube thumbnail artwork and a cover-derived accent color; its width and text size are adjustable.
+The HUD uses circular YouTube thumbnail artwork. Live Monitor lets you arrange component positions, dimensions, text, and styling on the player canvas.
 
 | Control | How to use it |
 | --- | --- |
 | Source | Choose `YT` for YouTube tracks, or open `DB ▼` to search/select `1001`, `MIXESDB`, or `TRACKID`. Switching sources keeps the playback position. |
 | Previous / next | Use `◀ PREV` / `NEXT ▶` (labels follow the interface language) to jump between timestamped tracks in the selected source. |
-| Tracklist panel | Press `≡` to show or hide the list. Click a timestamped row to play from that cue; the current track is highlighted. |
+| Tracklist panel | Press `≡` to toggle the floating list. A list placed in the Composer layout stays visible until removed from that layout. Click a timestamped row to seek to its cue. |
 | Disc scrubbing | Hold and rotate the disc: clockwise fast-forwards; counter-clockwise loops a short sample. Release to resume playback. |
 
-See the [Live Monitor Visual Composer guide](docs/live-monitor-visual-composer.md) for selecting, moving, resizing, and styling HUD components, then applying the saved layout to YouTube.
+### Layout and controls
 
-Two built-in panels ship with the extension: **Compact playback** and **Tracklist reader**. Choose one under **Built-in panels** in Live Monitor to preview it, then **Save and apply**.
-
-### Options page walkthrough
-
-These existing options-page screenshots show version **5.8.3**, including its built-in sample HUD preview. The current version adds provider and language controls; the sample preview is not live YouTube playback.
-
-| Settings overview | Configured appearance |
+| Feature | Operation |
 | --- | --- |
-| [![Options page with provider settings, appearance controls, custom CSS, and a sample HUD preview](docs/assets/readme/youtube-cd-hud-options-overview.png)](docs/assets/readme/youtube-cd-hud-options-overview.png) | [![Options page with a yellow accent, 115% disc scale, 92% panel opacity, and transport controls hidden](docs/assets/readme/youtube-cd-hud-options-configured.png)](docs/assets/readme/youtube-cd-hud-options-configured.png) |
-| Start with provider behavior and the default appearance. | Example: adjust the disc, opacity, accent, and visible controls. |
+| Built-in panels | Choose **Compact playback** or **Tracklist reader** to load an editable starting layout. The reader includes a larger disc and a fixed tracklist. |
+| Select and arrange | Select a component, drag it, or resize it with the wheel or corner handles. Use **AUTO ALIGN** for grid snapping. |
+| Component properties | The toolbar below the canvas exposes the selected unit's text, colors, opacity, border, corners, and supported effects. Borders stay at 1px when resized. |
+| Layers and collisions | Enable Z layers to overlap units. A conflicting drag offers automatic layer allocation or returns the conflicting units to the Component List. |
+| Component List | Add missing units or remove optional ones with Delete. The panel base is retained and follows the boundaries of the placed controls. |
+| Temporary A/B/C slots | Select a slot and use **SAVE / LOAD** for this browser session. These are separate from the bundled panels and from persistent **Save and apply**. |
 
-1. **Providers:** open the extension's options page; enable `1001`, `MixesDB`, or `TrackId.net` as needed, and choose whether 1001 searches automatically or becomes preferred after a match.
-2. **Appearance:** adjust typography, disc scale, panel opacity, accent color, and visible controls while checking the sample preview.
-3. **Custom CSS:** enter overrides scoped to `#yt-cd-hud` or `.yt-tracklist-panel`, then choose **Save and apply**. Check CSS changes on the YouTube HUD; settings are saved in the current Chrome profile.
+### Options page workflow
+
+1. **Sources:** configure provider switches, automatic 1001 lookup, timeout, and candidate limits on the left.
+2. **Layout:** choose a built-in panel and edit it in Live Monitor on the right. Expand **HUD appearance** or **Custom CSS** there for additional settings; scope CSS to `#yt-cd-hud` or `.yt-tracklist-panel`.
+3. **Apply:** use **Save and apply**, fixed at the bottom of the window, to persist settings and layout. Choosing a preset only changes the preview until saved; it does not overwrite A/B/C slots.
+
+See the [Live Monitor Visual Composer guide](docs/live-monitor-visual-composer.md) for the full editor workflow and layout constraints.
 
 ## Interface Language
 

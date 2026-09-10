@@ -18,7 +18,7 @@
 
 - [專案狀態](#專案狀態)
 - [這個專案在做什麼](#這個專案在做什麼)
-- [實際操作預覽](#實際操作預覽)
+- [版面編輯器預覽](#版面編輯器預覽)
 - [如何選擇安裝方式](#如何選擇安裝方式)
 - [快速開始](#快速開始)
 - [曲目來源與比對方式](#曲目來源與比對方式)
@@ -57,46 +57,11 @@ YouTube CD HUD 會搜尋、整理並切換多個曲目資料來源，再依 YouT
 
 ---
 
-## 實際操作預覽
+## 版面編輯器預覽
 
-以下截圖展示 Chrome 擴充功能在不同 DJ Set／音樂影片畫面中的 HUD 與曲目列表面板。這些圖片是介面視覺預覽，不取代[開發與驗證](#開發與驗證)中所述的實際瀏覽器驗收。
+![實際 Live Monitor 編輯器局部畫面：選取面板底座，調整邊框、圓角、留白與效果](docs/assets/readme/youtube-cd-hud-layout-editor-controls.png)
 
-<table>
-  <tr>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-01.png" width="100%" alt="YouTube CD HUD 在 TrackId.net 曲目結果中醒目標示目前曲目。" />
-      <br />
-      <sub>01 · TrackId.net 結果與目前曲目醒目標示</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-02.png" width="100%" alt="YouTube CD HUD 在影片播放畫面上顯示 YouTube 時間戳曲目列表。" />
-      <br />
-      <sub>02 · YouTube 時間戳曲目與播放進度同步</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-03.png" width="100%" alt="YouTube CD HUD 顯示 1001Tracklists 結果與目前曲目。" />
-      <br />
-      <sub>03 · 資料來源指示與目前曲目狀態</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-04.png" width="100%" alt="YouTube CD HUD 與曲目列表面板顯示在 DJ 影片上方。" />
-      <br />
-      <sub>04 · 顯示在 DJ Set 上方的精簡 HUD</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-05.png" width="100%" alt="YouTube CD HUD 與曲目列表面板醒目標示目前曲目。" />
-      <br />
-      <sub>05 · 適合較長 Set 的展開曲目列表</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-06.png" width="100%" alt="YouTube CD HUD 顯示目前曲目與可捲動的曲目列表。" />
-      <br />
-      <sub>06 · 可捲動曲目列表與同步中的 HUD 狀態</sub>
-    </td>
-  </tr>
-</table>
+*實際設定頁局部截圖：選取元件後，在畫布下方編輯屬性。圖中曲名為範例預覽內容，並非即時 YouTube 播放；此圖說明編輯控制，不代表目前兩套內建面板的配置。*
 
 ---
 
@@ -198,31 +163,35 @@ HUD 集中呈現目前曲目、資料來源與播放同步狀態，並提供曲�
 
 ![概念插圖：Cue Fox 操作唱盤，左側為 HUD，右側為曲目列表面板](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg)
 
-*兩張 Cue Fox 圖皆為概念插圖，使用原始 HDR JPEG。實際介面請參考上方操作截圖與下方設定頁截圖。*
+*兩張 Cue Fox 圖皆為概念插圖，使用原始 HDR JPEG。實際介面請參考上方版面編輯器截圖。*
 
-HUD 可拖移，以 YouTube 縮圖呈現圓形唱片並產生封面強調色，也可調整寬度與文字大小。
+HUD 以 YouTube 縮圖呈現圓形唱片；Live Monitor 可在播放器畫布上調整各元件的位置、尺寸、文字與樣式。
 
 | 控制項 | 操作方式 |
 | --- | --- |
 | 資料來源 | 按 `YT` 使用 YouTube 曲目；展開 `DB ▼` 可搜尋或選用 `1001`、`MIXESDB`、`TRACKID`。切換來源會保留播放位置。 |
 | 上一曲／下一曲 | 按 `◀ PREV`／`NEXT ▶`（文字隨介面語言切換），跳至目前來源中帶有時間戳的上一首或下一首曲目。 |
-| 曲目列表面板 | 按 `≡` 顯示或隱藏列表；點選帶有時間戳的曲目列，即可從該時間點播放。目前曲目會醒目標示。 |
+| 曲目列表面板 | 按 `≡` 開關浮動列表；放入 Composer 版面的固定列表則持續顯示，直到從版面移除。點選帶有時間戳的曲目列即可跳至該時間點。 |
 | 唱片拖曳（disc scrubbing） | 按住唱片旋轉：順時針快轉，逆時針循環播放短片段；放開後恢復播放。 |
 
-### 設定頁操作圖解
+### 版面與控制功能
 
-擴充功能內附「精簡播放」與「曲目閱讀」兩套面板。到 Live Monitor 的「內建面板」區點選預覽，再按「儲存並套用」即可使用。
-
-以下沿用既有 **5.8.3** 版設定頁截圖，右側為內建的範例 HUD 預覽。目前版本已增加資料來源與語言控制項；範例預覽並非即時 YouTube 播放畫面。
-
-| 設定總覽 | 外觀調整範例 |
+| 功能 | 操作方式 |
 | --- | --- |
-| [![設定頁顯示資料來源、外觀、自訂 CSS 與範例 HUD 預覽](docs/assets/readme/youtube-cd-hud-options-overview.png)](docs/assets/readme/youtube-cd-hud-options-overview.png) | [![設定頁改用黃色強調色、115% 唱片倍率、92% 面板不透明度，並隱藏跳曲控制](docs/assets/readme/youtube-cd-hud-options-configured.png)](docs/assets/readme/youtube-cd-hud-options-configured.png) |
-| 從資料來源行為與預設外觀開始。 | 調整唱片、透明度、強調色與顯示控制項。 |
+| 內建面板 | 選擇「精簡播放」或「曲目閱讀」作為可編輯的起始配置；曲目閱讀包含較大的唱片與固定曲目列表。 |
+| 選取與編排 | 點選元件後拖移，使用滾輪或四角控制點調整尺寸；開啟 **AUTO ALIGN** 可吸附格線。 |
+| 元件屬性 | 畫布下方工具列顯示所選元件可調整的文字、顏色、透明度、邊框、圓角與效果。尺寸改變時邊框維持 1px。 |
+| 圖層與碰撞 | 啟用 Z 圖層可重疊元件；拖曳發生衝突時，可自動分配圖層或將衝突元件移回元件庫。 |
+| 元件庫 | 加入尚未使用的元件，或按 Delete 移除可選元件。面板底座會保留，並隨已放置控制項的邊界調整。 |
+| A／B／C 暫存槽 | 選擇槽位後以 **SAVE／LOAD** 暫存或載入，保留至本次瀏覽器工作階段結束；與內建面板及持久儲存的「儲存並套用」分開。 |
 
-1. **資料來源：**開啟擴充功能設定頁，依需求啟用 `1001`、`MixesDB` 或 `TrackId.net`，並設定 1001 是否自動搜尋、比對成功後是否優先採用。
-2. **外觀：**調整字型、字級、唱片倍率、面板不透明度、強調色與顯示控制項，搭配範例預覽查看效果。
-3. **自訂 CSS：**輸入以 `#yt-cd-hud` 或 `.yt-tracklist-panel` 限定範圍的樣式，再按**儲存並套用**。CSS 效果請在 YouTube HUD 確認；設定儲存在目前的 Chrome 使用者設定檔。
+### 設定頁操作流程
+
+1. **資料來源：**在左側設定 provider 開關、1001 自動查詢、逾時秒數與候選上限。
+2. **版面：**在右側 Live Monitor 選用內建面板並編輯；展開同側的「HUD 外觀」或「自訂 CSS」調整其他設定。CSS 請以 `#yt-cd-hud` 或 `.yt-tracklist-panel` 限定範圍。
+3. **套用：**按固定於視窗底部的「儲存並套用」，保存設定與版面。點選預設僅改變預覽，儲存後才生效，也不會覆蓋 A／B／C 暫存槽。
+
+完整操作與版面限制請見 [Live Monitor Visual Composer 指南](docs/live-monitor-visual-composer.zh-tw.md)。
 
 ## 介面語言
 
