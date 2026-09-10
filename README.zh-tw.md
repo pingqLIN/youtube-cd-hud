@@ -58,7 +58,6 @@
 <details>
 <summary>HDR 原始插圖</summary>
 
-[TrackId.net 曲目醒目標示](docs/assets/readme/youtube-cd-hud-preview-01.png) | ![歷史播放 HUD 樣式](docs/assets/readme/youtube-cd-hud-preview-03.png) |
 
 [HDR 同步插圖原檔](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg) · [HDR 介面插圖原檔](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg) · [資產保留流程](docs/assets/readme/ASSETS.zh-tw.md)
 

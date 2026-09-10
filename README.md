@@ -58,7 +58,6 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 <details>
 <summary>Original HDR artwork</summary>
 
-[TrackId.net current-track highlight](docs/assets/readme/youtube-cd-hud-preview-01.png) | ![Historical playback HUD](docs/assets/readme/youtube-cd-hud-preview-03.png) |
 
 [Original HDR sync artwork](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg) · [Original HDR interface artwork](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg) · [Asset preservation guide](docs/assets/readme/ASSETS.md)
 
