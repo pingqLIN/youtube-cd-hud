@@ -4,7 +4,7 @@
 
 `cue-fox-banner-v1.png` 為 AI 生成的 SDR 概念橫幅，以既有 `youtube-cd-hud-cue-fox-sync-banner-v1.png` 作為視覺參考，並非操作介面截圖。英文名稱採 Cue Fox，繁體中文名稱採曲狐；repository slug 與已安裝產品的識別名稱維持不變。
 
-`youtube-cd-hud-preview-01.png` 至 `youtube-cd-hud-preview-06.png` 是專案既有的歷史播放截圖。前三張恢復至 README 前段；編輯器截圖保留於獨立區段。這些圖片不代表新版已完成即時瀏覽器驗收。
+`youtube-cd-hud-preview-01.png` 至 `youtube-cd-hud-preview-06.png` 是專案既有的歷史播放截圖。六張皆在 README 前段以每列三張、共兩列並排顯示；編輯器截圖保留於獨立區段。這些圖片不代表新版已完成即時瀏覽器驗收。
 
 ## HDR 原檔
 

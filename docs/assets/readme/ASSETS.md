@@ -4,7 +4,7 @@
 
 `cue-fox-banner-v1.png` is an AI-generated SDR concept banner, using the existing `youtube-cd-hud-cue-fox-sync-banner-v1.png` as its visual reference. It is not an interface screenshot. The English wordmark is Cue Fox; the Traditional Chinese name is 曲狐. The repository slug and installed product identifiers remain unchanged.
 
-Playback images `youtube-cd-hud-preview-01.png` through `youtube-cd-hud-preview-06.png` are historical screenshots already present in the repository. The first three are restored near the start of the README; the editor screenshot remains in its separate section. These images are not evidence of a new live acceptance run.
+Playback images `youtube-cd-hud-preview-01.png` through `youtube-cd-hud-preview-06.png` are historical screenshots already present in the repository. All six are displayed near the start of the README in a three-column, two-row gallery; the editor screenshot remains in its separate section. These images are not evidence of a new live acceptance run.
 
 ## HDR originals
 
