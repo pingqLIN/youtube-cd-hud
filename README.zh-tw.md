@@ -1,16 +1,46 @@
-# YouTube CD HUD
+# Cue Fox 曲狐 · YouTube 曲目 HUD
+
+原名 **YouTube CD HUD**。Repository slug 與安裝路徑維持 `youtube-cd-hud`。
 
 為 YouTube DJ Set、Mix 與音樂影片加入**可切換資料來源、並隨播放進度同步的曲目 HUD**。
 
 [English](README.md) · [日本語](README.ja.md) · [介面語言說明](docs/i18n.zh-tw.md)
 
-![概念插圖：Cue Fox 操作發光唱盤](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg)
+![Cue Fox — Follow every track. Concept banner](docs/assets/readme/cue-fox-banner-v1.png)
 
 > 找到曲目資料、對齊播放時間軸，讓 HUD 隨播放進度持續顯示正確曲目。
 
 [![Version 5.13.0](https://img.shields.io/badge/version-5.13.0-2563eb)](package.json)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
+
+## 播放曲目時的樣式
+
+![歷史播放截圖：YouTube 時間戳曲目列表與目前曲目](docs/assets/readme/youtube-cd-hud-preview-02.png)
+
+*從前一版 README 恢復的實際播放截圖。此圖為歷史介面預覽，不是新版編輯器截圖，也不代表本次已完成即時瀏覽器驗收。*
+
+<details>
+<summary>更多播放樣式與 HDR 原始插圖</summary>
+
+| TrackId.net 目前曲目 | 另一種播放樣式 |
+| --- | --- |
+| ![TrackId.net 曲目醒目標示](docs/assets/readme/youtube-cd-hud-preview-01.png) | ![歷史播放 HUD 樣式](docs/assets/readme/youtube-cd-hud-preview-03.png) |
+
+[HDR 同步插圖原檔](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg) · [HDR 介面插圖原檔](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg) · [資產保留流程](docs/assets/readme/ASSETS.zh-tw.md)
+
+新版 Banner 為 SDR 概念插圖；既有 HDR JPEG 原檔完整保留。HDR 實際顯示效果取決於瀏覽器、圖片傳遞方式與顯示器。
+
+</details>
+
+## 調整你的面板
+
+新版面預設為 **1280 × 720 畫布與相對比例 % 尺寸**。既有版面保留已儲存的模式；未記錄模式的舊 px 資料維持絕對尺寸，可切換為 REL · %，切換時保留目前幾何配置。為相容既有資料，儲存的寬高仍以畫布 px 表示，由編輯器換算百分比。
+
+- 常用控制元件最低高度由 48px 降至 32px；文字需要更多空間時，仍會提高最低高度。
+- **打包縮放 / SCALE %** 可選全部元件、選取元件或其重疊群組，以共同中心縮放尺寸與相對位置。保留分離控制鈕與圖層順序，面板底座隨內容調整。
+- 縮放後關閉自動對齊，以避免元件各自取整而改變間距；需要格線吸附時可重新啟用 AUTO ALIGN。
+- 達到尺寸、文字容納、碰撞或畫布邊界限制時，縮放不會套用。**復原縮放 / UNDO** 可還原上次縮放前的配置與對齊設定；若已做其他編輯，則停用復原以保留後續變更。最後使用設定頁的儲存按鈕保存結果。
 
 ---
 

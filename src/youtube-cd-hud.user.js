@@ -83,7 +83,7 @@
     const HUD_LAYOUT_DEFAULTS = Object.freeze({
         version: 2,
         palette: Object.freeze({ primaryColor: '#1a202c', secondaryColor: '#63b3ed' }),
-        canvas: Object.freeze({ width: 1280, height: 720, sizingMode: 'absolute', collisionPolicy: 'no-overlap-closed', alignmentGrid: Object.freeze({ enabled: true, unitWidth: 8, unitHeight: 8, visible: false }) }),
+        canvas: Object.freeze({ width: 1280, height: 720, sizingMode: 'relative', collisionPolicy: 'no-overlap-closed', alignmentGrid: Object.freeze({ enabled: true, unitWidth: 8, unitHeight: 8, visible: false }) }),
         components: Object.freeze([
             Object.freeze({ id: 'panel-base', type: 'panel-base', present: true, geometry: Object.freeze({ x: .45625, y: .5222222222222223, width: 772, height: 212.00000000000006, z: -1 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: false, mode: 'dynamic-envelope', padding: 18 }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: .85 }), effects: Object.freeze({ shadow: true, accentRail: true }) }),
             Object.freeze({ id: 'disc', type: 'disc', present: true, geometry: Object.freeze({ x: .125, y: .5, width: 104, height: 104, z: 1 }), layer: Object.freeze({ enabled: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1, texture: 'classic' }), effects: Object.freeze({ glow: true }) }),
@@ -381,7 +381,7 @@
         const canvas = {
             width: clamp(Number(source.canvas?.width) || 1280, 320, 3840),
             height: clamp(Number(source.canvas?.height) || 720, 180, 2160),
-            sizingMode: ['absolute', 'relative'].includes(source.canvas?.sizingMode) ? source.canvas.sizingMode : 'absolute',
+            sizingMode: ['absolute', 'relative'].includes(source.canvas?.sizingMode) ? source.canvas.sizingMode : (Array.isArray(source.components) ? 'absolute' : 'relative'),
             collisionPolicy: 'no-overlap-closed',
             alignmentGrid: {
                 enabled: source.canvas?.alignmentGrid?.enabled !== false,
@@ -392,16 +392,16 @@
         };
         const aliases = { 'panel-base': 'hud-root', 'track-title': 'track-info', 'source-selector': 'source-badge' };
         const sizeRules = {
-            'panel-base': [320, 96, 1280, 720],
-            disc: [60, 60, 720, 720],
-            'track-title': [180, 48, 720, 120],
-            'time-readout': [90, 48, 320, 96],
-            'source-selector': [180, 48, 520, 96],
-            'tracklist-toggle': [48, 48, 112, 96],
-            'transport-controls': [128, 48, 360, 112],
-            'close-control': [48, 48, 96, 96],
-            'text-size-control': [64, 48, 128, 96],
-            'tracklist-panel': [220, 120, 720, 640],
+            'panel-base': [320, 48, 1280, 720],
+            disc: [40, 40, 720, 720],
+            'track-title': [180, 32, 720, 120],
+            'time-readout': [90, 32, 320, 96],
+            'source-selector': [180, 32, 520, 96],
+            'tracklist-toggle': [48, 32, 112, 96],
+            'transport-controls': [128, 32, 360, 112],
+            'close-control': [48, 32, 96, 96],
+            'text-size-control': [64, 32, 128, 96],
+            'tracklist-panel': [220, 64, 720, 640],
         };
         const sizingScale = canvas.sizingMode === 'relative' ? Math.min(canvas.width / 1280, canvas.height / 720) : 1;
         const components = HUD_LAYOUT_DEFAULTS.components.map(base => {
@@ -488,7 +488,7 @@
                 const partWidth = clamp(Number(rawArrangement.partSize?.width), 64 * sizingScale, 180 * sizingScale, base.arrangement.partSize.width * sizingScale);
                 const partHeight = clamp(
                     Number(rawArrangement.partSize?.height),
-                    Math.max(48 * sizingScale, requiredTextHeight),
+                    Math.max(32 * sizingScale, requiredTextHeight),
                     Math.max(requiredTextHeight, 112 * sizingScale, HUD_TEXT_SIZE_MAXIMUM * sizingScale * 1.35 + 8 * sizingScale),
                     Math.max(base.arrangement.partSize.height * sizingScale, requiredTextHeight),
                 );
@@ -548,7 +548,7 @@
             const top = Math.max(0, Math.min(...rectangles.map(rect => rect.top)) - padding);
             const bottom = Math.min(canvas.height, Math.max(...rectangles.map(rect => rect.bottom)) + padding);
             const width = Math.max(320 * sizingScale, right - left);
-            const height = Math.max(96 * sizingScale, bottom - top);
+            const height = Math.max(48 * sizingScale, bottom - top);
             const baseLeft = clamp((left + right - width) / 2, 0, canvas.width - width, 0);
             const baseTop = clamp((top + bottom - height) / 2, 0, canvas.height - height, 0);
             base.geometry = { x: (baseLeft + width / 2) / canvas.width, y: (baseTop + height / 2) / canvas.height, width, height, z: base.geometry.z };

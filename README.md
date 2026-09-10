@@ -1,16 +1,46 @@
-# YouTube CD HUD
+# Cue Fox · YouTube Track HUD
+
+Previously **YouTube CD HUD** · 中文名稱：**曲狐**. Repository and install paths remain `youtube-cd-hud`.
 
 Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD with switchable data sources.
 
 [繁體中文](README.zh-tw.md) · [日本語](README.ja.md) · [Interface language guide](docs/i18n.md)
 
-![Concept artwork: Cue Fox operating a glowing turntable](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg)
+![Cue Fox — Follow every track. Concept banner](docs/assets/readme/cue-fox-banner-v1.png)
 
 > Find the tracklist. Match the timeline. Stay on the current track.
 
 [![Version 5.13.0](https://img.shields.io/badge/version-5.13.0-2563eb)](package.json)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
+
+## See it during playback
+
+![Historical playback screenshot: YouTube timestamp tracklist and current track](docs/assets/readme/youtube-cd-hud-preview-02.png)
+
+*Restored from the previous README. This is a historical playback screenshot, not a capture of the new editor or a new live-browser acceptance result.*
+
+<details>
+<summary>More playback styles and original HDR artwork</summary>
+
+| Current track from TrackId.net | Another playback style |
+| --- | --- |
+| ![TrackId.net current-track highlight](docs/assets/readme/youtube-cd-hud-preview-01.png) | ![Historical playback HUD](docs/assets/readme/youtube-cd-hud-preview-03.png) |
+
+[Original HDR sync artwork](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg) · [Original HDR interface artwork](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg) · [Asset preservation guide](docs/assets/readme/ASSETS.md)
+
+The new banner is an SDR concept illustration. Original HDR JPEG files remain unchanged; HDR display depends on the browser, image delivery path and display.
+
+</details>
+
+## Shape your layout
+
+New layouts start with **relative % sizing on a 1280 × 720 canvas**. Existing layouts retain their saved sizing mode; older pixel layouts without a mode remain absolute, and can be switched to REL · % without changing their current geometry. Stored widths and heights remain canvas pixels for compatibility; the editor converts them to percentages.
+
+- Compact controls can reach 32px height instead of 48px; text containment still sets a larger minimum when needed.
+- **SCALE %** scales all components, the selected component, or its overlapping group around their shared center. Split controls and layer order are retained. The panel base follows its contents.
+- Scaling preserves relative positions and disables auto alignment to avoid independent rounding. Enable AUTO ALIGN again when you want grid snapping.
+- Size, text, collision and canvas limits may reject a scale. **UNDO** restores the layout immediately before the last scale, including alignment, unless further edits have occurred. Use the page's Save action to persist the result.
 
 ---
 
