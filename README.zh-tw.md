@@ -1,6 +1,4 @@
-# Cue Fox 曲狐 · YouTube 曲目 HUD
-
-原名 **YouTube CD HUD**。Repository slug 與安裝路徑維持 `youtube-cd-hud`。
+# CueFox QF · YouTube 曲目 HUD
 
 為 YouTube DJ Set、Mix 與音樂影片加入**可切換資料來源、並隨播放進度同步的曲目 HUD**。
 
