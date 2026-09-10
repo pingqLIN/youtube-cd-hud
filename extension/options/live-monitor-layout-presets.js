@@ -10,81 +10,821 @@
     ]);
     let memorySlots = {};
 
+    // Approved saved layouts. Keep their positions, layers, and styling intact.
+    const BUNDLED_LAYOUTS = {
+        "compact-playback": {
+            "canvas": {
+                "alignmentGrid": {
+                    "enabled": true,
+                    "unitHeight": 8,
+                    "unitWidth": 8,
+                    "visible": false
+                },
+                "collisionPolicy": "no-overlap-closed",
+                "height": 720,
+                "sizingMode": "absolute",
+                "width": 1280
+            },
+            "components": [
+                {
+                    "boundary": {
+                        "collision": false,
+                        "mode": "dynamic-envelope",
+                        "padding": 12,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {
+                        "accentRail": true,
+                        "shadow": true
+                    },
+                    "geometry": {
+                        "height": 183.99999999999994,
+                        "width": 508,
+                        "x": 0.5109375,
+                        "y": 0.5,
+                        "z": -1
+                    },
+                    "id": "panel-base",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#111827",
+                        "borderColor": "#7dd3fc",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 0.92
+                    },
+                    "type": "panel-base"
+                },
+                {
+                    "effects": {
+                        "glow": true
+                    },
+                    "geometry": {
+                        "height": 200,
+                        "width": 200,
+                        "x": 0.3,
+                        "y": 0.4888888888888889,
+                        "z": 1
+                    },
+                    "id": "disc",
+                    "layer": {
+                        "enabled": true
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#111827",
+                        "borderColor": "#7dd3fc",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1,
+                        "texture": "gold"
+                    },
+                    "type": "disc"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {
+                        "marquee": true
+                    },
+                    "geometry": {
+                        "height": 48,
+                        "width": 424,
+                        "x": 0.4875,
+                        "y": 0.4222222222222222,
+                        "z": 0
+                    },
+                    "id": "track-title",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#111827",
+                        "borderColor": "#7dd3fc",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#f8fafc",
+                        "font": "cascadia-mono",
+                        "fontSize": 18,
+                        "opacity": 1,
+                        "textAlign": "right"
+                    },
+                    "type": "track-title"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {},
+                    "geometry": {
+                        "height": 48,
+                        "width": 144,
+                        "x": 0.4375,
+                        "y": 0.5,
+                        "z": 0
+                    },
+                    "id": "time-readout",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#111827",
+                        "borderColor": "#7dd3fc",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#7dd3fc",
+                        "font": "cascadia-mono",
+                        "fontSize": 16,
+                        "opacity": 1,
+                        "textAlign": "left"
+                    },
+                    "type": "time-readout"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {
+                        "statusLamp": true
+                    },
+                    "geometry": {
+                        "height": 48,
+                        "width": 192,
+                        "x": 0.58125,
+                        "y": 0.5,
+                        "z": 0
+                    },
+                    "id": "source-selector",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#111827",
+                        "borderColor": "#7dd3fc",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#7dd3fc",
+                        "font": "cascadia-mono",
+                        "fontSize": 12,
+                        "opacity": 1,
+                        "textAlign": "center"
+                    },
+                    "type": "source-selector"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {},
+                    "geometry": {
+                        "height": 48,
+                        "width": 48,
+                        "x": 0.68125,
+                        "y": 0.5,
+                        "z": 0
+                    },
+                    "id": "tracklist-toggle",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#111827",
+                        "borderColor": "#7dd3fc",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#7dd3fc",
+                        "font": "cascadia-mono",
+                        "fontSize": 12,
+                        "opacity": 1,
+                        "textAlign": "center"
+                    },
+                    "type": "tracklist-toggle"
+                },
+                {
+                    "arrangement": {
+                        "partSize": {
+                            "height": 48,
+                            "width": 72
+                        },
+                        "positions": {
+                            "next": {
+                                "x": 0.875,
+                                "y": 0.32222222222222224
+                            },
+                            "previous": {
+                                "x": 0.8125,
+                                "y": 0.32222222222222224
+                            }
+                        },
+                        "split": false
+                    },
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {},
+                    "geometry": {
+                        "height": 48,
+                        "width": 160,
+                        "x": 0.44375,
+                        "y": 0.5777777777777777,
+                        "z": 0
+                    },
+                    "id": "transport-controls",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#111827",
+                        "borderColor": "#7dd3fc",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#7dd3fc",
+                        "font": "cascadia-mono",
+                        "fontSize": 12,
+                        "opacity": 1,
+                        "textAlign": "center"
+                    },
+                    "type": "transport-controls"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {},
+                    "geometry": {
+                        "height": 48,
+                        "width": 48,
+                        "x": 0.68125,
+                        "y": 0.4222222222222222,
+                        "z": 0
+                    },
+                    "id": "close-control",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#111827",
+                        "borderColor": "#7dd3fc",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#7dd3fc",
+                        "font": "cascadia-mono",
+                        "fontSize": 12,
+                        "opacity": 1,
+                        "textAlign": "center"
+                    },
+                    "type": "close-control"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {},
+                    "geometry": {
+                        "height": 48,
+                        "width": 64,
+                        "x": 0.71875,
+                        "y": 0.5111111111111111,
+                        "z": 0
+                    },
+                    "id": "text-size-control",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": false,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#111827",
+                        "borderColor": "#7dd3fc",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#7dd3fc",
+                        "font": "cascadia-mono",
+                        "fontSize": 12,
+                        "opacity": 1,
+                        "textAlign": "center"
+                    },
+                    "type": "text-size-control"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {
+                        "accentRail": true,
+                        "shadow": true
+                    },
+                    "geometry": {
+                        "height": 256,
+                        "width": 280,
+                        "x": 0.8375,
+                        "y": 0.2222222222222222,
+                        "z": 0
+                    },
+                    "id": "tracklist-panel",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": false,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#111827",
+                        "borderColor": "#7dd3fc",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 0.88
+                    },
+                    "textStyle": {
+                        "color": "#f8fafc",
+                        "font": "cascadia-mono",
+                        "fontSize": 18,
+                        "opacity": 1,
+                        "textAlign": "left"
+                    },
+                    "type": "tracklist-panel"
+                }
+            ],
+            "palette": {
+                "primaryColor": "#111827",
+                "secondaryColor": "#7dd3fc"
+            },
+            "version": 2
+        },
+        "tracklist-reader": {
+            "canvas": {
+                "alignmentGrid": {
+                    "enabled": true,
+                    "unitHeight": 4,
+                    "unitWidth": 4,
+                    "visible": false
+                },
+                "collisionPolicy": "no-overlap-closed",
+                "height": 720,
+                "sizingMode": "absolute",
+                "width": 1280
+            },
+            "components": [
+                {
+                    "boundary": {
+                        "collision": false,
+                        "mode": "dynamic-envelope",
+                        "padding": 12,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {
+                        "accentRail": true,
+                        "shadow": true
+                    },
+                    "geometry": {
+                        "height": 336,
+                        "width": 722,
+                        "x": 0.49609375,
+                        "y": 0.5,
+                        "z": -1
+                    },
+                    "id": "panel-base",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#18181b",
+                        "borderColor": "#fbbf24",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 0.92
+                    },
+                    "type": "panel-base"
+                },
+                {
+                    "effects": {
+                        "glow": true
+                    },
+                    "geometry": {
+                        "height": 328,
+                        "width": 328,
+                        "x": 0.36875,
+                        "y": 0.31666666666666665,
+                        "z": 1
+                    },
+                    "id": "disc",
+                    "layer": {
+                        "enabled": true
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#18181b",
+                        "borderColor": "#fbbf24",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1,
+                        "texture": "classic"
+                    },
+                    "type": "disc"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {
+                        "marquee": true
+                    },
+                    "geometry": {
+                        "height": 80,
+                        "width": 364,
+                        "x": 0.365625,
+                        "y": 0.35,
+                        "z": 2
+                    },
+                    "id": "track-title",
+                    "layer": {
+                        "enabled": true
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#18181b",
+                        "borderColor": "#fbbf24",
+                        "borderEnabled": false,
+                        "cornerEnabled": false,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 0.2
+                    },
+                    "textStyle": {
+                        "color": "#f8fafc",
+                        "font": "cascadia-mono",
+                        "fontSize": 26,
+                        "opacity": 1,
+                        "textAlign": "left"
+                    },
+                    "type": "track-title"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {},
+                    "geometry": {
+                        "height": 48,
+                        "width": 144,
+                        "x": 0.2875,
+                        "y": 0.6055555555555555,
+                        "z": 0
+                    },
+                    "id": "time-readout",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#18181b",
+                        "borderColor": "#fbbf24",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#fbbf24",
+                        "font": "cascadia-mono",
+                        "fontSize": 18,
+                        "opacity": 1,
+                        "textAlign": "left"
+                    },
+                    "type": "time-readout"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {
+                        "statusLamp": true
+                    },
+                    "geometry": {
+                        "height": 48,
+                        "width": 200,
+                        "x": 0.428125,
+                        "y": 0.6055555555555555,
+                        "z": 0
+                    },
+                    "id": "source-selector",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#18181b",
+                        "borderColor": "#fbbf24",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#fbbf24",
+                        "font": "cascadia-mono",
+                        "fontSize": 14,
+                        "opacity": 1,
+                        "textAlign": "center"
+                    },
+                    "type": "source-selector"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {},
+                    "geometry": {
+                        "height": 48,
+                        "width": 64,
+                        "x": 0.48125,
+                        "y": 0.6833333333333333,
+                        "z": 0
+                    },
+                    "id": "tracklist-toggle",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#18181b",
+                        "borderColor": "#fbbf24",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#fbbf24",
+                        "font": "cascadia-mono",
+                        "fontSize": 14,
+                        "opacity": 1,
+                        "textAlign": "center"
+                    },
+                    "type": "tracklist-toggle"
+                },
+                {
+                    "arrangement": {
+                        "partSize": {
+                            "height": 48,
+                            "width": 72
+                        },
+                        "positions": {
+                            "next": {
+                                "x": 0.6625,
+                                "y": 0.6277777777777778
+                            },
+                            "previous": {
+                                "x": 0.6,
+                                "y": 0.6277777777777778
+                            }
+                        },
+                        "split": false
+                    },
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {},
+                    "geometry": {
+                        "height": 48,
+                        "width": 208,
+                        "x": 0.3125,
+                        "y": 0.6833333333333333,
+                        "z": 0
+                    },
+                    "id": "transport-controls",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#18181b",
+                        "borderColor": "#fbbf24",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#fbbf24",
+                        "font": "cascadia-mono",
+                        "fontSize": 14,
+                        "opacity": 1,
+                        "textAlign": "center"
+                    },
+                    "type": "transport-controls"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {},
+                    "geometry": {
+                        "height": 64,
+                        "width": 48,
+                        "x": 0.4875,
+                        "y": 0.5166666666666667,
+                        "z": 0
+                    },
+                    "id": "close-control",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#18181b",
+                        "borderColor": "#fbbf24",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#fbbf24",
+                        "font": "cascadia-mono",
+                        "fontSize": 14,
+                        "opacity": 1,
+                        "textAlign": "center"
+                    },
+                    "type": "close-control"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {},
+                    "geometry": {
+                        "height": 48,
+                        "width": 64,
+                        "x": 0.425,
+                        "y": 0.6833333333333333,
+                        "z": 0
+                    },
+                    "id": "text-size-control",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#18181b",
+                        "borderColor": "#fbbf24",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 1
+                    },
+                    "textStyle": {
+                        "color": "#fbbf24",
+                        "font": "cascadia-mono",
+                        "fontSize": 14,
+                        "opacity": 1,
+                        "textAlign": "center"
+                    },
+                    "type": "text-size-control"
+                },
+                {
+                    "boundary": {
+                        "collision": true,
+                        "shape": "rect",
+                        "state": "closed"
+                    },
+                    "effects": {
+                        "accentRail": true,
+                        "shadow": true
+                    },
+                    "geometry": {
+                        "height": 312,
+                        "width": 320,
+                        "x": 0.64375,
+                        "y": 0.5,
+                        "z": 0
+                    },
+                    "id": "tracklist-panel",
+                    "layer": {
+                        "enabled": false
+                    },
+                    "present": true,
+                    "style": {
+                        "backgroundBlurEnabled": false,
+                        "backgroundColor": "#18181b",
+                        "borderColor": "#fbbf24",
+                        "borderEnabled": true,
+                        "cornerEnabled": true,
+                        "cornerRadiusLevel": 4,
+                        "opacity": 0.88
+                    },
+                    "textStyle": {
+                        "color": "#f8fafc",
+                        "font": "cascadia-mono",
+                        "fontSize": 18,
+                        "opacity": 1,
+                        "textAlign": "left"
+                    },
+                    "type": "tracklist-panel"
+                }
+            ],
+            "palette": {
+                "primaryColor": "#18181b",
+                "secondaryColor": "#fbbf24"
+            },
+            "version": 2
+        }
+    };
+
     function createBundledLayout(id) {
         if (!BUNDLED_PRESETS.some(preset => preset.id === id)) return null;
-        const reader = id === 'tracklist-reader';
-        const layout = composer.createDefaultLayout();
-        if (reader) {
-            layout.canvas.alignmentGrid.unitWidth = 4;
-            layout.canvas.alignmentGrid.unitHeight = 4;
-        }
-        const palette = reader
-            ? { primaryColor: '#18181b', secondaryColor: '#fbbf24' }
-            : { primaryColor: '#111827', secondaryColor: '#7dd3fc' };
-        // Pixel centers on the shipped 1280 × 720 canvas; normalization applies
-        // the same size, alignment, and collision rules as manually edited layouts.
-        const frames = reader ? {
-            disc: [464, 256, 128, 128],
-            'track-title': [436, 360, 296, 64],
-            'time-readout': [360, 424, 144, 48],
-            'source-selector': [540, 424, 200, 48],
-            'tracklist-toggle': [608, 480, 64, 48],
-            'transport-controls': [392, 480, 208, 48],
-            'close-control': [616, 360, 48, 64],
-            'text-size-control': [536, 480, 64, 48],
-            'tracklist-panel': [816, 348, 320, 312],
-        } : {
-            disc: [144, 552, 88, 88],
-            'track-title': [376, 512, 336, 48],
-            'time-readout': [280, 568, 144, 48],
-            'source-selector': [464, 568, 192, 48],
-            'tracklist-toggle': [592, 568, 48, 48],
-            'transport-controls': [288, 624, 160, 48],
-            'close-control': [592, 512, 48, 48],
-        };
-        const themed = composer.applyPalette(layout, palette, true);
-        for (const component of themed.components) {
-            const frame = frames[component.id];
-            if (component.id === 'panel-base') {
-                component.boundary.padding = 12;
-                component.style.opacity = .92;
-            } else {
-                component.present = Boolean(frame);
-                if (frame) {
-                    const [x, y, width, height] = frame;
-                    component.geometry = { ...component.geometry, x: x / layout.canvas.width, y: y / layout.canvas.height, width, height };
-                }
-            }
-            component.style.cornerEnabled = true;
-            component.style.cornerRadiusLevel = 4;
-            if (component.textStyle) {
-                component.textStyle.fontSize = reader ? 14 : 12;
-                if (['track-title', 'tracklist-panel'].includes(component.id)) {
-                    component.textStyle.fontSize = reader ? (component.id === 'track-title' ? 24 : 18) : 18;
-                    component.textStyle.color = '#f8fafc';
-                }
-                if (component.id === 'time-readout') component.textStyle.fontSize = reader ? 18 : 16;
-            }
-        }
-        const normalized = composer.normalizeLayout(themed);
-        // Center the complete visible group, including the disc outside the
-        // dynamic base, so each preset leaves room to edit on all four sides.
-        const visible = normalized.components.filter(component => component.present);
-        const rects = visible.map(component => composer.componentRect(component.geometry, normalized.canvas));
-        const grid = normalized.canvas.alignmentGrid;
-        const dx = Math.round((normalized.canvas.width - Math.min(...rects.map(rect => rect.left)) - Math.max(...rects.map(rect => rect.right))) / 2 / grid.unitWidth) * grid.unitWidth;
-        const dy = Math.round((normalized.canvas.height - Math.min(...rects.map(rect => rect.top)) - Math.max(...rects.map(rect => rect.bottom))) / 2 / grid.unitHeight) * grid.unitHeight;
-        for (const component of visible) {
-            component.geometry.x += dx / normalized.canvas.width;
-            component.geometry.y += dy / normalized.canvas.height;
-            if (component.arrangement) {
-                for (const position of Object.values(component.arrangement.positions)) {
-                    position.x += dx / normalized.canvas.width;
-                    position.y += dy / normalized.canvas.height;
-                }
-            }
-        }
-        return composer.normalizeLayout(normalized);
+        return composer.normalizeLayout(BUNDLED_LAYOUTS[id]);
     }
 
     function sessionStorage() {
