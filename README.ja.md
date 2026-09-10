@@ -59,6 +59,14 @@ YouTube の DJ セット、ミックス、音楽動画に、複数の情報源�
 
 ---
 
+## 曲目リストを自動検索
+
+YouTube の利用可能なチャプターやタイムスタンプを読み込み、動画を切り替えると 1001Tracklists を自動検索できます。現在の曲を再生位置に合わせて表示し、前後の曲へ移動できます。MixesDB と TrackId.net は手動検索で補足できます。
+
+音声認識ではなく既存の曲目情報を照合する機能です。収録内容と利用できる曲目はデータ提供元によって異なります。[検索と情報源の詳細](README.md#find-the-tracklist-automatically)。
+
+---
+
 ## 目次
 
 - [プロジェクトの状態](#プロジェクトの状態)
@@ -101,13 +109,15 @@ YouTube 自体に利用可能な曲目情報がある場合、`YT` 情報源が�
 
 ---
 
-## レイアウトエディターの例
+## 設定ページとレイアウトエディター
 
-[![5つの縦長の模擬編集状態](docs/assets/readme/editor-states/editor-states-strip.jpg)](docs/assets/readme/editor-states/editor-states-strip.svg)
+[options.html](extension/options/options.html) では、情報源、自動検索、HUD の外観、レイアウトを調整できます。Chrome の拡張機能メニューから「オプション」を開きます。
 
-説明用に再構成した模擬 UI のスクリーンショットです。拡張機能そのものの画面キャプチャではありません。[各パラメーターと機能の説明（English）](README.md#layout-editor-preview) · [繁體中文](README.zh-tw.md#版面編輯器預覽)。
+![実際の設定画面：黄色のアクセントと重なりのない HUD 配置](docs/assets/readme/youtube-cd-hud-options-configured.png)
 
-設定ページは **Save and apply** で保存します。A/B/C は SAVE を押して使うセッション内の一時保存です。YouTube 上で HUD の部品をドラッグした位置は、操作終了時に自動保存されます。
+*既存の 5.8.3 設定画面です。黄色のアクセント、115% のディスク倍率、92% の不透明度を表示しています。現行エディターの最終画面ではありません。*
+
+[設定ページと各機能の説明（English）](README.md#optionshtml-make-the-player-yours) · [繁體中文](README.zh-tw.md#版面編輯器預覽)。設定ページは Save and apply で保存し、YouTube 上で HUD をドラッグした位置は操作終了時に自動保存します。
 
 ---
 

@@ -65,6 +65,18 @@ The new banner is an SDR concept illustration. Original HDR JPEG files remain un
 
 </details>
 
+## Find the tracklist automatically
+
+Open a DJ set or a long mix and let CueFox QF help you follow the music. It reads available YouTube chapters and timestamped tracks, then can automatically search **1001Tracklists**. Once usable track data is loaded, the title and tracklist follow playback so you can jump back to a favorite section.
+
+- **A new video, a new search:** Auto search enables 1001Tracklists matching after video changes and is on by default.
+- **Choose when to switch:** Prefer 1001 switches sources after a successful search. It is off by default, keeping your current source.
+- **Look further when needed:** Search MixesDB and TrackId.net manually, then switch between independent results without moving playback.
+
+This matches existing tracklists and timestamps; it is not audio recognition. Coverage depends on the source data. If 1001Tracklists requires browser verification, use OPEN 1001 to complete it.
+
+[Install the Chrome extension](#option-b--chrome-extension) · [Use Tampermonkey](#option-a--tampermonkey) · [Source matching details](#track-sources-and-matching)
+
 ## Shape your layout
 
 New layouts start with **relative % sizing on a 1280 × 720 canvas**. Existing layouts retain their saved sizing mode; older pixel layouts without a mode remain absolute, and can be switched to REL · % without changing their current geometry. Stored widths and heights remain canvas pixels for compatibility; the editor converts them to percentages.
@@ -80,6 +92,8 @@ New layouts start with **relative % sizing on a 1280 × 720 canvas**. Existing l
 
 - [Project Status](#project-status)
 - [What It Does](#what-it-does)
+- [Automatic tracklist search](#find-the-tracklist-automatically)
+- [Options page](#optionshtml-make-the-player-yours)
 - [Layout Editor Preview](#layout-editor-preview)
 - [Choose an Installation](#choose-an-installation)
 - [Quick Start](#quick-start)
@@ -119,21 +133,43 @@ When YouTube already provides usable track information, the `YT` source remains 
 
 ---
 
+## options.html: make the player yours
+
+The Chrome extension's [options.html settings page](extension/options/options.html) brings **sources, appearance and layout editing** into one control panel. Open Options from Chrome's extension menu or quickly double-click the toolbar icon to adjust the HUD while checking the preview.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/readme/youtube-cd-hud-options-overview.png" width="100%" alt="Actual settings page: source search, appearance controls and live preview" /><br /><sub>Source search and appearance controls</sub></td>
+<td width="50%"><img src="docs/assets/readme/youtube-cd-hud-options-configured.png" width="100%" alt="Actual settings page: yellow accent, 115% disc scale and 92% surface opacity" /><br /><sub>Yellow accent, 115% disc scale, 92% surface opacity</sub></td>
+</tr>
+</table>
+
+*These are existing screenshots of the 5.8.3 settings page. The current version adds layout editing controls and has a different arrangement.*
+
+| Controls | What you can do |
+| --- | --- |
+| Sources and search | Enable sources, automatic search and Prefer 1001; set a 5–30 second timeout and a limit of 1–10 candidate pages. |
+| HUD appearance | Show or hide the disc and transport, change text sizes, disc scale, surface opacity, font and accent color. |
+| Live Monitor layout | Drag components, select their properties, load bundled layouts and use relative sizing or group scaling. |
+| Custom CSS | Apply appearance overrides for more specific customization. |
+| Save and apply | Check the preview, then persist settings and layout. A/B/C provide separate, manually saved slots for the current browser session. |
+
 ## Layout Editor Preview
 
-Five portrait states form one continuous strip. These are **screenshots of reconstructed UI simulations**, rearranged to explain supported features, not unchanged extension screenshots or live-playback acceptance evidence. Open the image for the scalable vector version.
+**Select a component and make it your own.** Position and style the title, time, disc, source buttons and tracklist individually so the HUD fits what you are watching.
 
-[![Editor states 01–05](docs/assets/readme/editor-states/editor-states-strip.jpg)](docs/assets/readme/editor-states/editor-states-strip.svg)
+![Actual settings preview with yellow accent and unobstructed title and disc layout](docs/assets/readme/youtube-cd-hud-options-configured.png)
 
-| Image | Parameters and behavior |
+*An existing settings capture with a complete layout: yellow accent, 115% disc scale and 92% surface opacity. This shows the 5.8.3 appearance preview, not the final layout editor in the current version.*
+
+| Feature | What it does |
 | --- | --- |
-| [01 · Properties](docs/assets/readme/editor-states/parameters.jpg) | Surface and text settings are independent. Example: title width **33.75%**, surface opacity **85%**, **18px** text and corner level **4/10**. Depending on the component, adjust color, opacity, size, border, corners, blur, text font, size, alignment and effects. |
-| [02 · Layers](docs/assets/readme/editor-states/layers.jpg) | Enable **Z axis**: title **Z=2** sits above time **Z=1**, within **−99 to 99**. The base encloses the content underneath. Split previous/next controls have separate positions with shared size and appearance. |
-| [03 · Proportions](docs/assets/readme/editor-states/scale.jpg) | **Size** preserves the current aspect ratio; **SCALE %** transforms all, selected or overlapping components. Example: **1280×720 / REL % / 110%**. Dimensions, spacing and text scale together within limits. There is no separate aspect-lock toggle. Group scaling disables auto alignment to avoid rounding, rejects invalid sizes or bounds, and offers UNDO. |
-| [04 · Tracklist](docs/assets/readme/editor-states/tracklist.jpg) | Style the panel and text independently, with shadow and accent rail; the track-title component supports marquee. Example: **11px**, left alignment, **88%** surface opacity. Track names are samples. Actual playback highlights the current track from the selected source; long lists scroll. |
-| [05 · Placement and saving](docs/assets/readme/editor-states/save.jpg) | Adding a component searches for free space and fails if none fits. Same-layer drag collisions offer automatic Z ordering; **Cancel removes conflicting components from the panel**. Editor changes remain previews until **Save and apply**. A/B/C require SAVE and last for the browser session. **Dragging HUD components on YouTube saves their positions on release**. |
-
-[Original settings-page detail](docs/assets/readme/youtube-cd-hud-layout-editor-controls.png)
+| Component properties | The panel base exposes background, border, corners, envelope padding, shadow and accent rail. Text components also offer font, size, color, opacity and alignment. Available properties depend on the component. |
+| Layer order | Enable Z axis to arrange components from −99 to 99. The base encloses the content underneath. |
+| Keep proportions | Size preserves a component's current aspect ratio. SCALE % transforms selected, overlapping or all components together with their relative positions. This is part of the scaling operation, not a separate lock toggle. |
+| Track display | Style panel and text independently, scroll long lists, highlight the playing track and enable title marquee. |
+| Placement and collisions | New components search for free space. After a same-layer drag collision, confirmation can assign Z order automatically; Cancel removes conflicting components from the panel. |
+| Save the layout | Editor changes require Save and apply. Dragging HUD components on YouTube saves their positions on release. |
 
 ---
 
