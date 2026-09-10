@@ -24,6 +24,7 @@
 
     <main>
         <form id="settings-form" autocomplete="off">
+            <div class="quick-settings">
             <section class="master-strip" aria-labelledby="master-title">
                 <div>
                     <p class="section-index" data-i18n="options.masterIndex">總開關</p>
@@ -53,6 +54,8 @@
                     </select>
                 </label>
             </section>
+
+            </div>
 
             <div class="control-grid">
                 <div class="settings-rail">
@@ -105,11 +108,22 @@
                         </div>
                     </section>
 
-                    <section class="control-section" aria-labelledby="visual-title">
-                        <div class="section-heading">
+
+
+
+                </div>
+
+                <aside class="preview-rail" aria-labelledby="preview-title">
+                    <div class="preview-heading">
+                        <p class="section-index" data-i18n="options.previewIndex">即時監看</p>
+                        <h2 id="preview-title" data-i18n="options.previewTitle">即時預覽</h2>
+                    </div>
+                    <div class="appearance-tools">
+<details class="appearance-details" aria-labelledby="visual-title">
+                        <summary class="section-heading">
                             <p class="section-index" data-i18n="options.visualIndex">外觀</p>
                             <h2 id="visual-title" data-i18n="options.visualTitle">HUD 外觀</h2>
-                        </div>
+                        </summary>
 
                         <div class="switch-list compact">
                             <label class="switch-row">
@@ -163,25 +177,18 @@
                             <span><b data-i18n="options.accentColor">訊號色</b><small data-i18n="options.accentColorHelp">焦點、作用中控制與刻度線</small></span>
                             <input id="accentColor" name="accentColor" type="color">
                         </label>
-                    </section>
-
-                    <section class="control-section css-section" aria-labelledby="css-title">
-                        <div class="section-heading">
+                    </details>
+<details class="appearance-details" aria-labelledby="css-title">
+                        <summary class="section-heading">
                             <p class="section-index" data-i18n="options.overrideIndex">覆寫</p>
                             <h2 id="css-title" data-i18n="options.customCss">自訂 CSS</h2>
-                        </div>
+                        </summary>
                         <p class="field-note" data-i18n="options.customCssHelp">CSS 會直接套用到 YouTube 頁面。建議以 #yt-cd-hud 或 .yt-tracklist-panel 限定範圍。</p>
                         <label class="css-editor">
                             <span class="sr-only" data-i18n="options.customCss">自訂 CSS</span>
-                            <textarea id="customCss" name="customCss" spellcheck="false" placeholder="#yt-cd-hud {&#10;  border-width: 2px;&#10;}"></textarea>
+                            <textarea id="customCss" name="customCss" spellcheck="false" placeholder="#yt-cd-hud {&#10;  border-width: 1px;&#10;}"></textarea>
                         </label>
-                    </section>
-                </div>
-
-                <aside class="preview-rail" aria-labelledby="preview-title">
-                    <div class="preview-heading">
-                        <p class="section-index" data-i18n="options.previewIndex">即時監看</p>
-                        <h2 id="preview-title" data-i18n="options.previewTitle">即時預覽</h2>
+                    </details>
                     </div>
                     <section class="component-library-shell" aria-labelledby="component-library-title">
                         <div class="component-library-heading">
