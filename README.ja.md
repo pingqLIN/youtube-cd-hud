@@ -113,9 +113,9 @@ YouTube 自体に利用可能な曲目情報がある場合、`YT` 情報源が�
 
 [options.html](extension/options/options.html) では、情報源、自動検索、HUD の外観、レイアウトを調整できます。Chrome の拡張機能メニューから「オプション」を開きます。
 
-![実際の編集画面：Panel base の背景、枠線、角丸、余白、エフェクト](docs/assets/readme/youtube-cd-hud-layout-editor-controls.png)
+![実際の設定画面：黄色のアクセントと重なりのない HUD 配置](docs/assets/readme/youtube-cd-hud-options-configured.png)
 
-*既存の実操作キャプチャです。表示される ABS モードは当時の編集状態で、新しいレイアウトは REL % が既定です。*
+*既存の 5.8.3 設定画面です。黄色のアクセント、115% のディスク倍率、92% の不透明度を表示しています。現行エディターの最終画面ではありません。*
 
 [設定ページと各機能の説明（English）](README.md#optionshtml-make-the-player-yours) · [繁體中文](README.zh-tw.md#版面編輯器預覽)。設定ページは Save and apply で保存し、YouTube 上で HUD をドラッグした位置は操作終了時に自動保存します。
 

@@ -158,13 +158,13 @@ The Chrome extension's [options.html settings page](extension/options/options.ht
 
 **Select a component and make it your own.** Position and style the title, time, disc, source buttons and tracklist individually so the HUD fits what you are watching.
 
-![Actual editor detail: Panel base selected with background, border, corners, envelope padding and effects](docs/assets/readme/youtube-cd-hud-layout-editor-controls.png)
+![Actual settings preview with yellow accent and unobstructed title and disc layout](docs/assets/readme/youtube-cd-hud-options-configured.png)
 
-*Existing capture of an actual editing session: selecting the panel base exposes its properties below the canvas. ABS mode and track text reflect that session; new layouts now default to REL %.*
+*An existing settings capture with a complete layout: yellow accent, 115% disc scale and 92% surface opacity. This shows the 5.8.3 appearance preview, not the final layout editor in the current version.*
 
 | Feature | What it does |
 | --- | --- |
-| Component properties | The pictured base exposes background, border, corners, envelope padding, shadow and accent rail. Text components also offer font, size, color, opacity and alignment. Available properties depend on the component. |
+| Component properties | The panel base exposes background, border, corners, envelope padding, shadow and accent rail. Text components also offer font, size, color, opacity and alignment. Available properties depend on the component. |
 | Layer order | Enable Z axis to arrange components from −99 to 99. The base encloses the content underneath. |
 | Keep proportions | Size preserves a component's current aspect ratio. SCALE % transforms selected, overlapping or all components together with their relative positions. This is part of the scaling operation, not a separate lock toggle. |
 | Track display | Style panel and text independently, scroll long lists, highlight the playing track and enable title marquee. |
