@@ -1,6 +1,6 @@
 # Cue Fox · YouTube Track HUD
 
-Previously **YouTube CD HUD** · 中文名稱：**曲狐**. Repository and install paths remain `youtube-cd-hud`.
+Previously **YouTube CD HUD** . Repository and install paths remain `youtube-cd-hud`.
 
 Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD with switchable data sources.
 
