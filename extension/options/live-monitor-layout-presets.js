@@ -14,21 +14,25 @@
         if (!BUNDLED_PRESETS.some(preset => preset.id === id)) return null;
         const reader = id === 'tracklist-reader';
         const layout = composer.createDefaultLayout();
+        if (reader) {
+            layout.canvas.alignmentGrid.unitWidth = 4;
+            layout.canvas.alignmentGrid.unitHeight = 4;
+        }
         const palette = reader
             ? { primaryColor: '#18181b', secondaryColor: '#fbbf24' }
             : { primaryColor: '#111827', secondaryColor: '#7dd3fc' };
         // Pixel centers on the shipped 1280 × 720 canvas; normalization applies
         // the same size, alignment, and collision rules as manually edited layouts.
         const frames = reader ? {
-            disc: [136, 256, 128, 128],
-            'track-title': [480, 192, 560, 64],
-            'time-readout': [288, 264, 176, 48],
-            'source-selector': [544, 264, 256, 48],
-            'tracklist-toggle': [728, 264, 48, 48],
-            'transport-controls': [296, 336, 192, 48],
-            'close-control': [824, 192, 48, 48],
-            'text-size-control': [448, 336, 64, 48],
-            'tracklist-panel': [1040, 344, 368, 400],
+            disc: [464, 256, 128, 128],
+            'track-title': [436, 360, 296, 64],
+            'time-readout': [360, 424, 144, 48],
+            'source-selector': [540, 424, 200, 48],
+            'tracklist-toggle': [608, 480, 64, 48],
+            'transport-controls': [392, 480, 208, 48],
+            'close-control': [616, 360, 48, 64],
+            'text-size-control': [536, 480, 64, 48],
+            'tracklist-panel': [816, 348, 320, 312],
         } : {
             disc: [144, 552, 88, 88],
             'track-title': [376, 512, 336, 48],
@@ -62,7 +66,25 @@
                 if (component.id === 'time-readout') component.textStyle.fontSize = reader ? 18 : 16;
             }
         }
-        return composer.normalizeLayout(themed);
+        const normalized = composer.normalizeLayout(themed);
+        // Center the complete visible group, including the disc outside the
+        // dynamic base, so each preset leaves room to edit on all four sides.
+        const visible = normalized.components.filter(component => component.present);
+        const rects = visible.map(component => composer.componentRect(component.geometry, normalized.canvas));
+        const grid = normalized.canvas.alignmentGrid;
+        const dx = Math.round((normalized.canvas.width - Math.min(...rects.map(rect => rect.left)) - Math.max(...rects.map(rect => rect.right))) / 2 / grid.unitWidth) * grid.unitWidth;
+        const dy = Math.round((normalized.canvas.height - Math.min(...rects.map(rect => rect.top)) - Math.max(...rects.map(rect => rect.bottom))) / 2 / grid.unitHeight) * grid.unitHeight;
+        for (const component of visible) {
+            component.geometry.x += dx / normalized.canvas.width;
+            component.geometry.y += dy / normalized.canvas.height;
+            if (component.arrangement) {
+                for (const position of Object.values(component.arrangement.positions)) {
+                    position.x += dx / normalized.canvas.width;
+                    position.y += dy / normalized.canvas.height;
+                }
+            }
+        }
+        return composer.normalizeLayout(normalized);
     }
 
     function sessionStorage() {
@@ -270,7 +292,8 @@
             const enabled = !editor.state.layout.canvas.alignmentGrid.enabled;
             editor.updateAlignment(enabled);
             align.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-            status.textContent = enabled ? 'Auto align enabled on the hidden 8 × 8 grid.' : 'Auto align disabled.';
+            const grid = editor.state.layout.canvas.alignmentGrid;
+            status.textContent = enabled ? `Auto align enabled on the hidden ${grid.unitWidth} × ${grid.unitHeight} grid.` : 'Auto align disabled.';
         });
         void render().catch(error => {
             console.warn('[CD HUD] Could not load temporary layout slots.', error);
