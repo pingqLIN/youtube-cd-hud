@@ -16,16 +16,48 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 
 ## See it during playback
 
-![Historical playback screenshot: YouTube timestamp tracklist and current track](docs/assets/readme/youtube-cd-hud-preview-02.png)
+<table>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-01.png" width="100%" alt="YouTube CD HUD showing an active track in a TrackId.net result." />
+      <br />
+      <sub>01 · Active-track highlight with a TrackId.net result</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-02.png" width="100%" alt="YouTube CD HUD showing a YouTube timestamp tracklist over video playback." />
+      <br />
+      <sub>02 · YouTube timestamp tracklist in sync with playback</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-03.png" width="100%" alt="YouTube CD HUD showing a 1001Tracklists result with a highlighted current track." />
+      <br />
+      <sub>03 · Source indicator and current-track state</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-04.png" width="100%" alt="YouTube CD HUD and tracklist panel over a live DJ video." />
+      <br />
+      <sub>04 · Compact HUD over a live DJ set</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-05.png" width="100%" alt="Large YouTube CD HUD and tracklist panel with the current track highlighted." />
+      <br />
+      <sub>05 · Expanded tracklist view for longer sets</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-06.png" width="100%" alt="YouTube CD HUD showing the current track and a scrollable tracklist." />
+      <br />
+      <sub>06 · Scrollable tracklist with synchronized HUD state</sub>
+    </td>
+  </tr>
+</table>
 
 *Restored from the previous README. This is a historical playback screenshot, not a capture of the new editor or a new live-browser acceptance result.*
 
 <details>
-<summary>More playback styles and original HDR artwork</summary>
+<summary>Original HDR artwork</summary>
 
-| Current track from TrackId.net | Another playback style |
-| --- | --- |
-| ![TrackId.net current-track highlight](docs/assets/readme/youtube-cd-hud-preview-01.png) | ![Historical playback HUD](docs/assets/readme/youtube-cd-hud-preview-03.png) |
 
 [Original HDR sync artwork](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg) · [Original HDR interface artwork](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg) · [Asset preservation guide](docs/assets/readme/ASSETS.md)
 

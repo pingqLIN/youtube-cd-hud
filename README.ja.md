@@ -16,7 +16,42 @@ YouTube の DJ セット、ミックス、音楽動画に、複数の情報源�
 
 ## 再生中の表示
 
-![以前の README に掲載されていた再生画面](docs/assets/readme/youtube-cd-hud-preview-02.png)
+<table>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-01.png" width="100%" alt="TrackId.net の結果で現在の曲を強調表示する YouTube CD HUD。" />
+      <br />
+      <sub>01 · TrackId.net の結果と現在の曲の強調表示</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-02.png" width="100%" alt="YouTube のタイムスタンプ付きトラックリストを動画再生に重ねる YouTube CD HUD。" />
+      <br />
+      <sub>02 · YouTube のタイムスタンプ曲目と再生位置の同期</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-03.png" width="100%" alt="1001Tracklists の結果と現在の曲を表示する YouTube CD HUD。" />
+      <br />
+      <sub>03 · 情報源表示と現在の曲の状態</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-04.png" width="100%" alt="DJ 動画の上に HUD とトラックリストパネルを表示する YouTube CD HUD。" />
+      <br />
+      <sub>04 · DJ セット上に表示するコンパクトな HUD</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-05.png" width="100%" alt="現在の曲を強調表示する YouTube CD HUD とトラックリストパネル。" />
+      <br />
+      <sub>05 · 長いセット向けの展開トラックリスト</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-06.png" width="100%" alt="現在の曲とスクロール可能なトラックリストを表示する YouTube CD HUD。" />
+      <br />
+      <sub>06 · スクロール可能なトラックリストと同期中の HUD</sub>
+    </td>
+  </tr>
+</table>
 
 *過去の再生画面です。今回の変更のライブ動作検証を示すものではありません。*
 
@@ -62,44 +97,9 @@ YouTube 自体に利用可能な曲目情報がある場合、`YT` 情報源が�
 
 ## 使用中のプレビュー
 
-拡張機能は、YouTube の再生中も HUD とトラックリストパネルを表示し続けます。以下は、異なる DJ セットとトラックリスト情報源での実際の画面です。視覚的なプレビューであり、実際のブラウザーで行う受け入れテストの代わりにはなりません。
+[ページ冒頭の再生中の表示](#再生中の表示)に、6 枚のスクリーンショットを掲載しています。
 
-<table>
-  <tr>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-01.png" width="100%" alt="TrackId.net の結果で現在の曲を強調表示する YouTube CD HUD。" />
-      <br />
-      <sub>01 · TrackId.net の結果と現在の曲の強調表示</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-02.png" width="100%" alt="YouTube のタイムスタンプ付きトラックリストを動画再生に重ねる YouTube CD HUD。" />
-      <br />
-      <sub>02 · YouTube のタイムスタンプ曲目と再生位置の同期</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-03.png" width="100%" alt="1001Tracklists の結果と現在の曲を表示する YouTube CD HUD。" />
-      <br />
-      <sub>03 · 情報源表示と現在の曲の状態</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-04.png" width="100%" alt="DJ 動画の上に HUD とトラックリストパネルを表示する YouTube CD HUD。" />
-      <br />
-      <sub>04 · DJ セット上に表示するコンパクトな HUD</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-05.png" width="100%" alt="現在の曲を強調表示する YouTube CD HUD とトラックリストパネル。" />
-      <br />
-      <sub>05 · 長いセット向けの展開トラックリスト</sub>
-    </td>
-    <td width="33.33%" valign="top">
-      <img src="docs/assets/readme/youtube-cd-hud-preview-06.png" width="100%" alt="現在の曲とスクロール可能なトラックリストを表示する YouTube CD HUD。" />
-      <br />
-      <sub>06 · スクロール可能なトラックリストと同期中の HUD</sub>
-    </td>
-  </tr>
-</table>
+---
 
 ## インストール方法を選ぶ
 

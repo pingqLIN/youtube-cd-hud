@@ -16,16 +16,48 @@
 
 ## 播放曲目時的樣式
 
-![歷史播放截圖：YouTube 時間戳曲目列表與目前曲目](docs/assets/readme/youtube-cd-hud-preview-02.png)
+<table>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-01.png" width="100%" alt="YouTube CD HUD 在 TrackId.net 曲目結果中醒目標示目前曲目。" />
+      <br />
+      <sub>01 · TrackId.net 結果與目前曲目醒目標示</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-02.png" width="100%" alt="YouTube CD HUD 在影片播放畫面上顯示 YouTube 時間戳曲目列表。" />
+      <br />
+      <sub>02 · YouTube 時間戳曲目與播放進度同步</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-03.png" width="100%" alt="YouTube CD HUD 顯示 1001Tracklists 結果與目前曲目。" />
+      <br />
+      <sub>03 · 資料來源指示與目前曲目狀態</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-04.png" width="100%" alt="YouTube CD HUD 與曲目列表面板顯示在 DJ 影片上方。" />
+      <br />
+      <sub>04 · 顯示在 DJ Set 上方的精簡 HUD</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-05.png" width="100%" alt="YouTube CD HUD 與曲目列表面板醒目標示目前曲目。" />
+      <br />
+      <sub>05 · 適合較長 Set 的展開曲目列表</sub>
+    </td>
+    <td width="33.33%" valign="top">
+      <img src="docs/assets/readme/youtube-cd-hud-preview-06.png" width="100%" alt="YouTube CD HUD 顯示目前曲目與可捲動的曲目列表。" />
+      <br />
+      <sub>06 · 可捲動曲目列表與同步中的 HUD 狀態</sub>
+    </td>
+  </tr>
+</table>
 
 *從前一版 README 恢復的實際播放截圖。此圖為歷史介面預覽，不是新版編輯器截圖，也不代表本次已完成即時瀏覽器驗收。*
 
 <details>
-<summary>更多播放樣式與 HDR 原始插圖</summary>
+<summary>HDR 原始插圖</summary>
 
-| TrackId.net 目前曲目 | 另一種播放樣式 |
-| --- | --- |
-| ![TrackId.net 曲目醒目標示](docs/assets/readme/youtube-cd-hud-preview-01.png) | ![歷史播放 HUD 樣式](docs/assets/readme/youtube-cd-hud-preview-03.png) |
 
 [HDR 同步插圖原檔](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg) · [HDR 介面插圖原檔](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg) · [資產保留流程](docs/assets/readme/ASSETS.zh-tw.md)
 
