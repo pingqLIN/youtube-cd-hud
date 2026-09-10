@@ -77,3 +77,39 @@ test('extracts rendered 1001 rows into the direct packet contract', () => {
   assert.equal(packet.provider, '1001tracklists');
   assert.deepEqual(JSON.parse(JSON.stringify(packet.tracks)), [{ time: 260, title: 'Artist - Track' }]);
 });
+
+test('does not turn empty rendered cues into zero-second tracks', () => {
+  const makeRow = (value, visibleCue = '') => ({
+    querySelector(selector) {
+      if (selector.includes('.cue,')) return { textContent: visibleCue };
+      if (selector.includes('.trackValue')) return { textContent: 'Key4050 - Want More' };
+      if (selector.includes('[data-cue]')) return { dataset: {}, value };
+      return null;
+    },
+  });
+  const extract = rows => packetApi.extractRenderedTracklist({
+    querySelector() { return null; },
+    querySelectorAll() { return rows; },
+  }, 'https://www.1001tracklists.com/tracklist/example.html');
+
+  assert.equal(extract([makeRow('')]), null);
+  assert.equal(extract([makeRow('  ')]), null);
+  assert.equal(extract([makeRow('', 'not a cue')]), null);
+  assert.equal(extract([makeRow('', '07:41')]).tracks[0].time, 461);
+  assert.equal(extract([makeRow('0')]).tracks[0].time, 0);
+  assert.equal(extract([makeRow('120', '07:41')]).tracks[0].time, 120);
+});
+
+test('rejects absent or coerced packet times and stale all-zero multi-track packets', () => {
+  const normalize = tracks => packetApi.normalizePacket({
+    version: 1,
+    provider: '1001tracklists',
+    canonicalUrl: 'https://www.1001tracklists.com/tracklist/example.html',
+    tracks,
+  });
+  for (const time of [null, undefined, '', '  ', false, [], -1, 'invalid', Infinity]) {
+    assert.equal(normalize([{ time, title: 'Untimed track' }]), null, `invalid time: ${String(time)}`);
+  }
+  assert.equal(normalize([{ time: 0, title: 'Intro' }]).tracks[0].time, 0);
+  assert.equal(normalize([{ time: 0, title: 'Intro' }, { time: 0, title: 'Next' }]), null);
+});

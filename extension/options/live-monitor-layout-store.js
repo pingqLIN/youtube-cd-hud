@@ -1,29 +1,24 @@
 (function () {
     'use strict';
 
-    const STORAGE_KEY = 'liveMonitorLayout';
+    const composer = globalThis.YtCdHudLiveMonitorComposer;
 
-    async function load(defaultLayout) {
+    async function load() {
+        const fallback = composer.createDefaultLayout();
         try {
-            const result = await chrome.storage.local.get(STORAGE_KEY);
-            return result[STORAGE_KEY] || structuredClone(defaultLayout);
-        } catch {
-            return structuredClone(defaultLayout);
+            const result = await chrome.storage.local.get([composer.STORAGE_KEY, composer.LEGACY_STORAGE_KEY]);
+            return composer.normalizeLayout(result[composer.STORAGE_KEY] || result[composer.LEGACY_STORAGE_KEY] || fallback);
+        } catch (error) {
+            console.warn('[CD HUD] Could not load Live Monitor layout; using defaults.', error);
+            return fallback;
         }
     }
 
     async function save(layout) {
-        await chrome.storage.local.set({ [STORAGE_KEY]: layout });
+        const normalized = composer.normalizeLayout(layout);
+        await chrome.storage.local.set({ [composer.STORAGE_KEY]: normalized });
+        return normalized;
     }
 
-    function reset(defaultLayout) {
-        return structuredClone(defaultLayout);
-    }
-
-    globalThis.YtCdHudLiveMonitorLayoutStore = {
-        STORAGE_KEY,
-        load,
-        save,
-        reset
-    };
+    globalThis.YtCdHudLiveMonitorLayoutStore = Object.freeze({ load, save, normalize: composer.normalizeLayout });
 })();

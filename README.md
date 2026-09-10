@@ -4,11 +4,11 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 
 [繁體中文](README.zh-tw.md) · [日本語](README.ja.md) · [Interface language guide](docs/i18n.md)
 
-![Cue Fox synchronizing timestamp cards around a circular playback timeline](docs/assets/readme/youtube-cd-hud-cue-fox-sync-banner-v1.png)
+![Concept artwork: Cue Fox operating a glowing turntable](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg)
 
 > Find the tracklist. Match the timeline. Stay on the current track.
 
-[![Version 5.12.0](https://img.shields.io/badge/version-5.12.0-2563eb)](package.json)
+[![Version 5.13.0](https://img.shields.io/badge/version-5.13.0-2563eb)](package.json)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
 
@@ -33,7 +33,7 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 
 ## Project Status
 
-YouTube CD HUD is currently distributed as a **source-only beta**. The current source version is **5.12.0** for both the userscript and the Manifest V3 Chrome extension.
+YouTube CD HUD is currently distributed as a **source-only beta**. The current source version is **5.13.0** for both the userscript and the Manifest V3 Chrome extension.
 
 There is no Chrome Web Store package documented by this repository. The Chrome build is loaded as an unpacked extension; the userscript is installed through Tampermonkey.
 
@@ -129,6 +129,8 @@ No build step is required just to use the current checked-in extension.
 6. Open the extension's options page if you want to change providers, appearance, or controls.
 7. Reload any YouTube tabs that were already open.
 
+On a YouTube tab, click the toolbar icon once to show or hide the HUD. Double-click it quickly to open the settings page without changing the final HUD visibility. You can also right-click the icon and choose **Open settings** from Chrome's native extension menu.
+
 > [!NOTE]
 > `npm run build:extension` is a **developer** command used after changing the shared source. Ordinary users loading the current repository do not need to run it.
 
@@ -159,10 +161,6 @@ YouTube CD HUD evaluates each source with the evidence it provides, including Yo
 | `TRACKID` | Exact YouTube ID when available | Fallback candidates use title and duration checks; short single-track videos may use artist / title / version matching against the public music-track index |
 
 Each provider's tracklist remains independent so users can switch between sources and compare results.
-
-<p align="center">
-  <img src="docs/assets/readme/youtube-cd-hud-cue-fox-provider-banner-v1.png" width="880" alt="Cue Fox comparing several tracklist-provider signals before selecting a synchronized source." />
-</p>
 
 ### Source behavior at a glance
 
@@ -198,17 +196,33 @@ Automatic 1001 retries pause after a detected block, while manual retry remains 
 
 The HUD brings the current track, selected source, and playback synchronization state into one view, with controls for navigation, scrubbing, and appearance.
 
-Key interface features include:
+![Concept artwork: Cue Fox at a turntable with a HUD on the left and a tracklist panel on the right](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg)
 
-- Draggable CD-style HUD.
-- Circular artwork derived from the current YouTube thumbnail.
-- Cover-derived accent color.
-- Current track title and source indicator.
-- Previous / next track navigation.
-- Tracklist panel with active-track highlighting.
-- Direct disc scrubbing.
-- Adjustable HUD width and text size.
-- Dedicated extension options page for provider switches, typography, disc scale, panel opacity, accent color, visible controls, and custom CSS.
+*The two Cue Fox illustrations are concept artwork, supplied as original HDR JPEGs. See the interface screenshots above and the options screenshots below for actual UI.*
+
+The draggable HUD uses circular YouTube thumbnail artwork and a cover-derived accent color; its width and text size are adjustable.
+
+| Control | How to use it |
+| --- | --- |
+| Source | Choose `YT` for YouTube tracks, or open `DB ▼` to search/select `1001`, `MIXESDB`, or `TRACKID`. Switching sources keeps the playback position. |
+| Previous / next | Use `◀ PREV` / `NEXT ▶` (labels follow the interface language) to jump between timestamped tracks in the selected source. |
+| Tracklist panel | Press `≡` to show or hide the list. Click a timestamped row to play from that cue; the current track is highlighted. |
+| Disc scrubbing | Hold and rotate the disc: clockwise fast-forwards; counter-clockwise loops a short sample. Release to resume playback. |
+
+See the [Live Monitor Visual Composer guide](docs/live-monitor-visual-composer.md) for selecting, moving, resizing, and styling HUD components, then applying the saved layout to YouTube.
+
+### Options page walkthrough
+
+These existing options-page screenshots show version **5.8.3**, including its built-in sample HUD preview. The current version adds provider and language controls; the sample preview is not live YouTube playback.
+
+| Settings overview | Configured appearance |
+| --- | --- |
+| [![Options page with provider settings, appearance controls, custom CSS, and a sample HUD preview](docs/assets/readme/youtube-cd-hud-options-overview.png)](docs/assets/readme/youtube-cd-hud-options-overview.png) | [![Options page with a yellow accent, 115% disc scale, 92% panel opacity, and transport controls hidden](docs/assets/readme/youtube-cd-hud-options-configured.png)](docs/assets/readme/youtube-cd-hud-options-configured.png) |
+| Start with provider behavior and the default appearance. | Example: adjust the disc, opacity, accent, and visible controls. |
+
+1. **Providers:** open the extension's options page; enable `1001`, `MixesDB`, or `TrackId.net` as needed, and choose whether 1001 searches automatically or becomes preferred after a match.
+2. **Appearance:** adjust typography, disc scale, panel opacity, accent color, and visible controls while checking the sample preview.
+3. **Custom CSS:** enter overrides scoped to `#yt-cd-hud` or `.yt-tracklist-panel`, then choose **Save and apply**. Check CSS changes on the YouTube HUD; settings are saved in the current Chrome profile.
 
 ## Interface Language
 
@@ -218,15 +232,11 @@ The translated extension surfaces include the options page and the HUD's visible
 
 See the [interface language guide](docs/i18n.md) for the exact detection order, persistence behavior, and contributor guidance. This repository's local checks do not replace a visible Chrome, Tampermonkey, and YouTube acceptance check.
 
-![YouTube CD HUD control page showing the default local settings and live HUD preview](docs/assets/readme/youtube-cd-hud-options-overview.png)
-
-For custom CSS, scope selectors to `#yt-cd-hud` or `.yt-tracklist-panel` where practical so overrides stay inside the project UI.
-
 ---
 
 ## Privacy, Permissions, and Cache
 
-The Chrome extension requests only the `storage` permission and limits host access to:
+The Chrome extension requests `storage` for local settings and `contextMenus` for the toolbar icon's **Open settings** menu. Host access is limited to:
 
 - YouTube
 - 1001Tracklists
