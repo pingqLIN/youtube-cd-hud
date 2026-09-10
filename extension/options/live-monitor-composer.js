@@ -429,7 +429,11 @@
     }
 
     function rectsOverlap(left, right) {
-        return left.left < right.right && left.right > right.left && left.top < right.bottom && left.bottom > right.top;
+        // Normalized coordinates can round an exact grid gap into a microscopic
+        // overlap. Do not relocate a correctly aligned unit on normalization.
+        const epsilon = 1e-7;
+        return left.left < right.right - epsilon && left.right > right.left + epsilon
+            && left.top < right.bottom - epsilon && left.bottom > right.top + epsilon;
     }
 
     function collisionFor(component, components, canvas) {

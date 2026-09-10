@@ -240,6 +240,44 @@ test('built-in panels survive storage and runtime normalization with usable geom
   }
 });
 
+test('centers built-in groups and aligns the reader controls on a compact grid', () => {
+  const composer = loadComposer();
+  const presets = loadLayoutPresets(composer);
+  for (const preset of presets.BUNDLED_PRESETS) {
+    const layout = presets.createBundledLayout(preset.id);
+    const visible = layout.components.filter(component => component.present);
+    const rects = visible.map(component => composer.componentRect(component.geometry, layout.canvas));
+    const left = Math.min(...rects.map(rect => rect.left));
+    const right = Math.max(...rects.map(rect => rect.right));
+    const top = Math.min(...rects.map(rect => rect.top));
+    const bottom = Math.max(...rects.map(rect => rect.bottom));
+    assert.ok(Math.abs((left + right) / 2 - layout.canvas.width / 2) <= 4);
+    assert.ok(Math.abs((top + bottom) / 2 - layout.canvas.height / 2) <= 4);
+    assert.ok(left >= 96 && right <= layout.canvas.width - 96);
+    assert.ok(top >= 96 && bottom <= layout.canvas.height - 96);
+  }
+  const reader = presets.createBundledLayout('tracklist-reader');
+  const rect = id => Object.fromEntries(Object.entries(composer.componentRect(composer.getComponent(reader, id).geometry, reader.canvas))
+    .map(([key, value]) => [key, Math.round(value * 1e6) / 1e6]));
+  const rows = [['track-title', 'close-control'], ['time-readout', 'source-selector'], ['transport-controls', 'text-size-control', 'tracklist-toggle']];
+  for (const row of rows) {
+    assert.equal(rect(row[0]).left, rect('track-title').left);
+    assert.equal(rect(row.at(-1)).right, rect('close-control').right);
+    for (let index = 1; index < row.length; index += 1) {
+      assert.equal(rect(row[index]).top, rect(row[0]).top);
+      assert.equal(rect(row[index]).left - rect(row[index - 1]).right, 8);
+    }
+  }
+  assert.equal(rect('time-readout').top - rect('track-title').bottom, 8);
+  assert.equal(rect('transport-controls').top - rect('time-readout').bottom, 8);
+  assert.equal(rect('tracklist-panel').left - rect('close-control').right, 16);
+  assert.equal(rect('tracklist-panel').top, rect('disc').top);
+  assert.equal(rect('tracklist-panel').bottom, rect('transport-controls').bottom);
+  for (const component of reader.components.filter(item => item.present && item.id !== 'disc' && item.id !== 'panel-base')) {
+    assert.equal(composer.rectsOverlap(rect('disc'), rect(component.id)), false, component.id);
+  }
+});
+
 test('loading a built-in panel previews it and leaves storage untouched until explicit save', async () => {
   class Element {
     constructor(tag) { this.tagName = tag.toUpperCase(); this.children = []; this.dataset = {}; this.listeners = {}; }
