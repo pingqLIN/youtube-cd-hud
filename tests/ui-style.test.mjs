@@ -21,6 +21,8 @@ test('fills the balanced responsive circular disc with a native widescreen thumb
   assert.match(source, /DEFAULT_TIME_SIZE\s*=\s*12/);
   assert.match(discArtRule, /background-size:\s*cover/);
   assert.doesNotMatch(discArtRule, /background-size:\s*auto\s+100%/);
+  assert.match(source, /\.cd-disc-wrapper\[data-ytcd-texture\] \.cd-art\s*\{[\s\S]*?opacity:\s*1;[\s\S]*?filter:\s*none;/);
+  assert.match(source, /data-ytcd-texture="gold"\][\s\S]*?\.cd-disc:after\s*\{[\s\S]*?conic-gradient/);
 });
 
 test('defines the industrial HUD palette and accessible interaction states', () => {
@@ -92,7 +94,7 @@ test('paces 1001 candidate requests and suppresses repeated automatic requests a
   assert.match(source, /fetchTracklistFrom1001\(title,\s*id,\s*true,\s*true,\s*activateOnSuccess\)/);
   assert.match(source, /window\.addEventListener\('focus',\s*handle1001VerificationReturn/);
   assert.match(source, /document\.addEventListener\('visibilitychange',\s*handle1001VerificationReturn/);
-  assert.match(source, /runtime\.onMessage\.addListener\(handle1001BridgeReadyMessage\)/);
+  assert.match(source, /runtime\.onMessage\.addListener\(handleRuntimeMessage\)/);
   assert.match(source, /message\?\.type\s*===\s*'YT_CD_HUD_1001_PACKET_V1'/);
   assert.match(source, /retrySearch\(true\)/);
   assert.match(source, /isFirstCandidate\s*&&\s*activateOnSuccess/);
@@ -118,7 +120,9 @@ test('keeps the lower-right HUD resize handle interactive and content-bounds the
 
 test('shows the tracklist explicitly and uses the redesigned compound controls', () => {
   assert.match(source, /tracklistPanel\.style\.display\s*=\s*tracklistVisible\s*\?\s*'block'\s*:\s*'none'/);
-  assert.match(source, /panel\.style\.display\s*=\s*tracklistVisible\s*\?\s*'block'\s*:\s*'none'/);
+  assert.match(source, /panel\.style\.display\s*=\s*isTracklistPanelVisible\(\)\s*\?\s*'block'\s*:\s*'none'/);
+  assert.match(source, /function isPersistentTracklistPanel\(\)/);
+  assert.match(source, /element\.parentNode !== hud\) hud\.appendChild\(element\)/);
   assert.match(source, /className\s*=\s*'hud-side-controls'/);
   assert.match(source, /createControlButton\(\s*'T±'/);
   assert.doesNotMatch(source, /createControlButton\('T[−+]'/);
@@ -134,7 +138,7 @@ test('shows the tracklist explicitly and uses the redesigned compound controls',
   assert.match(source, /createControlButton\(t\('searchTrackId'\)/);
   assert.match(source, /createControlButton\(t\('open1001'\)/);
   assert.match(source, /createControlButton\('≡'/);
-  assert.match(source, /sourceSelector\.appendChild\(oneThousandMenu\);[\s\S]*?sourceSelector\.appendChild\(tracklistBtn\)/);
+  assert.match(source, /sourceSelector\.appendChild\(oneThousandMenu\);[\s\S]*?sourceActions\.appendChild\(sourceSelector\);[\s\S]*?sourceActions\.appendChild\(tracklistBtn\)/);
   assert.doesNotMatch(source, /sideControls\.appendChild\(tracklistBtn\)/);
   assert.match(source, /createControlButton\('◀ PREV', t\('previousTrack'\)/);
   assert.match(source, /createControlButton\('NEXT ▶', t\('nextTrack'\)/);

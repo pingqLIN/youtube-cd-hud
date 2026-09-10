@@ -10,11 +10,11 @@ const outputPath = path.join(projectRoot, 'extension', 'content', 'youtube-cd-hu
 const userscriptHeader = /^\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==\s*/;
 const generatedBanner = '// Generated from src/youtube-cd-hud.user.js. Run npm run build:extension after source changes.\n\n';
 
-const source = fs.readFileSync(sourcePath, 'utf8');
-const output = generatedBanner + source.replace(userscriptHeader, '');
+const source = fs.readFileSync(sourcePath, 'utf8').replace(/\r\n?/g, '\n');
+const output = (generatedBanner + source.replace(userscriptHeader, '')).replace(/\r\n?/g, '\n');
 
 if (process.argv.includes('--check')) {
-    const current = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8') : '';
+    const current = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8').replace(/\r\n?/g, '\n') : '';
     if (current !== output) {
         console.error('Extension HUD runtime is out of date. Run npm run build:extension.');
         process.exitCode = 1;

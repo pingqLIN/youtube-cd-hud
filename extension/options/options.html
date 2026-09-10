@@ -15,7 +15,7 @@
         </div>
         <div class="header-readout" aria-label="擴充版本資訊" data-i18n-aria-label="options.versionInfo">
             <span>BUILD</span>
-            <strong>5.12.0</strong>
+            <strong>5.13.0</strong>
             <span>MODE</span>
             <strong>LOCAL</strong>
         </div>
@@ -26,7 +26,7 @@
         <form id="settings-form" autocomplete="off">
             <section class="master-strip" aria-labelledby="master-title">
                 <div>
-                    <p class="section-index" data-i18n="options.masterIndex">00 / 總開關</p>
+                    <p class="section-index" data-i18n="options.masterIndex">總開關</p>
                     <h2 id="master-title" data-i18n="options.masterTitle">擴充總開關</h2>
                     <p data-i18n="options.masterDescription">所有設定只保存在這個 Chrome 使用者資料中。</p>
                 </div>
@@ -58,7 +58,7 @@
                 <div class="settings-rail">
                     <section class="control-section" aria-labelledby="source-title">
                         <div class="section-heading">
-                            <p class="section-index" data-i18n="options.sourceIndex">01 / 資料來源</p>
+                            <p class="section-index" data-i18n="options.sourceIndex">資料來源</p>
                             <h2 id="source-title" data-i18n="options.sourceTitle">曲目資料來源</h2>
                             <span class="status-lamp" aria-hidden="true"></span>
                         </div>
@@ -107,7 +107,7 @@
 
                     <section class="control-section" aria-labelledby="visual-title">
                         <div class="section-heading">
-                            <p class="section-index" data-i18n="options.visualIndex">02 / 外觀</p>
+                            <p class="section-index" data-i18n="options.visualIndex">外觀</p>
                             <h2 id="visual-title" data-i18n="options.visualTitle">HUD 外觀</h2>
                         </div>
 
@@ -167,7 +167,7 @@
 
                     <section class="control-section css-section" aria-labelledby="css-title">
                         <div class="section-heading">
-                            <p class="section-index" data-i18n="options.overrideIndex">03 / 覆寫</p>
+                            <p class="section-index" data-i18n="options.overrideIndex">覆寫</p>
                             <h2 id="css-title" data-i18n="options.customCss">自訂 CSS</h2>
                         </div>
                         <p class="field-note" data-i18n="options.customCssHelp">CSS 會直接套用到 YouTube 頁面。建議以 #yt-cd-hud 或 .yt-tracklist-panel 限定範圍。</p>
@@ -183,22 +183,39 @@
                         <p class="section-index" data-i18n="options.previewIndex">即時監看</p>
                         <h2 id="preview-title" data-i18n="options.previewTitle">即時預覽</h2>
                     </div>
-                    <div class="preview-stage">
-                        <div class="preview-grid" aria-hidden="true"></div>
-                        <div id="hud-preview" class="hud-preview">
-                            <div class="preview-disc"><span></span></div>
-                            <div class="preview-info">
-                                <strong id="preview-title-text">Midnight Transit — Chapter 04</strong>
-                                <time id="preview-time">12:48 / 58:31</time>
-                                <div class="preview-source">
-                                    <span>SRC</span><b>YT</b><b class="source-1001"><i></i>DB⌄</b><b class="preview-tracklist">≡</b>
-                                    <div class="preview-transport"><b>◀ PREV</b><b>NEXT ▶</b></div>
-                                </div>
-                            </div>
-                            <div class="preview-tools"><b>×</b><b>T±</b></div>
-                            <i class="preview-resize" aria-hidden="true"></i>
+                    <section class="component-library-shell" aria-labelledby="component-library-title">
+                        <div class="component-library-heading">
+                            <h3 id="component-library-title">元件庫 / COMPONENT LIST</h3>
+                            <p>只顯示尚未加入面板的最小功能單元</p>
                         </div>
-                        <p class="preview-caption" data-i18n="options.previewCaption">YOUTUBE 播放器 / 1280×720</p>
+                        <div id="live-monitor-library"></div>
+                    </section>
+                    <div id="live-monitor-layout-controls"></div>
+                    <div class="preview-workbench">
+                        <div class="preview-stage">
+                            <div id="hud-preview" class="hud-preview" aria-label="HUD component canvas">
+                            <div class="preview-grid" aria-hidden="true"></div>
+                            <div class="preview-panel-base" data-lm-component="panel-base" tabindex="0" role="button" aria-label="Select dynamic panel base">
+                                <i class="preview-resize" aria-hidden="true"></i>
+                            </div>
+                            <div class="preview-disc" data-lm-component="disc" tabindex="0" role="button" aria-label="Select disc control"><i class="preview-disc-art" aria-hidden="true"></i><span></span></div>
+                            <strong id="preview-title-text" class="preview-title" data-lm-component="track-title" tabindex="0" role="button" aria-label="Select track title">Midnight Transit — Chapter 04</strong>
+                            <time id="preview-time" class="preview-time" data-lm-component="time-readout" tabindex="0" role="button" aria-label="Select time readout">12:48 / 58:31</time>
+                            <div class="preview-source-selector" data-lm-component="source-selector" tabindex="0" role="button" aria-label="Select source selector">
+                                <span>SRC</span><b>YT</b><b class="source-1001"><i></i>DB⌄</b>
+                            </div>
+                            <button class="preview-tracklist-toggle" data-lm-component="tracklist-toggle" type="button" aria-label="Select tracklist toggle">≡</button>
+                            <div class="preview-transport" data-lm-component="transport-controls" tabindex="0" role="group" aria-label="Select track controls"><b data-lm-part="previous" tabindex="0" role="button" aria-label="Select previous track position">◀ PREV</b><b data-lm-part="next" tabindex="0" role="button" aria-label="Select next track position">NEXT ▶</b></div>
+                            <button class="preview-tool preview-close" data-lm-component="close-control" type="button" aria-label="Select close control">×</button>
+                            <button class="preview-tool preview-text-size" data-lm-component="text-size-control" type="button" aria-label="Select text size control">T±</button>
+                            <section class="preview-tracklist-panel" data-lm-component="tracklist-panel" tabindex="0" role="button" aria-label="Select persistent tracklist panel">
+                                <header><strong>TRACKLIST</strong><span>YOUTUBE</span></header>
+                                <ol><li><time>00:00</time><span>Midnight Transit</span></li><li><time>04:18</time><span>Blue Hour</span></li><li><time>09:42</time><span>Last Platform</span></li></ol>
+                            </section>
+                            </div>
+                            <p id="live-monitor-canvas-status" class="preview-caption">YOUTUBE PLAYER / 1280×720 / ABS</p>
+                        </div>
+                        <div id="live-monitor-properties" class="preview-properties"></div>
                     </div>
                     <dl class="scope-list">
                         <div><dt data-i18n="options.storage">資料儲存</dt><dd data-i18n="options.storageValue">Chrome 本機</dd></div>
@@ -220,6 +237,6 @@
 
     <script src="../shared/settings.js"></script>
     <script src="../shared/i18n.js"></script>
-    <script src="options.js"></script>
+    <script src="live-monitor-loader.js?v=2"></script>
 </body>
 </html>

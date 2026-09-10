@@ -70,6 +70,24 @@ const {
   submit1001SearchVerification,
 } = sandbox.__YT_CD_HUD_TEST_EXPORTS__;
 
+test('does not restore malformed or all-zero multi-track 1001 cache entries', () => {
+  const cached = normalizeTracklistCache({
+    SpD30ejMNMs: {
+      savedAt: Date.now(), activeSource: '1001',
+      url1001: 'https://www.1001tracklists.com/tracklist/example.html',
+      tracks1001: [{ time: 0, title: 'Intro' }, { time: 0, title: 'Next' }],
+      candidates1001: [{
+        url: 'https://www.1001tracklists.com/tracklist/example.html',
+        tracks: [{ time: 0, title: 'Intro' }, { time: 0, title: 'Next' }],
+      }],
+      tracksTrackId: [{ time: null, title: 'Untimed' }, { time: 0, title: 'Valid single track' }],
+    },
+  });
+  assert.equal(cached.SpD30ejMNMs.tracks1001.length, 0);
+  assert.equal(cached.SpD30ejMNMs.candidates1001.length, 0);
+  assert.deepEqual(JSON.parse(JSON.stringify(cached.SpD30ejMNMs.tracksTrackId)), [{ time: 0, title: 'Valid single track' }]);
+});
+
 test('builds an encoded Google search URL for the displayed track', () => {
   assert.equal(
     getGoogleTrackSearchUrl('Tiësto & KSHMR - Secrets (Original Mix)'),

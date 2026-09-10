@@ -120,6 +120,8 @@ YouTube 自体に利用可能な曲目情報がある場合、`YT` 情報源が�
 6. プロバイダー、外観、操作を変更したい場合は拡張機能の設定ページを開きます。
 7. すでに開いている YouTube タブを再読み込みします。
 
+YouTube タブでツールバーアイコンを1回クリックすると HUD の表示を切り替えます。素早くダブルクリックすると、HUD の最終表示状態を変えずに設定ページを開きます。アイコンを右クリックして、Chrome の拡張機能メニューから **Open settings** を選ぶこともできます。
+
 > [!NOTE]
 > `npm run build:extension` は、共有ソースを変更した開発者向けのコマンドです。リポジトリ内の既存 `extension/` を読み込む通常の利用者は実行する必要がありません。
 
@@ -177,7 +179,7 @@ Chrome 拡張機能のインターフェースは、繁体字中国語（台湾�
 
 ## プライバシー、権限、キャッシュ
 
-Chrome 拡張機能が要求する権限は `storage` のみで、ホストアクセスは YouTube、1001Tracklists、MixesDB、TrackId.net に限定されます。
+Chrome 拡張機能は、ローカル設定用の `storage` と、ツールバーアイコンの **Open settings** メニュー用の `contextMenus` を要求します。ホストアクセスは YouTube、1001Tracklists、MixesDB、TrackId.net に限定されます。
 
 このプロジェクトは Chrome の `cookies` 権限を要求せず、`chrome.cookies` を呼び出さず、閲覧履歴を収集せず、分析機能も含みません。許可済みの 1001Tracklists 要求では、そのサイトの認証 Cookie がブラウザーにより添付されることがありますが、拡張機能が Cookie 値を読み取り、保存し、公開することはありません。
 

@@ -13,7 +13,7 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
   const manifest = JSON.parse(read('extension/manifest.json'));
 
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '5.12.0');
+  assert.equal(manifest.version, '5.13.0');
   assert.deepEqual(manifest.icons, {
     16: 'icons/icon16.png',
     32: 'icons/icon32.png',
@@ -27,7 +27,7 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
   for (const iconPath of Object.values(manifest.icons)) {
     assert.equal(fs.existsSync(path.join(projectRoot, 'extension', iconPath)), true);
   }
-  assert.deepEqual(manifest.permissions, ['storage']);
+  assert.deepEqual(manifest.permissions, ['storage', 'contextMenus']);
   assert.deepEqual(manifest.host_permissions, [
     'https://www.youtube.com/*',
     'https://1001tracklists.com/*',
@@ -761,28 +761,123 @@ test('uses anonymous read-only requests for supplemental providers', async () =>
   }
 });
 
-test('keeps the settings preview aligned with the half-overhang HUD geometry', () => {
+test('keeps the settings preview aligned with the atomic bounded layout model', () => {
   const html = read('extension/options/options.html');
   const css = read('extension/options/options.css');
 
-  assert.match(html, /<div class="preview-source">[\s\S]*?<div class="preview-transport">[\s\S]*?<\/div>[\s\S]*?<\/div>/);
-  assert.match(html, /class="preview-tracklist">≡<\/b>/);
-  assert.match(html, /class="preview-tools"><b>×<\/b><b>T±<\/b><\/div>/);
+  assert.match(html, /class="preview-panel-base"\s+data-lm-component="panel-base"/);
+  assert.match(html, /class="preview-source-selector"\s+data-lm-component="source-selector"/);
+  assert.match(html, /class="preview-tracklist-toggle"\s+data-lm-component="tracklist-toggle"/);
+  assert.match(html, /class="preview-transport"\s+data-lm-component="transport-controls"/);
+  assert.match(html, /data-lm-component="close-control"/);
+  assert.match(html, /data-lm-component="text-size-control"/);
   assert.match(html, /class="preview-resize"/);
-  assert.match(css, /\.hud-preview:before\s*\{[\s\S]*?inset:\s*0\s+0\s+0\s+calc\(var\(--preview-disc-size\)\s*\/\s*2\)/);
-  assert.match(css, /\.hud-preview\s*\{[\s\S]*?gap:\s*6px/);
-  assert.match(css, /\.preview-disc\s*\{[\s\S]*?margin:\s*0\s+2px\s+0\s+0/);
-  assert.match(css, /\.preview-transport b\s*\{[\s\S]*?width:\s*48px/);
+  assert.match(css, /\.preview-panel-base\s*\{/);
+  assert.match(css, /\.preview-transport\s*\{[\s\S]*?grid-template-columns:\s*1fr\s+1fr/);
   assert.match(css, /\.hud-preview\.hide-disc\s+\.preview-disc\s*\{\s*visibility:\s*hidden/);
-  assert.doesNotMatch(css, /\.hud-preview\.hide-disc:before\s*\{[^}]*left:\s*0/);
-  assert.match(css, /font-family:\s*var\(--preview-font\)/);
+  assert.doesNotMatch(css, /\.hud-preview:before/);
+  assert.match(css, /font:\s*700\s+var\(--lm-font-size\)\/1\.35\s+var\(--lm-font\)/);
   assert.match(read('extension/options/options.js'), /settingsApi\.FONT_STACKS\[settings\.fontFamily\]/);
+});
+
+test('toggles the HUD on one toolbar click and opens settings on double-click or the action menu', async () => {
+  let actionClickListener = null;
+  let contextMenuClickListener = null;
+  let installedListener = null;
+  let now = 1000;
+  let optionsOpenCount = 0;
+  let createdMenu = null;
+  const sentMessages = [];
+  const sessionStore = {};
+  const context = {
+    AbortController,
+    TextEncoder,
+    URL,
+    clearTimeout,
+    console,
+    Date: { now: () => now },
+    fetch: async () => { throw new Error('fetch is outside this test'); },
+    setTimeout,
+    chrome: {
+      action: { onClicked: { addListener(listener) { actionClickListener = listener; } } },
+      contextMenus: {
+        removeAll(callback) { callback(); },
+        create(properties) { createdMenu = properties; },
+        onClicked: { addListener(listener) { contextMenuClickListener = listener; } },
+      },
+      runtime: {
+        lastError: null,
+        async openOptionsPage() { optionsOpenCount += 1; },
+        onInstalled: { addListener(listener) { installedListener = listener; } },
+        onMessage: { addListener() {} },
+      },
+      storage: {
+        session: {
+          async get(key) { return { [key]: sessionStore[key] }; },
+          async set(value) { Object.assign(sessionStore, value); },
+          async remove(key) { delete sessionStore[key]; },
+        },
+      },
+      tabs: {
+        async sendMessage(tabId, message) {
+          sentMessages.push({ tabId, message });
+          return { ok: true };
+        },
+      },
+    },
+  };
+
+  vm.runInNewContext(read('extension/background/service-worker.js'), context);
+  assert.match(read('src/youtube-cd-hud.user.js'), /YT_CD_HUD_TOGGLE_VISIBILITY[\s\S]*?toggleHudVisibility\(\)/);
+  installedListener();
+  assert.deepEqual(JSON.parse(JSON.stringify(createdMenu)), {
+    id: 'yt-cd-hud-open-options',
+    title: '開啟設定 / Open settings',
+    contexts: ['action'],
+  });
+
+  await actionClickListener({ id: 42 });
+  assert.equal(sentMessages.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(sentMessages[0])), {
+    tabId: 42,
+    message: { type: 'YT_CD_HUD_TOGGLE_VISIBILITY' },
+  });
+  assert.equal(optionsOpenCount, 0);
+
+  now = 1200;
+  await actionClickListener({ id: 42 });
+  assert.equal(sentMessages.length, 2, 'the second click restores the first toggle before opening settings');
+  assert.equal(optionsOpenCount, 1);
+
+  contextMenuClickListener({ menuItemId: 'yt-cd-hud-open-options' });
+  await Promise.resolve();
+  assert.equal(optionsOpenCount, 2);
+});
+
+test('worker rejects untimed 1001 packets before delivery', () => {
+  const context = {
+    URL, TextEncoder,
+    chrome: {
+      action: { onClicked: { addListener() {} } },
+      runtime: { onMessage: { addListener() {} } },
+    },
+  };
+  vm.runInNewContext(read('extension/background/service-worker.js'), context);
+  const packet = tracks => context.normalize1001Packet({
+    version: 1, provider: '1001tracklists',
+    canonicalUrl: 'https://www.1001tracklists.com/tracklist/example.html', tracks,
+  });
+  for (const time of [null, undefined, '', ' ', false, [], -1]) {
+    assert.equal(packet([{ time, title: 'Untimed' }]), null);
+  }
+  assert.equal(packet([{ time: 0, title: 'Intro' }, { time: 0, title: 'Next' }]), null);
+  assert.equal(packet([{ time: 0, title: 'Intro' }, { time: 461, title: 'Next' }]).tracks.length, 2);
 });
 
 test('keeps the generated extension HUD synchronized with the userscript source', () => {
   const userscript = read('src/youtube-cd-hud.user.js');
   const generated = read('extension/content/youtube-cd-hud.js');
-  const stripped = userscript.replace(/^\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==\s*/, '');
+  const stripped = userscript.replace(/^\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==\s*/, '').replace(/\r\n?/g, '\n');
 
   assert.match(generated, /^\/\/ Generated from src\/youtube-cd-hud\.user\.js\./);
   assert.equal(generated.slice(generated.indexOf('(function ()')), stripped);

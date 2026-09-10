@@ -9,6 +9,9 @@ const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/;
 const PACKET_URL_PATTERN = /^https:\/\/(?:www\.)?1001tracklists\.com\/tracklist\//i;
 const MAX_PACKET_TRACKS = 300;
 const MAX_PACKET_BYTES = 128 * 1024;
+const ACTION_CLICK_STATE_KEY = 'ytCdHudActionClickV1';
+const ACTION_DOUBLE_CLICK_WINDOW_MS = 350;
+const ACTION_OPEN_OPTIONS_MENU_ID = 'yt-cd-hud-open-options';
 const activeDirectControllers = new Map();
 const activeBridgeRoutes = new Map();
 const remoteRequestOwners = new Map();
@@ -152,11 +155,14 @@ function normalize1001Packet(value) {
     } catch (error) {
         return null;
     }
-    const tracks = value.tracks.slice(0, MAX_PACKET_TRACKS).map(track => ({
-        time: Math.max(0, Math.floor(Number(track && track.time))),
+    const tracks = value.tracks.slice(0, MAX_PACKET_TRACKS).filter(track => (
+        typeof track?.time === 'number' || (typeof track?.time === 'string' && track.time.trim() !== '')
+    )).map(track => ({
+        time: Math.floor(Number(track.time)),
         title: String(track && track.title || '').replace(/\s+/g, ' ').trim().slice(0, 300),
-    })).filter(track => Number.isFinite(track.time) && track.title);
+    })).filter(track => Number.isFinite(track.time) && track.time >= 0 && track.title);
     if (!tracks.length) return null;
+    if (tracks.length > 1 && tracks.every(track => track.time === 0)) return null;
     const packet = {
         version: 1,
         provider: '1001tracklists',
@@ -407,13 +413,70 @@ async function cancelRemoteRequest(message, sender) {
     return { ok: true, cancelled: Boolean(directRoute || bridgeRoute) };
 }
 
-chrome.action.onClicked.addListener(async () => {
+async function openOptionsPage() {
     try {
         await chrome.runtime.openOptionsPage();
+        return true;
     } catch (error) {
         console.error('[CD HUD] Could not open the controls page.', error);
+        return false;
     }
-});
+}
+
+async function toggleHudForTab(tabId) {
+    if (!Number.isInteger(tabId)) return false;
+    try {
+        const response = await chrome.tabs.sendMessage(tabId, { type: 'YT_CD_HUD_TOGGLE_VISIBILITY' });
+        return response?.ok === true;
+    } catch (_error) {
+        return false;
+    }
+}
+
+async function handleActionClick(tab) {
+    const tabId = Number.isInteger(tab?.id) ? tab.id : null;
+    const now = Date.now();
+    const stored = await chrome.storage.session.get(ACTION_CLICK_STATE_KEY);
+    const previous = stored[ACTION_CLICK_STATE_KEY];
+    const elapsed = now - Number(previous?.clickedAt);
+    const isDoubleClick = tabId !== null
+        && previous?.tabId === tabId
+        && Number.isFinite(elapsed)
+        && elapsed >= 0
+        && elapsed <= ACTION_DOUBLE_CLICK_WINDOW_MS;
+
+    if (isDoubleClick) {
+        await chrome.storage.session.remove(ACTION_CLICK_STATE_KEY);
+        await toggleHudForTab(tabId);
+        await openOptionsPage();
+        return;
+    }
+
+    await chrome.storage.session.set({
+        [ACTION_CLICK_STATE_KEY]: { tabId, clickedAt: now },
+    });
+    await toggleHudForTab(tabId);
+}
+
+function registerActionContextMenu() {
+    chrome.contextMenus.removeAll(() => {
+        void chrome.runtime.lastError;
+        chrome.contextMenus.create({
+            id: ACTION_OPEN_OPTIONS_MENU_ID,
+            title: '開啟設定 / Open settings',
+            contexts: ['action'],
+        });
+    });
+}
+
+chrome.action.onClicked.addListener(handleActionClick);
+
+if (chrome.contextMenus && chrome.runtime.onInstalled) {
+    chrome.runtime.onInstalled.addListener(registerActionContextMenu);
+    chrome.contextMenus.onClicked.addListener(info => {
+        if (info.menuItemId === ACTION_OPEN_OPTIONS_MENU_ID) void openOptionsPage();
+    });
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message || ![

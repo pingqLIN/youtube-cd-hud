@@ -21,10 +21,17 @@
         return numbers[0] * 60 + numbers[1];
     }
 
+    function readCueSeconds(value) {
+        if (typeof value !== 'number' && typeof value !== 'string') return null;
+        if (typeof value === 'string' && !value.trim()) return null;
+        const time = Number(value);
+        return Number.isFinite(time) && time >= 0 ? Math.floor(time) : null;
+    }
+
     function normalizeTrack(track) {
-        const time = Math.max(0, Math.floor(Number(track && track.time)));
+        const time = readCueSeconds(track && track.time);
         const title = trim(track && track.title).slice(0, MAX_TITLE_LENGTH);
-        if (!Number.isFinite(time) || !title) return null;
+        if (time === null || !title) return null;
         return { time, title };
     }
 
@@ -56,6 +63,8 @@
         }
         tracks.sort((left, right) => left.time - right.time);
         if (!tracks.length) return null;
+        // Older extractors coerced empty cue fields to zero for every row.
+        if (tracks.length > 1 && tracks.every(track => track.time === 0)) return null;
         const packet = {
             version: 1,
             provider: '1001tracklists',
@@ -90,9 +99,13 @@
             const timeNode = row.querySelector('.cue, .cueValueField, .tlTime, .tl-time, .time, .timestamp, .duration');
             const titleNode = row.querySelector('.trackValue, .trackFormat, .tlTrack, .tl-track, .track-name, .title, .track, .track-title');
             const hiddenSeconds = row.querySelector('[data-cue], [data-time], [data-seconds], input[id*="cue"]');
-            const seconds = hiddenSeconds
-                ? Number(hiddenSeconds.dataset && (hiddenSeconds.dataset.cue || hiddenSeconds.dataset.time || hiddenSeconds.dataset.seconds) || hiddenSeconds.value)
-                : parseTimestampToSeconds(timeNode && (timeNode.textContent || timeNode.innerText));
+            const hiddenCue = hiddenSeconds ? [
+                hiddenSeconds.dataset?.cue,
+                hiddenSeconds.dataset?.time,
+                hiddenSeconds.dataset?.seconds,
+                hiddenSeconds.value,
+            ].map(readCueSeconds).find(value => value !== null) : null;
+            const seconds = hiddenCue ?? parseTimestampToSeconds(timeNode && (timeNode.textContent || timeNode.innerText));
             tracks.push({ time: seconds, title: titleNode && (titleNode.textContent || titleNode.innerText) });
         });
         return normalizePacket({

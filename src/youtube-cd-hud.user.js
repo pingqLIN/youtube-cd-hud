@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         YouTube CD Album & HUD Overlay (with selectable tracklist providers) v5.12.0
+// @name         YouTube CD Album & HUD Overlay (with selectable tracklist providers) v5.13.0
 // @namespace    http://tampermonkey.net/
-// @version      5.12.0
+// @version      5.13.0
 // @description  Tampermonkey／Chrome 擴充雙版本、可選 1001Tracklists、MixesDB、TrackId.net 與 HUD 外觀
 // @author       You
 // @match        https://www.youtube.com/*
@@ -54,7 +54,11 @@
             if (/^ja/i.test(candidate || '')) return 'ja';
             return 'zh-TW';
         };
-        return { resolveLanguage, translate: (key, language, values = {}) => (messages[resolveLanguage(language)]?.[key] || messages['zh-TW'][key] || key).replace(/\{(\w+)\}/g, (_, name) => String(values[name] ?? `{${name}}`)) };
+        return { resolveLanguage, translate: (key, language, values = {}) => {
+            const localKey = String(key || '').replace(/^hud\./, '');
+            return (messages[resolveLanguage(language)]?.[localKey] || messages['zh-TW'][localKey] || key)
+                .replace(/\{(\w+)\}/g, (_, name) => String(values[name] ?? `{${name}}`));
+        } };
     }
 
     const I18N_API = globalThis.YtCdHudI18n || createUserScriptI18n();
@@ -72,7 +76,27 @@
 
     const DEFAULT_TITLE_SIZE = 14;
     const DEFAULT_TIME_SIZE = 12;
+    const HUD_TEXT_SIZE_MAXIMUM = 192;
     const SETTINGS_API = globalThis.YtCdHudSettings || null;
+    const HUD_LAYOUT_STORAGE_KEY = 'ytCdHudLayoutV2';
+    const HUD_LAYOUT_LEGACY_STORAGE_KEY = 'ytCdHudLayoutV1';
+    const HUD_LAYOUT_DEFAULTS = Object.freeze({
+        version: 2,
+        palette: Object.freeze({ primaryColor: '#1a202c', secondaryColor: '#63b3ed' }),
+        canvas: Object.freeze({ width: 1280, height: 720, sizingMode: 'absolute', collisionPolicy: 'no-overlap-closed', alignmentGrid: Object.freeze({ enabled: true, unitWidth: 8, unitHeight: 8, visible: false }) }),
+        components: Object.freeze([
+            Object.freeze({ id: 'panel-base', type: 'panel-base', present: true, geometry: Object.freeze({ x: .45625, y: .5222222222222223, width: 772, height: 212.00000000000006, z: -1 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: false, mode: 'dynamic-envelope', padding: 18 }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: .85 }), effects: Object.freeze({ shadow: true, accentRail: true }) }),
+            Object.freeze({ id: 'disc', type: 'disc', present: true, geometry: Object.freeze({ x: .125, y: .5, width: 104, height: 104, z: 1 }), layer: Object.freeze({ enabled: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1, texture: 'classic' }), effects: Object.freeze({ glow: true }) }),
+            Object.freeze({ id: 'track-title', type: 'track-title', present: true, geometry: Object.freeze({ x: .3375, y: .43333333333333335, width: 432, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 14, textAlign: 'left' }), effects: Object.freeze({ marquee: true }) }),
+            Object.freeze({ id: 'time-readout', type: 'time-readout', present: true, geometry: Object.freeze({ x: .23125, y: .5111111111111111, width: 120, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 12, textAlign: 'left' }), effects: Object.freeze({}) }),
+            Object.freeze({ id: 'source-selector', type: 'source-selector', present: true, geometry: Object.freeze({ x: .3875, y: .6111111111111112, width: 280, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 9, textAlign: 'center' }), effects: Object.freeze({ statusLamp: true }) }),
+            Object.freeze({ id: 'tracklist-toggle', type: 'tracklist-toggle', present: true, geometry: Object.freeze({ x: .525, y: .6111111111111112, width: 48, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 11, textAlign: 'center' }), effects: Object.freeze({}) }),
+            Object.freeze({ id: 'transport-controls', type: 'transport-controls', present: true, geometry: Object.freeze({ x: .625, y: .6111111111111112, width: 128, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), arrangement: Object.freeze({ split: false, partSize: Object.freeze({ width: 72, height: 48 }), positions: Object.freeze({ previous: Object.freeze({ x: .59375, y: .6111111111111112 }), next: Object.freeze({ x: .65625, y: .6111111111111112 }) }) }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 9, textAlign: 'center' }), effects: Object.freeze({}) }),
+            Object.freeze({ id: 'close-control', type: 'close-control', present: true, geometry: Object.freeze({ x: .71875, y: .43333333333333335, width: 48, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 16, textAlign: 'center' }), effects: Object.freeze({}) }),
+            Object.freeze({ id: 'text-size-control', type: 'text-size-control', present: true, geometry: Object.freeze({ x: .71875, y: .5111111111111111, width: 64, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 14, textAlign: 'center' }), effects: Object.freeze({}) }),
+            Object.freeze({ id: 'tracklist-panel', type: 'tracklist-panel', present: false, geometry: Object.freeze({ x: .8375, y: .2222222222222222, width: 280, height: 256, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: .88 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 11, textAlign: 'left' }), effects: Object.freeze({ shadow: true, accentRail: true }) }),
+        ]),
+    });
     const RUNTIME_DEFAULTS = Object.freeze({
         enabled: true,
         enable1001: true,
@@ -108,6 +132,7 @@
     let runtimeSettings = SETTINGS_API
         ? SETTINGS_API.normalize(SETTINGS_API.DEFAULTS)
         : { ...RUNTIME_DEFAULTS };
+    let runtimeLayout = HUD_LAYOUT_DEFAULTS;
 
     function t(key, values) {
         return I18N_API.translate(`hud.${key}`, I18N_API.resolveLanguage(runtimeSettings.language), values);
@@ -203,10 +228,18 @@
 
     function normalizeCachedTracks(tracks) {
         if (!Array.isArray(tracks) || tracks.length > TRACKLIST_CACHE_MAX_TRACKS_PER_SOURCE) return [];
-        return tracks.map(track => ({
-            time: Number(track && track.time),
+        return tracks.filter(track => (
+            typeof track?.time === 'number' || (typeof track?.time === 'string' && track.time.trim() !== '')
+        )).map(track => ({
+            time: Number(track.time),
             title: trim(String(track && track.title || '')).slice(0, 300),
         })).filter(track => Number.isFinite(track.time) && track.time >= 0 && track.title);
+    }
+
+    function normalizeCached1001Tracks(tracks) {
+        const normalized = normalizeCachedTracks(tracks);
+        // Ignore caches poisoned by the former empty-cue-to-zero coercion.
+        return normalized.length > 1 && normalized.every(track => track.time === 0) ? [] : normalized;
     }
 
     function isProviderUrl(source, url) {
@@ -225,7 +258,8 @@
         for (const candidate of candidates.slice(0, 10)) {
             const url = isProviderUrl(source, candidate && candidate.url) ? String(candidate.url) : '';
             if (!url || seenUrls.has(url) || remainingTracks <= 0) continue;
-            const tracks = normalizeCachedTracks(candidate && candidate.tracks).slice(0, remainingTracks);
+            const normalizeTracks = source === '1001' ? normalizeCached1001Tracks : normalizeCachedTracks;
+            const tracks = normalizeTracks(candidate && candidate.tracks).slice(0, remainingTracks);
             if (!tracks.length) continue;
             seenUrls.add(url);
             remainingTracks -= tracks.length;
@@ -266,7 +300,7 @@
                     activeSource: ['youtube', '1001', 'mixesdb', 'trackid'].includes(entry.activeSource)
                         ? entry.activeSource
                         : '',
-                    tracks1001: candidates1001.length ? [] : normalizeCachedTracks(entry.tracks1001),
+                    tracks1001: candidates1001.length ? [] : normalizeCached1001Tracks(entry.tracks1001),
                     tracksMixesDb: candidatesMixesDb.length ? [] : normalizeCachedTracks(entry.tracksMixesDb),
                     tracksTrackId: candidatesTrackId.length ? [] : normalizeCachedTracks(entry.tracksTrackId),
                     url1001: is1001TracklistsUrl(entry.url1001) ? String(entry.url1001) : '',
@@ -327,13 +361,428 @@
         }, 100);
     }
 
-    function clamp(value, min, max) {
-        return Math.min(Math.max(value, min), max);
+    function clamp(value, min, max, fallback = min) {
+        const number = Number(value);
+        return Number.isFinite(number) ? Math.min(Math.max(number, min), max) : fallback;
     }
 
     function hexToRgb(hex) {
         const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
         return match ? match.slice(1).map(component => parseInt(component, 16)) : [99, 179, 237];
+    }
+
+    function normalizeHudLayout(value) {
+        const source = value && typeof value === 'object' ? value : {};
+        const sourceComponents = Array.isArray(source.components) ? source.components : [];
+        const palette = {
+            primaryColor: /^#[0-9a-f]{6}$/i.test(source.palette?.primaryColor) ? source.palette.primaryColor.toLowerCase() : '#1a202c',
+            secondaryColor: /^#[0-9a-f]{6}$/i.test(source.palette?.secondaryColor) ? source.palette.secondaryColor.toLowerCase() : '#63b3ed',
+        };
+        const canvas = {
+            width: clamp(Number(source.canvas?.width) || 1280, 320, 3840),
+            height: clamp(Number(source.canvas?.height) || 720, 180, 2160),
+            sizingMode: ['absolute', 'relative'].includes(source.canvas?.sizingMode) ? source.canvas.sizingMode : 'absolute',
+            collisionPolicy: 'no-overlap-closed',
+            alignmentGrid: {
+                enabled: source.canvas?.alignmentGrid?.enabled !== false,
+                unitWidth: clamp(Number(source.canvas?.alignmentGrid?.unitWidth), 2, 64, 8),
+                unitHeight: clamp(Number(source.canvas?.alignmentGrid?.unitHeight), 2, 64, 8),
+                visible: false,
+            },
+        };
+        const aliases = { 'panel-base': 'hud-root', 'track-title': 'track-info', 'source-selector': 'source-badge' };
+        const sizeRules = {
+            'panel-base': [320, 96, 1280, 720],
+            disc: [60, 60, 720, 720],
+            'track-title': [180, 48, 720, 120],
+            'time-readout': [90, 48, 320, 96],
+            'source-selector': [180, 48, 520, 96],
+            'tracklist-toggle': [48, 48, 112, 96],
+            'transport-controls': [128, 48, 360, 112],
+            'close-control': [48, 48, 96, 96],
+            'text-size-control': [64, 48, 128, 96],
+            'tracklist-panel': [220, 120, 720, 640],
+        };
+        const sizingScale = canvas.sizingMode === 'relative' ? Math.min(canvas.width / 1280, canvas.height / 720) : 1;
+        const components = HUD_LAYOUT_DEFAULTS.components.map(base => {
+            const sourceItem = sourceComponents.find(component => {
+                const id = String(component?.type || component?.id || '');
+                return id === base.id || id === aliases[base.id];
+            });
+            const item = sourceItem || base;
+            const rawGeometry = item.geometry && typeof item.geometry === 'object' ? item.geometry : item;
+            const [baseMinWidth, baseMinHeight, baseMaxWidth, baseMaxHeight] = sizeRules[base.id];
+            const [minWidth, minHeight, maxWidth, maxHeight] = [baseMinWidth, baseMinHeight, baseMaxWidth, baseMaxHeight].map(value => value * sizingScale);
+            const width = clamp(Number(rawGeometry.width) || base.geometry.width, minWidth, maxWidth);
+            let height = Number(rawGeometry.height) || base.geometry.height;
+            const allowCanvasOverflow = base.id === 'disc';
+            const rawStyle = item.style && typeof item.style === 'object' ? item.style : {};
+            const rawTextStyle = item.textStyle && typeof item.textStyle === 'object' ? item.textStyle : { ...rawStyle, opacity: undefined };
+            const rawEffects = item.effects && typeof item.effects === 'object' ? item.effects : {};
+            const style = Object.fromEntries(Object.entries(base.style).map(([name, fallback]) => {
+                if (name === 'color' || name === 'borderColor') {
+                    return [name, /^#[0-9a-f]{6}$/i.test(rawStyle[name]) ? rawStyle[name].toLowerCase() : fallback];
+                }
+                if (name === 'backgroundColor') return [name, /^#[0-9a-f]{6}$/i.test(rawStyle[name]) ? rawStyle[name].toLowerCase() : fallback];
+                if (name === 'font') return [name, Object.hasOwn(HUD_FONT_STACKS, rawStyle.font) ? rawStyle.font : fallback];
+                if (name === 'fontSize') return [name, clamp(Number(rawStyle.fontSize), 8, 32, fallback)];
+                if (name === 'textAlign') return [name, ['left', 'right', 'center', 'justify'].includes(rawStyle.textAlign) ? rawStyle.textAlign : fallback];
+                if (name === 'opacity') return [name, clamp(Number(rawStyle.opacity), base.id === 'panel-base' ? 0 : .2, 1, fallback)];
+                if (name === 'texture') return [name, ['classic', 'gold', 'transparent-grooves'].includes(rawStyle.texture) ? rawStyle.texture : fallback];
+                return [name, fallback];
+            }));
+            const backgroundCandidate = rawStyle.backgroundColor || (base.id === 'panel-base' ? rawStyle.color : null);
+            style.backgroundColor = /^#[0-9a-f]{6}$/i.test(backgroundCandidate)
+                ? backgroundCandidate.toLowerCase()
+                : palette.primaryColor;
+            style.borderColor = palette.secondaryColor;
+            style.borderEnabled = rawStyle.borderEnabled !== false;
+            style.cornerEnabled = base.id === 'disc' ? true : rawStyle.cornerEnabled === true;
+            style.cornerRadiusLevel = Math.round(clamp(Number(rawStyle.cornerRadiusLevel), 1, 10, base.id === 'disc' ? 10 : 1));
+            style.backgroundBlurEnabled = rawStyle.backgroundBlurEnabled === true;
+            const textStyle = base.textStyle ? Object.fromEntries(Object.entries({
+                color: palette.secondaryColor,
+                opacity: 1,
+                font: 'cascadia-mono',
+                fontSize: base.id === 'close-control' ? 16 : base.id === 'text-size-control' ? 14 : 11,
+                textAlign: ['source-selector', 'tracklist-toggle', 'transport-controls', 'close-control', 'text-size-control'].includes(base.id) ? 'center' : 'left',
+                ...base.textStyle,
+            }).map(([name, fallback]) => {
+                if (name === 'color') return [name, /^#[0-9a-f]{6}$/i.test(rawTextStyle[name]) ? rawTextStyle[name].toLowerCase() : fallback];
+                if (name === 'font') return [name, Object.hasOwn(HUD_FONT_STACKS, rawTextStyle.font) ? rawTextStyle.font : fallback];
+                if (name === 'fontSize') return [name, clamp(Number(rawTextStyle.fontSize), 8 * sizingScale, HUD_TEXT_SIZE_MAXIMUM * sizingScale, fallback * sizingScale)];
+                if (name === 'textAlign') return [name, ['left', 'right', 'center', 'justify'].includes(rawTextStyle.textAlign) ? rawTextStyle.textAlign : fallback];
+                if (name === 'opacity') return [name, clamp(Number(rawTextStyle.opacity), 0, 1, fallback)];
+                return [name, fallback];
+            })) : null;
+            const rawRequiredTextHeight = textStyle ? Math.ceil(textStyle.fontSize * 1.35 + 8 * sizingScale) : minHeight;
+            const requiredTextHeight = textStyle && canvas.alignmentGrid.enabled
+                ? Math.ceil(rawRequiredTextHeight / canvas.alignmentGrid.unitHeight) * canvas.alignmentGrid.unitHeight
+                : rawRequiredTextHeight;
+            const maximumTextHeight = Math.min(
+                canvas.height,
+                textStyle ? Math.max(requiredTextHeight, maxHeight, HUD_TEXT_SIZE_MAXIMUM * sizingScale * 1.35 + 8 * sizingScale) : maxHeight,
+            );
+            height = clamp(
+                height,
+                Math.max(minHeight, requiredTextHeight),
+                maximumTextHeight,
+                Math.max(minHeight, requiredTextHeight),
+            );
+            const halfX = width / (2 * canvas.width);
+            const halfY = height / (2 * canvas.height);
+            const effects = Object.fromEntries(Object.entries(base.effects).map(([name, fallback]) => [name, rawEffects[name] === undefined ? fallback : Boolean(rawEffects[name])]));
+            const layer = {
+                enabled: base.id === 'disc' || (base.id !== 'panel-base' && item.layer?.enabled === true),
+            };
+            const geometry = {
+                x: clamp(Number(rawGeometry.x), allowCanvasOverflow ? 0 : halfX, allowCanvasOverflow ? 1 : 1 - halfX, base.geometry.x),
+                y: clamp(Number(rawGeometry.y), allowCanvasOverflow ? 0 : halfY, allowCanvasOverflow ? 1 : 1 - halfY, base.geometry.y),
+                width,
+                height,
+                z: base.id === 'panel-base' ? base.geometry.z : (layer.enabled ? clamp(Number(rawGeometry.z), -99, 99, base.geometry.z) : 0),
+            };
+            let arrangement = null;
+            if (base.arrangement) {
+                const rawArrangement = item.arrangement && typeof item.arrangement === 'object' ? item.arrangement : {};
+                const partWidth = clamp(Number(rawArrangement.partSize?.width), 64 * sizingScale, 180 * sizingScale, base.arrangement.partSize.width * sizingScale);
+                const partHeight = clamp(
+                    Number(rawArrangement.partSize?.height),
+                    Math.max(48 * sizingScale, requiredTextHeight),
+                    Math.max(requiredTextHeight, 112 * sizingScale, HUD_TEXT_SIZE_MAXIMUM * sizingScale * 1.35 + 8 * sizingScale),
+                    Math.max(base.arrangement.partSize.height * sizingScale, requiredTextHeight),
+                );
+                const spacing = (partWidth + 8) / (2 * canvas.width);
+                const normalizePosition = (name, fallbackX) => ({
+                    x: clamp(Number(rawArrangement.positions?.[name]?.x), partWidth / (2 * canvas.width), 1 - partWidth / (2 * canvas.width), fallbackX),
+                    y: clamp(Number(rawArrangement.positions?.[name]?.y), partHeight / (2 * canvas.height), 1 - partHeight / (2 * canvas.height), geometry.y),
+                });
+                arrangement = {
+                    split: rawArrangement.split === true,
+                    partSize: { width: partWidth, height: partHeight },
+                    positions: {
+                        previous: normalizePosition('previous', geometry.x - spacing),
+                        next: normalizePosition('next', geometry.x + spacing),
+                    },
+                };
+            }
+            return {
+                id: base.id,
+                type: base.id,
+                present: base.id === 'panel-base' || (sourceItem ? item.present !== false : base.present !== false),
+                geometry,
+                layer,
+                ...(arrangement ? { arrangement } : {}),
+                ...(base.boundary ? { boundary: {
+                    ...base.boundary,
+                    ...(base.id === 'panel-base' ? { padding: clamp(Number(item.boundary?.padding), 0, 96, base.boundary.padding) } : {}),
+                } } : {}),
+                style,
+                ...(textStyle ? { textStyle } : {}),
+                effects,
+            };
+        });
+        const base = components.find(component => component.id === 'panel-base');
+        const visible = components.filter(component => !['panel-base', 'disc'].includes(component.id) && component.present && component.boundary);
+        const layerValues = components.filter(component => component.id !== 'panel-base' && component.present).map(component => component.layer.enabled ? component.geometry.z : 0);
+        if (base) base.geometry.z = Math.min(0, ...layerValues) - 1;
+        if (base && visible.length) {
+            const rectangles = visible.flatMap(component => {
+                const geometries = component.arrangement?.split
+                    ? Object.values(component.arrangement.positions).map(position => ({ ...component.geometry, ...component.arrangement.partSize, ...position }))
+                    : [component.geometry];
+                return geometries.map(geometry => {
+                const centerX = geometry.x * canvas.width;
+                const centerY = geometry.y * canvas.height;
+                return {
+                    left: centerX - geometry.width / 2,
+                    right: centerX + geometry.width / 2,
+                    top: centerY - geometry.height / 2,
+                    bottom: centerY + geometry.height / 2,
+                };
+                });
+            });
+            const padding = base.boundary.padding;
+            const left = Math.max(0, Math.min(...rectangles.map(rect => rect.left)) - padding);
+            const right = Math.min(canvas.width, Math.max(...rectangles.map(rect => rect.right)) + padding);
+            const top = Math.max(0, Math.min(...rectangles.map(rect => rect.top)) - padding);
+            const bottom = Math.min(canvas.height, Math.max(...rectangles.map(rect => rect.bottom)) + padding);
+            const width = Math.max(320 * sizingScale, right - left);
+            const height = Math.max(96 * sizingScale, bottom - top);
+            const baseLeft = clamp((left + right - width) / 2, 0, canvas.width - width, 0);
+            const baseTop = clamp((top + bottom - height) / 2, 0, canvas.height - height, 0);
+            base.geometry = { x: (baseLeft + width / 2) / canvas.width, y: (baseTop + height / 2) / canvas.height, width, height, z: base.geometry.z };
+        }
+        return { version: 2, palette, canvas, components };
+    }
+
+    function getHudLayoutComponent(id) {
+        return runtimeLayout.components.find(component => component.id === id);
+    }
+
+    function projectHudLayout(layout, viewport = {}) {
+        const canvas = layout?.canvas;
+        const base = layout?.components?.find(component => component.id === 'panel-base');
+        if (!canvas || !base) return null;
+        const viewportWidth = Math.max(1, Number(viewport.width) || canvas.width);
+        const viewportHeight = Math.max(1, Number(viewport.height) || canvas.height);
+        const scale = Math.min(viewportWidth / canvas.width, viewportHeight / canvas.height);
+        const canvasWidth = canvas.width * scale;
+        const canvasHeight = canvas.height * scale;
+        const canvasLeft = (viewportWidth - canvasWidth) / 2;
+        const canvasTop = (viewportHeight - canvasHeight) / 2;
+        const baseLeft = base.geometry.x * canvas.width - base.geometry.width / 2;
+        const baseTop = base.geometry.y * canvas.height - base.geometry.height / 2;
+        return {
+            scale,
+            design: { width: canvas.width, height: canvas.height },
+            canvas: { left: canvasLeft, top: canvasTop, width: canvasWidth, height: canvasHeight },
+            root: {
+                left: canvasLeft + baseLeft * scale,
+                top: canvasTop + baseTop * scale,
+                width: base.geometry.width * scale,
+                height: base.geometry.height * scale,
+            },
+            base: { left: baseLeft, top: baseTop, width: base.geometry.width, height: base.geometry.height },
+        };
+    }
+
+    function projectHudGeometry(geometry, projection) {
+        return {
+            x: (geometry.x * projection.design.width - projection.base.left) / projection.base.width * 100,
+            y: (geometry.y * projection.design.height - projection.base.top) / projection.base.height * 100,
+            width: geometry.width / projection.base.width * 100,
+            height: geometry.height / projection.base.height * 100,
+        };
+    }
+
+    function projectCanvasGeometry(geometry, projection) {
+        return {
+            left: projection.canvas.left + (geometry.x * projection.design.width - geometry.width / 2) * projection.scale,
+            top: projection.canvas.top + (geometry.y * projection.design.height - geometry.height / 2) * projection.scale,
+            width: geometry.width * projection.scale,
+            height: geometry.height * projection.scale,
+        };
+    }
+
+    function applyRuntimeLayout() {
+        const hud = document.getElementById('yt-cd-hud');
+        if (!hud) return;
+        const base = getHudLayoutComponent('panel-base');
+        if (!base) return;
+        const canvas = runtimeLayout.canvas;
+        const player = hud.parentElement;
+        const projection = projectHudLayout(runtimeLayout, {
+            width: player?.clientWidth || canvas.width,
+            height: player?.clientHeight || canvas.height,
+        });
+        if (!projection) return;
+        const unitMap = {
+            'panel-base': '.hud-panel-surface',
+            disc: '.cd-disc-wrapper',
+            'track-title': '.hud-chapter',
+            'time-readout': '.hud-time',
+            'source-selector': '.hud-source-selector',
+            'tracklist-toggle': '.hud-tracklist-button',
+            'transport-controls': '.hud-transport-controls',
+            'close-control': '.hud-close-button',
+            'text-size-control': '.hud-text-size-button',
+            'tracklist-panel': '#yt-tracklist-panel',
+        };
+        hud.classList.remove('ytcd-layout-v1');
+        hud.classList.add('ytcd-layout-v2');
+        hud.style.left = `${projection.root.left}px`;
+        hud.style.top = `${projection.root.top}px`;
+        hud.style.width = `${projection.root.width}px`;
+        hud.style.minWidth = `${projection.root.width}px`;
+        hud.style.maxWidth = `${projection.root.width}px`;
+        hud.style.height = `${projection.root.height}px`;
+        hud.style.minHeight = `${projection.root.height}px`;
+        hud.style.maxHeight = `${projection.root.height}px`;
+        hud.dataset.ytcdCanvasScale = String(projection.scale);
+        hud.dataset.ytcdSizingMode = runtimeLayout.canvas.sizingMode;
+        hud.style.setProperty('--ytcd-primary-color', runtimeLayout.palette.primaryColor);
+        hud.style.setProperty('--ytcd-secondary-color', runtimeLayout.palette.secondaryColor);
+        for (const [id, selector] of Object.entries(unitMap)) {
+            const component = getHudLayoutComponent(id);
+            const element = id === 'tracklist-panel' ? document.querySelector(selector) : hud.querySelector(selector);
+            if (!component || !element) continue;
+            if (id === 'tracklist-panel' && !component.present) {
+                if (element.parentNode !== player) player.appendChild(element);
+                element.classList.remove('ytcd-layout-tracklist', 'ytcd-layout-unit-hidden', 'ytcd-effect-shadow', 'ytcd-effect-accent-rail', 'ytcd-layout-unit-dragging');
+                delete element.dataset.ytcdLayoutUnit;
+                delete element.dataset.ytcdLayoutDraggable;
+                element.style.left = '';
+                element.style.top = '96px';
+                element.style.right = '20px';
+                element.style.width = '';
+                element.style.height = '';
+                element.style.removeProperty('--ytcd-unit-x');
+                element.style.removeProperty('--ytcd-unit-y');
+                element.style.removeProperty('--ytcd-unit-width');
+                element.style.removeProperty('--ytcd-unit-height');
+                element.style.display = runtimeSettings.enabled && tracklistVisible ? 'block' : 'none';
+                if (tracklistBtn) {
+                    tracklistBtn.classList.toggle('active', tracklistVisible);
+                    tracklistBtn.setAttribute('aria-expanded', String(tracklistVisible));
+                }
+                continue;
+            }
+            if (id === 'disc') {
+                element.style.removeProperty('width');
+                element.style.removeProperty('height');
+            }
+            if (id === 'track-title') {
+                element.style.removeProperty('width');
+                element.style.removeProperty('max-width');
+                element.style.removeProperty('font-size');
+            }
+            if (id === 'time-readout') element.style.removeProperty('font-size');
+            element.dataset.ytcdLayoutUnit = id;
+            element.classList.toggle('ytcd-layout-unit-hidden', component.present === false);
+            element.classList.toggle('ytcd-effect-shadow', component.effects.shadow === true);
+            element.classList.toggle('ytcd-effect-accent-rail', component.effects.accentRail === true);
+            element.classList.toggle('ytcd-effect-glow', component.effects.glow === true);
+            element.classList.toggle('ytcd-effect-status-lamp', component.effects.statusLamp === true);
+            element.classList.toggle('ytcd-effect-marquee', component.effects.marquee === true);
+            if (id === 'disc') element.dataset.ytcdTexture = component.style.texture || 'classic';
+            if (id === 'tracklist-panel') {
+                if (element.parentNode !== hud) hud.appendChild(element);
+                const projected = projectHudGeometry(component.geometry, projection);
+                element.style.setProperty('--ytcd-unit-x', String(projected.x) + '%');
+                element.style.setProperty('--ytcd-unit-y', String(projected.y) + '%');
+                element.style.setProperty('--ytcd-unit-width', String(projected.width) + '%');
+                element.style.setProperty('--ytcd-unit-height', String(projected.height) + '%');
+                element.style.left = '';
+                element.style.top = '';
+                element.style.right = '';
+                element.style.width = '';
+                element.style.height = '';
+                element.style.borderColor = component.style.borderColor;
+                element.style.display = runtimeSettings.enabled ? 'block' : 'none';
+                element.classList.add('ytcd-layout-tracklist');
+                if (tracklistBtn) {
+                    tracklistBtn.classList.add('active');
+                    tracklistBtn.setAttribute('aria-expanded', 'true');
+                }
+            } else if (id === 'panel-base') {
+                element.style.setProperty('--ytcd-unit-x', '50%');
+                element.style.setProperty('--ytcd-unit-y', '50%');
+                element.style.setProperty('--ytcd-unit-width', '100%');
+                element.style.setProperty('--ytcd-unit-height', '100%');
+                element.style.backgroundColor = '';
+                element.style.borderColor = '';
+            } else {
+                const geometry = component.geometry;
+                const projected = projectHudGeometry(geometry, projection);
+                element.style.setProperty('--ytcd-unit-x', String(projected.x) + '%');
+                element.style.setProperty('--ytcd-unit-y', String(projected.y) + '%');
+                element.style.setProperty('--ytcd-unit-width', String(projected.width) + '%');
+                element.style.setProperty('--ytcd-unit-height', String(projected.height) + '%');
+            }
+            element.style.setProperty('--ytcd-unit-z', String(component.geometry.z + 101));
+            element.style.setProperty('--ytcd-unit-opacity', String(component.style.opacity ?? 1));
+            element.style.setProperty('--ytcd-unit-shadow-alpha', String((component.style.opacity ?? 1) * .35));
+            const textStyle = component.textStyle || component.style;
+            element.style.setProperty('--ytcd-unit-color', textStyle.color || runtimeSettings.accentColor);
+            element.style.setProperty('--ytcd-unit-text-opacity', String(textStyle.opacity ?? 1));
+            element.style.setProperty('--ytcd-unit-background-color', component.style.backgroundColor || component.style.color || '#1a202c');
+            element.style.setProperty('--ytcd-secondary-color', runtimeLayout.palette.secondaryColor);
+            element.style.setProperty('--ytcd-unit-border-width', component.style.borderEnabled === false ? '0px' : '1px');
+            element.style.setProperty('--ytcd-unit-border-radius', component.style.cornerEnabled && id !== 'disc'
+                ? String(component.style.cornerRadiusLevel * 2 * projection.scale) + 'px'
+                : '0px');
+            element.style.setProperty('--ytcd-unit-backdrop-filter', component.style.backgroundBlurEnabled ? 'blur(8px) saturate(.86)' : 'none');
+            element.style.setProperty('--ytcd-unit-font-size', String((textStyle.fontSize || runtimeSettings.titleFontSize) * projection.scale) + 'px');
+            element.style.setProperty('--ytcd-unit-font', HUD_FONT_STACKS[textStyle.font] || HUD_FONT_STACKS[runtimeSettings.fontFamily]);
+            element.style.setProperty('--ytcd-unit-text-align', textStyle.textAlign || 'left');
+            element.dataset.ytcdTextAlign = textStyle.textAlign || 'left';
+            const draggable = ['track-title', 'time-readout', 'tracklist-panel'].includes(id) && component.present;
+            element.dataset.ytcdLayoutDraggable = String(draggable);
+            if (draggable) bindRuntimeLayoutUnitDragging(element, player, id);
+            if (id === 'transport-controls') {
+                const split = component.arrangement?.split === true;
+                element.classList.toggle('ytcd-transport-split', split);
+                const parts = { previous: element.querySelector('.hud-previous-track'), next: element.querySelector('.hud-next-track') };
+                for (const [part, button] of Object.entries(parts)) {
+                    if (!button) continue;
+                    const buttonWidth = split
+                        ? component.arrangement.partSize.width * projection.scale
+                        : null;
+                    const buttonHeight = (split
+                        ? component.arrangement.partSize.height
+                        : component.geometry.height) * projection.scale;
+                    button.style.setProperty('height', `${buttonHeight}px`, 'important');
+                    if (!split) {
+                        button.style.removeProperty('width');
+                        delete button.dataset.ytcdLayoutPart;
+                        continue;
+                    }
+                    const position = component.arrangement.positions[part];
+                    const projected = projectHudGeometry({ ...position, ...component.arrangement.partSize }, projection);
+                    button.dataset.ytcdLayoutPart = part;
+                    button.style.setProperty('width', `${buttonWidth}px`, 'important');
+                    button.style.setProperty('--ytcd-unit-x', String(projected.x) + '%');
+                    button.style.setProperty('--ytcd-unit-y', String(projected.y) + '%');
+                    button.style.setProperty('--ytcd-unit-width', String(projected.width) + '%');
+                    button.style.setProperty('--ytcd-unit-height', String(projected.height) + '%');
+                    button.style.setProperty('--ytcd-unit-z', String(component.geometry.z + 101));
+                    button.style.setProperty('--ytcd-unit-opacity', String(component.style.opacity ?? 1));
+                    button.style.setProperty('--ytcd-unit-color', component.textStyle?.color || runtimeSettings.accentColor);
+                    button.style.setProperty('--ytcd-unit-text-opacity', String(component.textStyle?.opacity ?? 1));
+                    button.style.setProperty('--ytcd-unit-background-color', component.style.backgroundColor || runtimeLayout.palette.primaryColor);
+                    button.style.setProperty('--ytcd-secondary-color', runtimeLayout.palette.secondaryColor);
+                    button.style.setProperty('--ytcd-unit-border-width', component.style.borderEnabled === false ? '0px' : '1px');
+                    button.style.setProperty('--ytcd-unit-border-radius', component.style.cornerEnabled
+                        ? String(component.style.cornerRadiusLevel * 2 * projection.scale) + 'px'
+                        : '0px');
+                    button.style.setProperty('--ytcd-unit-backdrop-filter', component.style.backgroundBlurEnabled ? 'blur(8px) saturate(.86)' : 'none');
+                    button.style.setProperty('--ytcd-unit-font-size', String((component.textStyle?.fontSize || 9) * projection.scale) + 'px');
+                    button.style.setProperty('--ytcd-unit-font', HUD_FONT_STACKS[component.textStyle?.font] || HUD_FONT_STACKS[runtimeSettings.fontFamily]);
+                    button.dataset.ytcdTextAlign = component.textStyle?.textAlign || 'center';
+                }
+            }
+        }
     }
 
     function applyRuntimeAppearance() {
@@ -357,6 +806,7 @@
                 !runtimeSettings.enable1001 && !runtimeSettings.enableMixesDb && !runtimeSettings.enableTrackId
             );
             hud.style.display = runtimeSettings.enabled ? '' : 'none';
+            applyRuntimeLayout();
         }
         if (tracklistPanel && !runtimeSettings.enabled) tracklistPanel.style.display = 'none';
 
@@ -368,6 +818,25 @@
         }
         customStyle.textContent = runtimeSettings.customCss;
         applySizing();
+    }
+
+    function setHudVisibility(visible) {
+        const hud = document.getElementById('yt-cd-hud');
+        if (!hud) return { ok: false, visible: false, reason: 'hud-unavailable' };
+        hud.style.display = visible ? '' : 'none';
+        if (!visible) {
+            tracklistVisible = false;
+            if (tracklistPanel) tracklistPanel.style.display = 'none';
+        }
+        return { ok: true, visible };
+    }
+
+    function toggleHudVisibility() {
+        const hud = document.getElementById('yt-cd-hud');
+        if (!hud || !runtimeSettings.enabled) {
+            return { ok: false, visible: false, reason: runtimeSettings.enabled ? 'hud-unavailable' : 'hud-disabled' };
+        }
+        return setHudVisibility(hud.style.display === 'none');
     }
 
     function applyRuntimeSettings(nextSettings, reschedule = true) {
@@ -429,6 +898,28 @@
             if (areaName !== 'local' || !changes[SETTINGS_API.STORAGE_KEY]) return;
             applyRuntimeSettings(changes[SETTINGS_API.STORAGE_KEY].newValue || SETTINGS_API.DEFAULTS);
         });
+    }
+
+    async function prepareExtensionLayout() {
+        try {
+            if (globalThis.chrome?.storage?.local) {
+                const stored = await chrome.storage.local.get([HUD_LAYOUT_STORAGE_KEY, HUD_LAYOUT_LEGACY_STORAGE_KEY]);
+                runtimeLayout = normalizeHudLayout(stored[HUD_LAYOUT_STORAGE_KEY] || stored[HUD_LAYOUT_LEGACY_STORAGE_KEY]);
+                chrome.storage.onChanged.addListener((changes, areaName) => {
+                    if (areaName !== 'local' || !changes[HUD_LAYOUT_STORAGE_KEY]) return;
+                    runtimeLayout = normalizeHudLayout(changes[HUD_LAYOUT_STORAGE_KEY].newValue);
+                    applyRuntimeAppearance();
+                });
+            } else if (typeof globalThis.GM_getValue === 'function') {
+                runtimeLayout = normalizeHudLayout(await globalThis.GM_getValue(HUD_LAYOUT_STORAGE_KEY, null));
+            } else {
+                runtimeLayout = normalizeHudLayout(null);
+            }
+        } catch (error) {
+            runtimeLayout = normalizeHudLayout(null);
+            console.warn('[CD HUD] Could not load Live Monitor layout; using defaults.', error);
+        }
+        applyRuntimeAppearance();
     }
 
     function isSuccessfulHttpStatus(status) {
@@ -813,7 +1304,12 @@
         return true;
     }
 
-    function handle1001BridgeReadyMessage(message, _sender, sendResponse) {
+    function handleRuntimeMessage(message, _sender, sendResponse) {
+        if (message?.type === 'YT_CD_HUD_TOGGLE_VISIBILITY') {
+            const result = toggleHudVisibility();
+            if (typeof sendResponse === 'function') sendResponse(result);
+            return false;
+        }
         if (message?.type === 'YT_CD_HUD_1001_PACKET_V1') {
             const accepted = apply1001TracklistPacket(message);
             if (typeof sendResponse === 'function') sendResponse({ ok: true, accepted });
@@ -2405,8 +2901,184 @@
                 visibility: hidden;
                 pointer-events: none;
             }
-            #yt-cd-hud.ytcd-hide-transport .hud-transport-controls { display: none; }
-            #yt-cd-hud.ytcd-hide-1001 .hud-status-button { display: none; }
+            #yt-cd-hud.ytcd-hide-transport .hud-transport-controls { display: none !important; }
+            #yt-cd-hud.ytcd-hide-transport .hud-transport-controls.ytcd-transport-split { display: none !important; }
+            #yt-cd-hud.ytcd-hide-1001 .hud-status-button { display: none !important; }
+            #yt-cd-hud.ytcd-layout-v1 .cd-disc-wrapper {
+                transform: translate(var(--ytcd-disc-dx), var(--ytcd-disc-dy)) scale(var(--ytcd-disc-scale));
+                opacity: var(--ytcd-disc-opacity);
+            }
+            #yt-cd-hud.ytcd-layout-v1 .hud-info {
+                transform: translate(var(--ytcd-info-dx), var(--ytcd-info-dy));
+                max-width: var(--ytcd-info-width);
+                opacity: var(--ytcd-info-opacity);
+                color: var(--ytcd-info-color);
+                font-family: var(--ytcd-info-font);
+            }
+            #yt-cd-hud.ytcd-layout-v1 .hud-chapter {
+                color: var(--ytcd-info-color);
+                font-size: var(--ytcd-info-font-size);
+            }
+            #yt-cd-hud.ytcd-layout-v1 .hud-source-actions {
+                transform: translate(var(--ytcd-source-dx), var(--ytcd-source-dy));
+                opacity: var(--ytcd-source-opacity);
+                color: var(--ytcd-source-color);
+                font-family: var(--ytcd-source-font);
+                font-size: var(--ytcd-source-font-size);
+            }
+            #yt-cd-hud.ytcd-layout-hide-disc .cd-disc-wrapper { visibility: hidden; pointer-events: none; }
+            #yt-cd-hud.ytcd-layout-hide-source .hud-source-actions { visibility: hidden; pointer-events: none; }
+            #yt-cd-hud.ytcd-layout-v2 {
+                display: block;
+                min-width: 0;
+                max-width: none;
+                min-height: 0;
+                max-height: none;
+                padding: 0;
+                gap: 0;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-info,
+            #yt-cd-hud.ytcd-layout-v2 .hud-source-actions,
+            #yt-cd-hud.ytcd-layout-v2 .hud-side-controls {
+                position: static;
+                display: block;
+                width: 0;
+                min-width: 0;
+                height: 0;
+                margin: 0;
+                padding: 0;
+                border: 0;
+            }
+            #yt-cd-hud.ytcd-layout-v2 [data-ytcd-layout-unit],
+            #yt-cd-hud.ytcd-layout-v2 [data-ytcd-layout-part] {
+                position: absolute;
+                left: var(--ytcd-unit-x);
+                top: var(--ytcd-unit-y);
+                z-index: var(--ytcd-unit-z);
+                width: var(--ytcd-unit-width);
+                min-width: 0;
+                max-width: none;
+                height: var(--ytcd-unit-height);
+                margin: 0;
+                transform: translate(-50%, -50%);
+                opacity: 1;
+                color: color-mix(in srgb, var(--ytcd-unit-color) calc(var(--ytcd-unit-text-opacity, 1) * 100%), transparent);
+                font-family: var(--ytcd-unit-font);
+                font-size: var(--ytcd-unit-font-size);
+                box-sizing: border-box;
+            }
+            #yt-cd-hud.ytcd-layout-v2 [data-ytcd-layout-draggable="true"],
+            .yt-tracklist-panel[data-ytcd-layout-draggable="true"] .tracklist-header {
+                cursor: grab;
+                pointer-events: auto;
+                touch-action: none;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .ytcd-layout-unit-dragging,
+            .yt-tracklist-panel.ytcd-layout-unit-dragging .tracklist-header { cursor: grabbing; }
+            #yt-cd-hud.ytcd-layout-v2 .hud-panel-surface {
+                inset: auto;
+                left: var(--ytcd-unit-x);
+                top: var(--ytcd-unit-y);
+                pointer-events: none;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-panel-surface.ytcd-effect-shadow {
+                box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha));
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-panel-surface:not(.ytcd-effect-accent-rail) {
+                border-left-color: var(--hud-border);
+            }
+            #yt-cd-hud.ytcd-layout-v2 .cd-disc-wrapper {
+                display: grid;
+                place-items: center;
+                opacity: var(--ytcd-unit-opacity);
+            }
+            #yt-cd-hud.ytcd-layout-v2 .cd-disc-wrapper .cd-disc {
+                width: 100%;
+                height: 100%;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .cd-disc-wrapper:not(.ytcd-effect-glow) .cd-disc {
+                box-shadow: none;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-chapter,
+            #yt-cd-hud.ytcd-layout-v2 .hud-time {
+                display: block;
+                align-content: center;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+                text-align: var(--ytcd-unit-text-align, left);
+                text-align-last: var(--ytcd-unit-text-align, left);
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-chapter.ytcd-effect-marquee:hover {
+                overflow: hidden;
+                text-overflow: clip;
+                animation: ytcd-title-marquee 5s ease-in-out infinite alternate;
+            }
+            @keyframes ytcd-title-marquee {
+                from { text-indent: 0; }
+                to { text-indent: -42%; }
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-source-selector {
+                display: inline-flex;
+                align-items: stretch;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-source-selector > :where(.hud-source-caption, .hud-source-option, .hud-status-button) {
+                box-sizing: border-box;
+                display: inline-flex;
+                flex: 1 1 0;
+                align-items: center;
+                justify-content: center;
+                min-width: 0;
+                height: 100%;
+                margin-left: -1px;
+                padding: 0 3px;
+                line-height: 1;
+                color: inherit;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-source-selector > .hud-source-caption { margin-left: 0; }
+            #yt-cd-hud.ytcd-layout-v2 .hud-source-selector:not(.ytcd-effect-status-lamp) :where(.status-light) {
+                display: none;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-tracklist-button,
+            #yt-cd-hud.ytcd-layout-v2 .hud-close-button,
+            #yt-cd-hud.ytcd-layout-v2 .hud-text-size-button {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-transport-controls {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 3px;
+                padding: 0;
+                border: var(--ytcd-unit-border-width) solid var(--ytcd-secondary-color);
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-transport-controls .hud-control-button {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: auto;
+                min-width: 0;
+                padding: 0 3px;
+                font-size: inherit;
+                line-height: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                color: inherit;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-transport-controls.ytcd-transport-split { display: contents; }
+            #yt-cd-hud.ytcd-layout-v2 .hud-transport-controls.ytcd-transport-split .hud-control-button {
+                position: absolute;
+                width: var(--ytcd-unit-width);
+                min-width: 0;
+                height: var(--ytcd-unit-height);
+                padding: 0 3px;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .ytcd-layout-unit-hidden {
+                display: none !important;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .resize-handle { display: none; }
             .hud-panel-surface:after {
                 content: "";
                 position: absolute;
@@ -2429,6 +3101,25 @@
                 touch-action: none;
                 margin: 0 2px 0 0;
                 pointer-events: auto;
+            }
+            .cd-disc-wrapper[data-ytcd-texture="gold"] .cd-disc {
+                border-color: var(--ytcd-secondary-color);
+            }
+            .cd-disc-wrapper[data-ytcd-texture="gold"] .cd-disc:after {
+                background:
+                    radial-gradient(circle at center, rgba(36,27,8,.96) 0 7%, rgba(255,240,170,.94) 7.5% 9%, rgba(60,42,8,.9) 9.5% 12%, transparent 12.5%),
+                    repeating-radial-gradient(circle at center, transparent 0 3px, rgba(255,246,190,.28) 3.5px 4px),
+                    conic-gradient(from 12deg, rgba(114,81,17,.42), rgba(244,215,122,.34), rgba(154,106,22,.46), rgba(255,241,168,.28), rgba(114,81,17,.42));
+            }
+            .cd-disc-wrapper[data-ytcd-texture="transparent-grooves"] .cd-disc {
+                border-color: var(--ytcd-secondary-color);
+            }
+            .cd-disc-wrapper[data-ytcd-texture="transparent-grooves"] .cd-disc:after {
+                background:
+                    radial-gradient(circle at center, rgba(10,24,30,.82) 0 7%, rgba(235,250,255,.9) 7.5% 9%, rgba(20,42,50,.72) 9.5% 12%, transparent 12.5%),
+                    repeating-radial-gradient(circle at center, rgba(235,250,255,.58) 0 1px, rgba(150,205,220,.12) 1px 4px, transparent 4px 7px),
+                    linear-gradient(125deg, rgba(255,255,255,.26), transparent 34%, rgba(95,150,170,.16) 74%, rgba(235,250,255,.18));
+                box-shadow: inset 0 0 0 1px rgba(235,250,255,.3), inset 0 0 14px rgba(160,220,235,.18);
             }
             .cd-disc {
                 position: absolute;
@@ -2475,6 +3166,11 @@
                 animation-play-state: paused;
                 will-change: transform;
                 cursor: inherit;
+            }
+            .cd-disc-wrapper[data-ytcd-texture] .cd-art {
+                opacity: 1;
+                filter: none;
+                mix-blend-mode: normal;
             }
             .cd-disc:after {
                 content: "";
@@ -2868,13 +3564,36 @@
             }
             .yt-tracklist-panel.dragging { cursor: grabbing; }
             .yt-tracklist-panel.resizing { cursor: nwse-resize; }
+            .yt-tracklist-panel.ytcd-layout-tracklist {
+                z-index: var(--ytcd-unit-z);
+                min-width: 0;
+                min-height: 0;
+                max-width: none;
+                max-height: none;
+                opacity: 1;
+                color: color-mix(in srgb, var(--ytcd-unit-color) calc(var(--ytcd-unit-text-opacity, 1) * 100%), transparent);
+                background:
+                    linear-gradient(180deg, rgba(45, 55, 72, .24), transparent 32%),
+                    var(--ytcd-unit-background-color);
+                font-family: var(--ytcd-unit-font);
+                font-size: var(--ytcd-unit-font-size);
+                text-align: var(--ytcd-unit-text-align, left);
+                text-align-last: var(--ytcd-unit-text-align, left);
+                transform: none;
+            }
+            .yt-tracklist-panel.ytcd-layout-tracklist:not(.ytcd-effect-shadow) { box-shadow: inset 3px 0 0 rgba(99, 179, 237, .5); }
+            .yt-tracklist-panel.ytcd-layout-tracklist:not(.ytcd-effect-accent-rail) { box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha)); }
+            .yt-tracklist-panel.ytcd-layout-tracklist:not(.ytcd-effect-accent-rail):not(.ytcd-effect-shadow) { box-shadow: none; }
+            .yt-tracklist-panel.ytcd-layout-tracklist .tracklist-control-button,
+            .yt-tracklist-panel.ytcd-layout-tracklist .tracklist-resize-handle { display: none; }
+            .yt-tracklist-panel.ytcd-layout-tracklist :where(.tracklist-heading-title, .tracklist-source-link, .tracklist-item, .tracklist-time, .tracklist-title) { color: inherit; }
             .tracklist-header {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 height: 28px;
                 padding: 0 5px 0 9px;
-                border-bottom: 1px solid var(--hud-border);
+                border-bottom: var(--ytcd-unit-border-width, 1px) solid var(--ytcd-secondary-color, var(--hud-border));
                 color: var(--hud-title);
                 background: rgba(15, 23, 42, .66);
                 font-size: 9px;
@@ -2931,11 +3650,11 @@
             .tracklist-list::-webkit-scrollbar-thumb { background: var(--hud-border); }
             .tracklist-item {
                 padding: 4px 5px;
-                border-bottom: 1px solid rgba(74, 85, 104, .68);
+                border-bottom: var(--ytcd-unit-border-width, 1px) solid color-mix(in srgb, var(--ytcd-secondary-color, var(--hud-border)) 68%, transparent);
                 cursor: pointer;
                 white-space: nowrap;
                 display: flex;
-                align-items: baseline;
+                align-items: center;
                 transition: color .15s ease, background-color .15s ease;
             }
             .tracklist-item.active {
@@ -2955,6 +3674,91 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
+            #yt-cd-hud.ytcd-layout-v2 .hud-panel-surface {
+                border: var(--ytcd-unit-border-width) solid var(--ytcd-secondary-color);
+                border-radius: var(--ytcd-unit-border-radius);
+                background: color-mix(in srgb, var(--ytcd-unit-background-color) calc(var(--ytcd-unit-opacity) * 100%), transparent);
+                backdrop-filter: var(--ytcd-unit-backdrop-filter);
+                -webkit-backdrop-filter: var(--ytcd-unit-backdrop-filter);
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-panel-surface.ytcd-effect-accent-rail {
+                box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha)), inset 3px 0 0 var(--ytcd-secondary-color);
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-panel-surface.ytcd-effect-accent-rail:not(.ytcd-effect-shadow) { box-shadow: inset 3px 0 0 var(--ytcd-secondary-color); }
+            #yt-cd-hud.ytcd-layout-v2 :where(.hud-chapter, .hud-time, .hud-source-selector, .hud-tracklist-button, .hud-transport-controls, .hud-close-button, .hud-text-size-button),
+            .yt-tracklist-panel.ytcd-layout-tracklist {
+                border: var(--ytcd-unit-border-width) solid var(--ytcd-secondary-color);
+                border-radius: var(--ytcd-unit-border-radius);
+                background: color-mix(in srgb, var(--ytcd-unit-background-color) calc(var(--ytcd-unit-opacity) * 100%), transparent);
+                backdrop-filter: var(--ytcd-unit-backdrop-filter);
+                -webkit-backdrop-filter: var(--ytcd-unit-backdrop-filter);
+                text-align: var(--ytcd-unit-text-align, left);
+                text-align-last: var(--ytcd-unit-text-align, left);
+                text-shadow: 0 0 6px color-mix(in srgb, var(--ytcd-secondary-color) 55%, transparent);
+            }
+            #yt-cd-hud.ytcd-layout-v2 :where(.hud-chapter, .hud-time) {
+                display: grid;
+                align-content: center;
+            }
+            .yt-tracklist-panel.ytcd-layout-tracklist.ytcd-effect-accent-rail {
+                box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha)), inset 3px 0 0 var(--ytcd-secondary-color);
+            }
+            .yt-tracklist-panel.ytcd-layout-tracklist.ytcd-effect-accent-rail:not(.ytcd-effect-shadow) { box-shadow: inset 3px 0 0 var(--ytcd-secondary-color); }
+            #yt-cd-hud.ytcd-layout-v2 .hud-source-selector > :where(.hud-source-caption, .hud-source-option, .hud-status-button) {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                align-self: stretch;
+                height: auto;
+                margin-left: calc(-1 * var(--ytcd-unit-border-width));
+                border: 0;
+                border-left: var(--ytcd-unit-border-width) solid var(--ytcd-secondary-color);
+                color: inherit;
+                background: transparent;
+                text-align: inherit;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-source-selector > :first-child {
+                margin-left: 0;
+                border-left: 0;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-transport-controls .hud-control-button {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 0;
+                border-left: var(--ytcd-unit-border-width) solid var(--ytcd-secondary-color);
+                color: inherit;
+                background: transparent;
+                text-align: inherit;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-transport-controls .hud-control-button:first-child { border-left: 0; }
+            #yt-cd-hud.ytcd-layout-v2 :where(.hud-tracklist-button, .hud-close-button, .hud-text-size-button) {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-transport-controls.ytcd-transport-split .hud-control-button {
+                border: var(--ytcd-unit-border-width) solid var(--ytcd-secondary-color);
+                border-radius: var(--ytcd-unit-border-radius);
+                background: color-mix(in srgb, var(--ytcd-unit-background-color) calc(var(--ytcd-unit-opacity) * 100%), transparent);
+                backdrop-filter: var(--ytcd-unit-backdrop-filter);
+                -webkit-backdrop-filter: var(--ytcd-unit-backdrop-filter);
+            }
+            #yt-cd-hud.ytcd-layout-v2 [data-ytcd-text-align="left"] > :where(.hud-source-caption, .hud-source-option, .hud-status-button, .hud-control-button) { justify-content: flex-start; }
+            #yt-cd-hud.ytcd-layout-v2 [data-ytcd-text-align="right"] > :where(.hud-source-caption, .hud-source-option, .hud-status-button, .hud-control-button) { justify-content: flex-end; }
+            #yt-cd-hud.ytcd-layout-v2 [data-ytcd-text-align="justify"] > :where(.hud-source-caption, .hud-source-option, .hud-status-button, .hud-control-button) { justify-content: space-around; }
+            #yt-cd-hud.ytcd-layout-v2 :where(.hud-tracklist-button, .hud-close-button, .hud-text-size-button)[data-ytcd-text-align="left"] { justify-content: flex-start; }
+            #yt-cd-hud.ytcd-layout-v2 :where(.hud-tracklist-button, .hud-close-button, .hud-text-size-button)[data-ytcd-text-align="right"] { justify-content: flex-end; }
+            #yt-cd-hud.ytcd-layout-v2 :where(.hud-tracklist-button, .hud-close-button, .hud-text-size-button)[data-ytcd-text-align="justify"] { justify-content: space-around; }
+            #yt-cd-hud.ytcd-layout-v2 .cd-disc {
+                border: var(--ytcd-unit-border-width) solid var(--ytcd-secondary-color);
+                background-color: color-mix(in srgb, var(--ytcd-unit-background-color) calc(var(--ytcd-unit-opacity) * 100%), transparent);
+                backdrop-filter: var(--ytcd-unit-backdrop-filter);
+                -webkit-backdrop-filter: var(--ytcd-unit-backdrop-filter);
+            }
+            #yt-cd-hud.ytcd-layout-v2 .cd-disc-wrapper.ytcd-effect-glow .cd-disc {
+                box-shadow: 0 0 0 1px color-mix(in srgb, var(--ytcd-secondary-color) 70%, transparent), 0 0 10px color-mix(in srgb, var(--ytcd-secondary-color) 55%, transparent);
+            }
             @media (max-width: 640px) {
                 #yt-cd-hud {
                     top: 10px;
@@ -2971,6 +3775,7 @@
                     transition: none;
                 }
                 .cd-art,
+                .hud-chapter.ytcd-effect-marquee,
                 .status-light.searching,
                 .hud-hover-marquee.hud-hover-marquee-active .hud-marquee-label {
                     animation: none;
@@ -3261,6 +4066,12 @@
         if (!hud || !player || !chapter || !time || !disc || !info || !sideControls) {
             return { width: 300, height: 118 };
         }
+        if (hud.classList.contains('ytcd-layout-v2')) {
+            return {
+                width: parseFloat(hud.style.width) || hud.offsetWidth || 1,
+                height: parseFloat(hud.style.height) || hud.offsetHeight || 1,
+            };
+        }
 
         const signature = [
             chapter.textContent,
@@ -3399,6 +4210,11 @@
     }
 
     function applySizing() {
+        const hud = document.getElementById('yt-cd-hud');
+        if (hud?.classList.contains('ytcd-layout-v2')) {
+            applyRuntimeLayout();
+            return;
+        }
         const titleEl = document.getElementById('hud-chapter');
         const timeEl = document.getElementById('hud-time');
         if (titleEl) titleEl.style.fontSize = hudTitleFontSize + 'px';
@@ -3412,6 +4228,174 @@
         hudTitleFontSize = clamp(hudTitleFontSize + direction, 9, 28);
         hudTimeFontSize = clamp(hudTimeFontSize + direction, 10, 29);
         applySizing();
+    }
+
+    async function persistRuntimeLayout() {
+        try {
+            if (globalThis.chrome?.storage?.local) {
+                await globalThis.chrome.storage.local.set({ [HUD_LAYOUT_STORAGE_KEY]: runtimeLayout });
+            } else if (typeof globalThis.GM_setValue === 'function') {
+                await globalThis.GM_setValue(HUD_LAYOUT_STORAGE_KEY, runtimeLayout);
+            }
+        } catch (error) {
+            console.warn('[CD HUD] Could not persist the dragged Live Monitor unit.', error);
+        }
+    }
+
+    function runtimeLayoutRect(component, gap = 0) {
+        const geometry = component.geometry;
+        const centerX = geometry.x * runtimeLayout.canvas.width;
+        const centerY = geometry.y * runtimeLayout.canvas.height;
+        return {
+            left: centerX - geometry.width / 2 - gap,
+            right: centerX + geometry.width / 2 + gap,
+            top: centerY - geometry.height / 2 - gap,
+            bottom: centerY + geometry.height / 2 + gap,
+        };
+    }
+
+    function runtimeRectsOverlap(left, right) {
+        return left.left < right.right && left.right > right.left && left.top < right.bottom && left.bottom > right.top;
+    }
+
+    function runtimeEffectiveZ(component) {
+        return component.layer?.enabled ? Number(component.geometry.z) || 0 : 0;
+    }
+
+    function runtimePhysicalOverlaps(component, sameLayerOnly = true) {
+        if (!component?.present || !component.boundary?.collision) return [];
+        const candidate = runtimeLayoutRect(component, 4);
+        return runtimeLayout.components.filter(other => other.id !== component.id
+            && other.present
+            && other.boundary?.collision
+            && (!sameLayerOnly || runtimeEffectiveZ(other) === runtimeEffectiveZ(component))
+            && runtimeRectsOverlap(candidate, runtimeLayoutRect(other, 4)));
+    }
+
+    function runtimeOverlapGroup(componentId) {
+        const initial = getHudLayoutComponent(componentId);
+        if (!initial) return [];
+        const group = [];
+        const queue = [initial];
+        const seen = new Set();
+        while (queue.length) {
+            const component = queue.shift();
+            if (seen.has(component.id)) continue;
+            seen.add(component.id);
+            group.push(component);
+            runtimePhysicalOverlaps(component, true).forEach(other => {
+                if (!seen.has(other.id)) queue.push(other);
+            });
+        }
+        return group.length > 1 ? group : [];
+    }
+
+    function optimizeRuntimeOverlapLayers(componentId, group) {
+        const target = group.find(component => component.id === componentId);
+        const ordered = group.filter(component => component.id !== componentId).concat(target || []);
+        const candidates = [0];
+        for (let value = 1; value <= 99; value += 1) candidates.push(value, -value);
+        for (const component of ordered) {
+            component.layer.enabled = true;
+            const occupied = new Set(runtimePhysicalOverlaps(component, false)
+                .filter(other => !group.includes(other) || other.layer.enabled)
+                .map(runtimeEffectiveZ));
+            const z = candidates.find(candidate => !occupied.has(candidate));
+            if (z === undefined) return false;
+            component.geometry.z = z;
+        }
+        return true;
+    }
+
+    function bindRuntimeLayoutUnitDragging(element, player, componentId) {
+        if (!element || !player || element._ytCdLayoutUnitDragBound) return;
+        element._ytCdLayoutUnitDragBound = true;
+        let dragState = null;
+
+        const finish = async (event, cancelled = false) => {
+            if (!dragState || (event && event.pointerId !== dragState.pointerId)) return;
+            const finished = dragState;
+            dragState = null;
+            element.classList.remove('ytcd-layout-unit-dragging');
+            if (cancelled) {
+                runtimeLayout = finished.originalLayout;
+                applyRuntimeLayout();
+                return;
+            }
+            if (!finished.moved) return;
+            element._ytCdSuppressClick = true;
+            const overlaps = runtimeOverlapGroup(componentId);
+            if (overlaps.length) {
+                const enableLayers = globalThis.confirm('元件已重疊。是否自動開啟層次功能並最佳化 Z 軸？\n選擇「取消」會從面板移除所有衝突元件。');
+                if (enableLayers) {
+                    if (!optimizeRuntimeOverlapLayers(componentId, overlaps)) {
+                        runtimeLayout = finished.originalLayout;
+                    }
+                } else {
+                    overlaps.forEach(component => { component.present = false; });
+                }
+            }
+            runtimeLayout = normalizeHudLayout(runtimeLayout);
+            applyRuntimeLayout();
+            await persistRuntimeLayout();
+        };
+
+        element.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || event.isPrimary === false) return;
+            const component = getHudLayoutComponent(componentId);
+            if (!component?.present) return;
+            if (componentId === 'tracklist-panel' && (!event.target.closest('.tracklist-header') || event.target.closest('.tracklist-header-action'))) return;
+            dragState = {
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                geometry: { ...component.geometry },
+                originalLayout: JSON.parse(JSON.stringify(runtimeLayout)),
+                moved: false,
+            };
+            if (typeof element.setPointerCapture === 'function') element.setPointerCapture(event.pointerId);
+        }, true);
+
+        element.addEventListener('pointermove', event => {
+            if (!dragState || event.pointerId !== dragState.pointerId) return;
+            const deltaX = event.clientX - dragState.startX;
+            const deltaY = event.clientY - dragState.startY;
+            if (!dragState.moved && Math.hypot(deltaX, deltaY) < 3) return;
+            dragState.moved = true;
+            event.preventDefault();
+            event.stopPropagation();
+            const projection = projectHudLayout(runtimeLayout, { width: player.clientWidth, height: player.clientHeight });
+            const scale = projection?.scale || 1;
+            const canvas = runtimeLayout.canvas;
+            const grid = canvas.alignmentGrid;
+            const halfX = dragState.geometry.width / (2 * canvas.width);
+            const halfY = dragState.geometry.height / (2 * canvas.height);
+            let x = dragState.geometry.x + deltaX / scale / canvas.width;
+            let y = dragState.geometry.y + deltaY / scale / canvas.height;
+            if (grid.enabled) {
+                x = Math.round(x * canvas.width / grid.unitWidth) * grid.unitWidth / canvas.width;
+                y = Math.round(y * canvas.height / grid.unitHeight) * grid.unitHeight / canvas.height;
+            }
+            const next = JSON.parse(JSON.stringify(runtimeLayout));
+            const nextComponent = next.components.find(component => component.id === componentId);
+            nextComponent.geometry = {
+                ...nextComponent.geometry,
+                x: clamp(x, halfX, 1 - halfX, dragState.geometry.x),
+                y: clamp(y, halfY, 1 - halfY, dragState.geometry.y),
+            };
+            runtimeLayout = normalizeHudLayout(next);
+            element.classList.add('ytcd-layout-unit-dragging');
+            applyRuntimeLayout();
+        }, true);
+
+        element.addEventListener('pointerup', event => { void finish(event); }, true);
+        element.addEventListener('pointercancel', event => { void finish(event, true); }, true);
+        element.addEventListener('click', event => {
+            if (!element._ytCdSuppressClick) return;
+            element._ytCdSuppressClick = false;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }, true);
     }
 
     function isControlTarget(target, hud) {
@@ -3482,6 +4466,7 @@
         };
 
         hud.addEventListener('mousedown', (event) => {
+            if (hud.classList.contains('ytcd-layout-v2')) return;
             if (event.button !== 0 || isControlTarget(event.target, hud)) return;
             event.preventDefault();
             event.stopPropagation();
@@ -3489,6 +4474,7 @@
         }, true);
 
         hud.addEventListener('touchstart', (event) => {
+            if (hud.classList.contains('ytcd-layout-v2')) return;
             if (isControlTarget(event.target, hud)) return;
             if (event.touches.length === 1) {
                 event.preventDefault();
@@ -3499,6 +4485,7 @@
         }, true);
 
         hud.addEventListener('click', (event) => {
+            if (hud.classList.contains('ytcd-layout-v2')) return;
             if (isControlTarget(event.target, hud)) return;
             event.preventDefault();
             event.stopPropagation();
@@ -3683,6 +4670,7 @@
         };
 
         element.addEventListener('mousedown', (event) => {
+            if (getHudLayoutComponent('tracklist-panel')?.present) return;
             if (!event.target.closest('.tracklist-header') || event.target.closest('.tracklist-header-action')) return;
             if (event.button !== 0) return;
             event.preventDefault();
@@ -3691,6 +4679,7 @@
         }, true);
 
         element.addEventListener('touchstart', (event) => {
+            if (getHudLayoutComponent('tracklist-panel')?.present) return;
             if (!event.target.closest('.tracklist-header') || event.target.closest('.tracklist-header-action')) return;
             if (event.touches.length === 1) {
                 event.preventDefault();
@@ -3992,7 +4981,26 @@
         });
     }
 
+    function isPersistentTracklistPanel() {
+        return getHudLayoutComponent('tracklist-panel')?.present === true;
+    }
+
+    function isTracklistPanelVisible() {
+        return isPersistentTracklistPanel() || tracklistVisible;
+    }
+
     function toggleTracklist() {
+        if (isPersistentTracklistPanel()) {
+            if (tracklistPanel) {
+                tracklistPanel.style.display = 'block';
+                renderTracklist(tracklistPanel);
+            }
+            if (tracklistBtn) {
+                tracklistBtn.classList.add('active');
+                tracklistBtn.setAttribute('aria-expanded', 'true');
+            }
+            return;
+        }
         tracklistVisible = !tracklistVisible;
         if (!tracklistPanel) return;
         tracklistPanel.style.display = tracklistVisible ? 'block' : 'none';
@@ -4036,6 +5044,7 @@
             heading.appendChild(headerTitle);
             heading.appendChild(sourceLink);
             const closeButton = createControlButton('×', t('closeTracklist'), () => {
+                if (isPersistentTracklistPanel()) return;
                 tracklistVisible = false;
                 panel.style.display = 'none';
                 if (tracklistBtn) {
@@ -4061,12 +5070,13 @@
         } else if (panel.parentNode !== player) {
             player.appendChild(panel);
         }
-        panel.style.display = tracklistVisible ? 'block' : 'none';
-        if (tracklistVisible) {
+        panel.style.display = isTracklistPanelVisible() ? 'block' : 'none';
+        if (isTracklistPanelVisible()) {
             renderTracklist(panel);
             if (currentVideo) updateTracklistHighlight(currentVideo.currentTime);
         }
         tracklistPanel = panel;
+        applyRuntimeLayout();
     }
 
     function createHud(player) {
@@ -4209,8 +5219,8 @@
             tracklistBtn = createControlButton('≡', t('toggleTracklist'), toggleTracklist);
             tracklistBtn.classList.add('hud-tracklist-button');
             tracklistBtn.setAttribute('aria-expanded', 'false');
-            sourceSelector.appendChild(tracklistBtn);
             sourceActions.appendChild(sourceSelector);
+            sourceActions.appendChild(tracklistBtn);
 
             info.appendChild(sourceActions);
 
@@ -4229,9 +5239,7 @@
 
             const closeBtn = createControlButton('×', t('closeHud'), () => {
                 if (stopDiscScrubbing) stopDiscScrubbing(false);
-                tracklistVisible = false;
-                if (tracklistPanel) tracklistPanel.style.display = 'none';
-                hud.style.display = 'none';
+                setHudVisibility(false);
             });
             closeBtn.classList.add('hud-close-button');
 
@@ -4441,7 +5449,7 @@
         window.removeEventListener('focus', handle1001VerificationReturn, false);
         document.removeEventListener('visibilitychange', handle1001VerificationReturn, false);
         if (globalThis.chrome?.runtime?.onMessage?.removeListener) {
-            globalThis.chrome.runtime.onMessage.removeListener(handle1001BridgeReadyMessage);
+            globalThis.chrome.runtime.onMessage.removeListener(handleRuntimeMessage);
         }
         if (currentVideo) {
             currentVideo.removeEventListener('timeupdate', updateHud);
@@ -4458,6 +5466,7 @@
             angleDeltaToSeconds,
             calculateHudMinimumSize,
             chooseHudTitle,
+            createUserScriptI18n,
             detectBlockPage,
             getAdjacentTrackTime,
             getBalancedDiscSize,
@@ -4472,6 +5481,10 @@
             isLikelySingleTrackVideo,
             normalizeSearchTitle,
             normalize1001SearchGuard,
+            normalizeHudLayout,
+            projectCanvasGeometry,
+            projectHudGeometry,
+            projectHudLayout,
             normalizeTracklistCache,
             normalizeAngleDelta,
             parseRemoteHtml,
@@ -4495,6 +5508,7 @@
 
     async function boot() {
         await prepareExtensionSettings();
+        await prepareExtensionLayout();
         await loadTracklistCache();
         await load1001SearchGuard();
         document.addEventListener('yt-navigate-finish', scheduleInitialization, false);
@@ -4504,7 +5518,7 @@
         window.addEventListener('focus', handle1001VerificationReturn, false);
         document.addEventListener('visibilitychange', handle1001VerificationReturn, false);
         if (globalThis.chrome?.runtime?.onMessage?.addListener) {
-            globalThis.chrome.runtime.onMessage.addListener(handle1001BridgeReadyMessage);
+            globalThis.chrome.runtime.onMessage.addListener(handleRuntimeMessage);
         }
         window.addEventListener('pagehide', cleanup, { once: true });
         scheduleInitialization();

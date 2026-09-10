@@ -4,11 +4,11 @@
 
 [English](README.md) · [日本語](README.ja.md) · [介面語言說明](docs/i18n.zh-tw.md)
 
-![Cue Fox 沿著環形播放時間軸同步帶有時間戳的曲目卡片](docs/assets/readme/youtube-cd-hud-cue-fox-sync-banner-v1.png)
+![概念插圖：Cue Fox 操作發光唱盤](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg)
 
 > 找到曲目資料、對齊播放時間軸，讓 HUD 隨播放進度持續顯示正確曲目。
 
-[![Version 5.12.0](https://img.shields.io/badge/version-5.12.0-2563eb)](package.json)
+[![Version 5.13.0](https://img.shields.io/badge/version-5.13.0-2563eb)](package.json)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
 
@@ -33,7 +33,7 @@
 
 ## 專案狀態
 
-YouTube CD HUD 目前以**原始碼 Beta 測試版**形式提供。Userscript 與 Manifest V3 Chrome 擴充功能的版本皆為 **5.12.0**。
+YouTube CD HUD 目前以**原始碼 Beta 測試版**形式提供。Userscript 與 Manifest V3 Chrome 擴充功能的版本皆為 **5.13.0**。
 
 目前尚未提供 Chrome 線上應用程式商店版本。Chrome 版需以「載入未封裝項目」方式安裝；Userscript 則透過 Tampermonkey 安裝。
 
@@ -129,6 +129,8 @@ YouTube CD HUD 會搜尋、整理並切換多個曲目資料來源，再依 YouT
 6. 如需調整資料來源、外觀或控制項目，開啟擴充功能的設定頁。
 7. 重新載入已經開啟的 YouTube 分頁。
 
+在 YouTube 分頁中，單擊工具列 ICON 可顯示或隱藏 HUD；快速雙擊會開啟設定頁，且不改變 HUD 最後的顯示狀態。也可以在 ICON 上按滑鼠右鍵，從 Chrome 原生擴充功能選單選擇 **開啟設定**。
+
 > [!NOTE]
 > `npm run build:extension` 是**開發者**修改共用原始碼後才需要使用的指令。一般使用者直接載入專案中既有的 `extension/` 即可，不需要先執行 build。
 
@@ -159,10 +161,6 @@ YouTube CD HUD 會依各資料來源可取得的 YouTube ID、標題、影片長
 | `TRACKID` | 可取得時，優先比對完全相同的 YouTube ID | 備援候選會比對標題與長度；較短的單曲影片可改用 artist／title／version（藝人／曲名／版本）比對公開單曲索引 |
 
 各資料來源的 tracklist 會獨立保存，使用者可在來源之間切換並比較結果。
-
-<p align="center">
-  <img src="docs/assets/readme/youtube-cd-hud-cue-fox-provider-banner-v1.png" width="880" alt="Cue Fox 比較多個曲目資料來源的判斷依據，並選擇可同步的結果。" />
-</p>
 
 ### 常見情境
 
@@ -198,17 +196,31 @@ YouTube CD HUD 會依各資料來源可取得的 YouTube ID、標題、影片長
 
 HUD 集中呈現目前曲目、資料來源與播放同步狀態，並提供曲目跳轉、播放位置拖曳與外觀調整等控制。
 
-主要介面功能：
+![概念插圖：Cue Fox 操作唱盤，左側為 HUD，右側為曲目列表面板](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg)
 
-- 可拖移的 CD 風格 HUD。
-- 依目前 YouTube 縮圖產生的圓形唱片圖。
-- 依封面自動產生的強調色（accent color）。
-- 目前曲名與資料來源指示。
-- 上一曲／下一曲跳轉。
-- 曲目列表（tracklist）面板會醒目標示目前曲目。
-- 直接拖曳唱片以調整播放位置。
-- 可調整 HUD 寬度與文字大小。
-- Chrome 擴充功能提供獨立設定頁，可調整資料來源、字型、唱片比例、面板透明度、強調色、顯示控制項與自訂 CSS。
+*兩張 Cue Fox 圖皆為概念插圖，使用原始 HDR JPEG。實際介面請參考上方操作截圖與下方設定頁截圖。*
+
+HUD 可拖移，以 YouTube 縮圖呈現圓形唱片並產生封面強調色，也可調整寬度與文字大小。
+
+| 控制項 | 操作方式 |
+| --- | --- |
+| 資料來源 | 按 `YT` 使用 YouTube 曲目；展開 `DB ▼` 可搜尋或選用 `1001`、`MIXESDB`、`TRACKID`。切換來源會保留播放位置。 |
+| 上一曲／下一曲 | 按 `◀ PREV`／`NEXT ▶`（文字隨介面語言切換），跳至目前來源中帶有時間戳的上一首或下一首曲目。 |
+| 曲目列表面板 | 按 `≡` 顯示或隱藏列表；點選帶有時間戳的曲目列，即可從該時間點播放。目前曲目會醒目標示。 |
+| 唱片拖曳（disc scrubbing） | 按住唱片旋轉：順時針快轉，逆時針循環播放短片段；放開後恢復播放。 |
+
+### 設定頁操作圖解
+
+以下沿用既有 **5.8.3** 版設定頁截圖，右側為內建的範例 HUD 預覽。目前版本已增加資料來源與語言控制項；範例預覽並非即時 YouTube 播放畫面。
+
+| 設定總覽 | 外觀調整範例 |
+| --- | --- |
+| [![設定頁顯示資料來源、外觀、自訂 CSS 與範例 HUD 預覽](docs/assets/readme/youtube-cd-hud-options-overview.png)](docs/assets/readme/youtube-cd-hud-options-overview.png) | [![設定頁改用黃色強調色、115% 唱片倍率、92% 面板不透明度，並隱藏跳曲控制](docs/assets/readme/youtube-cd-hud-options-configured.png)](docs/assets/readme/youtube-cd-hud-options-configured.png) |
+| 從資料來源行為與預設外觀開始。 | 調整唱片、透明度、強調色與顯示控制項。 |
+
+1. **資料來源：**開啟擴充功能設定頁，依需求啟用 `1001`、`MixesDB` 或 `TrackId.net`，並設定 1001 是否自動搜尋、比對成功後是否優先採用。
+2. **外觀：**調整字型、字級、唱片倍率、面板不透明度、強調色與顯示控制項，搭配範例預覽查看效果。
+3. **自訂 CSS：**輸入以 `#yt-cd-hud` 或 `.yt-tracklist-panel` 限定範圍的樣式，再按**儲存並套用**。CSS 效果請在 YouTube HUD 確認；設定儲存在目前的 Chrome 使用者設定檔。
 
 ## 介面語言
 
@@ -218,15 +230,11 @@ Chrome 擴充功能介面支援繁體中文（台灣）、英文與日文。可�
 
 完整的偵測順序、儲存行為與貢獻者說明請見[介面語言說明](docs/i18n.zh-tw.md)。本機檢查不取代 Chrome、Tampermonkey 與 YouTube 的可見實機驗收。
 
-![YouTube CD HUD 控制頁顯示預設本機設定與即時 HUD 預覽](docs/assets/readme/youtube-cd-hud-options-overview.png)
-
-若使用自訂 CSS，建議盡量將 CSS selector（選擇器）限制在 `#yt-cd-hud` 或 `.yt-tracklist-panel`，避免樣式影響 YouTube 的其他介面。
-
 ---
 
 ## 隱私、權限與快取
 
-Chrome 擴充功能僅要求 `storage` 權限；可存取的網站範圍限制在：
+Chrome 擴充功能要求 `storage`（儲存本機設定）與 `contextMenus`（提供工具列 ICON 的「開啟設定」選單）權限；可存取的網站範圍限制在：
 
 - YouTube
 - 1001Tracklists
@@ -265,7 +273,7 @@ npm test
 
 `npm run check` 會確認擴充功能的 content script（內容指令碼）與 Userscript 共用原始碼保持同步，並執行 JavaScript 語法檢查；`npm test` 會執行 Node.js 測試。
 
-這些檢查可以驗證專案原始碼狀態，但最終驗收仍應使用實際的瀏覽器使用者設定檔，安裝 Userscript 或載入未封裝擴充功能，並開啟真正的 YouTube 影片進行測試。
+這些檢查可以驗證專案原始碼狀態，但最終驗收仍應使用實際的瀏覽器使用者設定檔，安裝 Userscript 或載入未封裝擴充功能，並開啟真正的 YouTube 影片進行測試。Live Monitor 視覺化編輯器的操作與限制請見 [Live Monitor Visual Composer 指南](docs/live-monitor-visual-composer.zh-tw.md)。
 
 ---
 

@@ -1,11 +1,12 @@
 {
   "name": "youtube-cd-hud",
-  "version": "5.12.0",
+  "version": "5.13.0",
   "private": true,
   "description": "Governed source and tests for the YouTube CD HUD userscript and Chrome extension.",
   "scripts": {
     "build:extension": "node scripts/build-extension.mjs",
-    "check": "node scripts/build-extension.mjs --check && node --check src/youtube-cd-hud.user.js && node --check extension/background/service-worker.js && node --check extension/content/1001-session-bridge.js && node --check extension/content/gm-xmlhttp-request.js && node --check extension/content/youtube-cd-hud.js && node --check extension/options/options.js && node --check extension/shared/1001-packet.js && node --check extension/shared/settings.js",
+    "check": "node scripts/build-extension.mjs --check && node --check src/youtube-cd-hud.user.js && node --check extension/background/service-worker.js && node --check extension/content/1001-session-bridge.js && node --check extension/content/gm-xmlhttp-request.js && node --check extension/content/youtube-cd-hud.js && node --check extension/options/options.js && node --check extension/options/live-monitor-composer.js && node --check extension/options/live-monitor-layout-store.js && node --check extension/options/live-monitor-resize-engine.js && node --check extension/options/live-monitor-canvas-editor.js && node --check extension/options/live-monitor-property-toolbar.js && node --check extension/options/live-monitor-component-library.js && node --check extension/options/live-monitor-layout-presets.js && node --check extension/options/live-monitor-bootstrap.js && node --check extension/options/live-monitor-loader.js && node --check extension/shared/1001-packet.js && node --check extension/shared/settings.js",
+    "check:version": "node --test tests/version-consistency.test.mjs",
     "test": "node --test tests/*.test.mjs"
   }
 }
