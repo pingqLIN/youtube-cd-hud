@@ -101,6 +101,16 @@ YouTube 自体に利用可能な曲目情報がある場合、`YT` 情報源が�
 
 ---
 
+## レイアウトエディターの例
+
+[![5つの縦長の模擬編集状態](docs/assets/readme/editor-states/editor-states-strip.jpg)](docs/assets/readme/editor-states/editor-states-strip.svg)
+
+説明用に再構成した模擬 UI のスクリーンショットです。拡張機能そのものの画面キャプチャではありません。[各パラメーターと機能の説明（English）](README.md#layout-editor-preview) · [繁體中文](README.zh-tw.md#版面編輯器預覽)。
+
+設定ページは **Save and apply** で保存します。A/B/C は SAVE を押して使うセッション内の一時保存です。YouTube 上で HUD の部品をドラッグした位置は、操作終了時に自動保存されます。
+
+---
+
 ## インストール方法を選ぶ
 
 どちらの形式も同じ Userscript ソースを使いますが、用途が異なります。
