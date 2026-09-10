@@ -121,9 +121,19 @@ When YouTube already provides usable track information, the `YT` source remains 
 
 ## Layout Editor Preview
 
-![Actual Live Monitor editor detail showing the selected panel base, border and corner controls, padding, and effects](docs/assets/readme/youtube-cd-hud-layout-editor-controls.png)
+Five portrait states form one continuous strip. These are **screenshots of reconstructed UI simulations**, rearranged to explain supported features, not unchanged extension screenshots or live-playback acceptance evidence. Open the image for the scalable vector version.
 
-*Actual options-page detail: select a component to edit its properties below the canvas. The track text is sample preview content, not live YouTube playback; this crop illustrates editing controls rather than the current built-in panel arrangements.*
+[![Editor states 01–05](docs/assets/readme/editor-states/editor-states-strip.jpg)](docs/assets/readme/editor-states/editor-states-strip.svg)
+
+| Image | Parameters and behavior |
+| --- | --- |
+| [01 · Properties](docs/assets/readme/editor-states/parameters.jpg) | Surface and text settings are independent. Example: title width **33.75%**, surface opacity **85%**, **18px** text and corner level **4/10**. Depending on the component, adjust color, opacity, size, border, corners, blur, text font, size, alignment and effects. |
+| [02 · Layers](docs/assets/readme/editor-states/layers.jpg) | Enable **Z axis**: title **Z=2** sits above time **Z=1**, within **−99 to 99**. The base encloses the content underneath. Split previous/next controls have separate positions with shared size and appearance. |
+| [03 · Proportions](docs/assets/readme/editor-states/scale.jpg) | **Size** preserves the current aspect ratio; **SCALE %** transforms all, selected or overlapping components. Example: **1280×720 / REL % / 110%**. Dimensions, spacing and text scale together within limits. There is no separate aspect-lock toggle. Group scaling disables auto alignment to avoid rounding, rejects invalid sizes or bounds, and offers UNDO. |
+| [04 · Tracklist](docs/assets/readme/editor-states/tracklist.jpg) | Style the panel and text independently, with shadow and accent rail; the track-title component supports marquee. Example: **11px**, left alignment, **88%** surface opacity. Track names are samples. Actual playback highlights the current track from the selected source; long lists scroll. |
+| [05 · Placement and saving](docs/assets/readme/editor-states/save.jpg) | Adding a component searches for free space and fails if none fits. Same-layer drag collisions offer automatic Z ordering; **Cancel removes conflicting components from the panel**. Editor changes remain previews until **Save and apply**. A/B/C require SAVE and last for the browser session. **Dragging HUD components on YouTube saves their positions on release**. |
+
+[Original settings-page detail](docs/assets/readme/youtube-cd-hud-layout-editor-controls.png)
 
 ---
 
@@ -225,7 +235,7 @@ The HUD brings the current track, selected source, and playback synchronization 
 
 ![Concept artwork: Cue Fox at a turntable with a HUD on the left and a tracklist panel on the right](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg)
 
-*The two Cue Fox illustrations are concept artwork, supplied as original HDR JPEGs. See the layout editor screenshot above for actual UI.*
+*The two Cue Fox illustrations are concept artwork, supplied as original HDR JPEGs. See the original settings-page detail linked in the editor section for actual UI.*
 
 The HUD uses circular YouTube thumbnail artwork. Live Monitor lets you arrange component positions, dimensions, text, and styling on the player canvas.
 

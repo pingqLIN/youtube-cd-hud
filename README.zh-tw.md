@@ -119,9 +119,19 @@ YouTube CD HUD 會搜尋、整理並切換多個曲目資料來源，再依 YouT
 
 ## 版面編輯器預覽
 
-![實際 Live Monitor 編輯器局部畫面：選取面板底座，調整邊框、圓角、留白與效果](docs/assets/readme/youtube-cd-hud-layout-editor-controls.png)
+五張直式模擬編輯狀態連續並排。這是依現有功能重建、為說明而重新排版的 **模擬 UI 截圖**，並非擴充功能原樣截圖或即時播放驗收。點圖可開啟可放大的向量版。
 
-*實際設定頁局部截圖：選取元件後，在畫布下方編輯屬性。圖中曲名為範例預覽內容，並非即時 YouTube 播放；此圖說明編輯控制，不代表目前兩套內建面板的配置。*
+[![Editor states 01–05](docs/assets/readme/editor-states/editor-states-strip.jpg)](docs/assets/readme/editor-states/editor-states-strip.svg)
+
+| 對照圖片 | 參數與功能說明 |
+| --- | --- |
+| [01 · 元件參數](docs/assets/readme/editor-states/parameters.jpg) | 表面與文字分開設定。圖中示範標題寬 **33.75%**、表面不透明度 **85%**、字級 **18px**、圓角等級 **4/10**。可依元件調整背景色、透明度、尺寸、邊框、圓角、模糊，以及文字色彩、透明度、字型、字級、對齊與效果。 |
+| [02 · 圖層](docs/assets/readme/editor-states/layers.jpg) | 啟用 **Z axis**，圖中標題 **Z=2** 在時間 **Z=1** 前方，可用範圍 **−99～99**。底座自動包覆內容並留在下方。分離的上一曲／下一曲可各自定位，仍共用尺寸與外觀。 |
+| [03 · 等比例縮放](docs/assets/readme/editor-states/scale.jpg) | **Size** 依目前寬高比調整單一元件；**SCALE %** 縮放全部、選取元件或重疊群組。圖中為 **1280×720／REL %／110%**。寬高、相對間距與文字一起調整；沒有獨立的「比例鎖定」開關。群組縮放會關閉自動對齊以避免取整，超出尺寸或畫布限制則不套用，可用 UNDO 復原。 |
+| [04 · 曲目展示](docs/assets/readme/editor-states/tracklist.jpg) | 曲目面板可獨立設定表面與文字，並啟用陰影、側邊強調線；曲名元件支援跑馬燈。圖中為 **11px**、靠左、表面不透明度 **88%**。曲名為示範資料；實際播放依來源與播放位置醒目標示曲目，長列表可捲動。 |
+| [05 · 避讓與保存](docs/assets/readme/editor-states/save.jpg) | 新增元件會搜尋空位，找不到則不加入。拖曳後若同層重疊，確認可自動配置 Z 軸；**取消會把衝突元件移出面板**。編輯器修改先保留在預覽，需按「儲存並套用」才保存；A／B／C 須按 SAVE，僅限本次瀏覽器工作階段。**在 YouTube 播放端拖移 HUD 元件，放開後會自動保存位置**。 |
+
+[原始設定頁局部截圖](docs/assets/readme/youtube-cd-hud-layout-editor-controls.png)
 
 ---
 
@@ -223,7 +233,7 @@ HUD 集中呈現目前曲目、資料來源與播放同步狀態，並提供曲�
 
 ![概念插圖：Cue Fox 操作唱盤，左側為 HUD，右側為曲目列表面板](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg)
 
-*兩張 Cue Fox 圖皆為概念插圖，使用原始 HDR JPEG。實際介面請參考上方版面編輯器截圖。*
+*兩張 Cue Fox 圖皆為概念插圖，使用原始 HDR JPEG。實際介面可查看編輯器段落連結的原始設定頁局部截圖。*
 
 HUD 以 YouTube 縮圖呈現圓形唱片；Live Monitor 可在播放器畫布上調整各元件的位置、尺寸、文字與樣式。
 
