@@ -13,7 +13,7 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
   const manifest = JSON.parse(read('extension/manifest.json'));
 
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '5.13.0');
+  assert.equal(manifest.version, '5.14.0');
   assert.deepEqual(manifest.icons, {
     16: 'icons/icon16.png',
     32: 'icons/icon32.png',

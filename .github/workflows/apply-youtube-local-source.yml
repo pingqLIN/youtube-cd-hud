@@ -1,15 +1,27 @@
-name: Apply YouTube local timestamp source
+name: Validate source and extension
 
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  diagnose:
+  validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Runner smoke test
-        run: |
-          echo "runner-ok"
-          node --version
-          git --version
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check generated extension and syntax
+        run: npm run check
+      - name: Run tests
+        run: npm test
+      - name: Check whitespace
+        run: git show --format= --check HEAD

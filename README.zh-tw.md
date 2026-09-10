@@ -10,7 +10,7 @@
 
 > 找到曲目資料、對齊播放時間軸，讓 HUD 隨播放進度持續顯示正確曲目。
 
-[![Version 5.13.0](https://img.shields.io/badge/version-5.13.0-2563eb)](package.json)
+[![Version 5.14.0](https://img.shields.io/badge/version-5.14.0-2563eb)](package.json)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
 
@@ -63,7 +63,7 @@
 
 ## 專案狀態
 
-YouTube CD HUD 目前以**原始碼 Beta 測試版**形式提供。Userscript 與 Manifest V3 Chrome 擴充功能的版本皆為 **5.13.0**。
+YouTube CD HUD 目前以**原始碼 Beta 測試版**形式提供。Userscript 與 Manifest V3 Chrome 擴充功能的版本皆為 **5.14.0**。
 
 目前尚未提供 Chrome 線上應用程式商店版本。Chrome 版需以「載入未封裝項目」方式安裝；Userscript 則透過 Tampermonkey 安裝。
 

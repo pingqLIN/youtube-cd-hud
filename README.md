@@ -10,7 +10,7 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 
 > Find the tracklist. Match the timeline. Stay on the current track.
 
-[![Version 5.13.0](https://img.shields.io/badge/version-5.13.0-2563eb)](package.json)
+[![Version 5.14.0](https://img.shields.io/badge/version-5.14.0-2563eb)](package.json)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
 
@@ -63,7 +63,7 @@ New layouts start with **relative % sizing on a 1280 × 720 canvas**. Existing l
 
 ## Project Status
 
-YouTube CD HUD is currently distributed as a **source-only beta**. The current source version is **5.13.0** for both the userscript and the Manifest V3 Chrome extension.
+YouTube CD HUD is currently distributed as a **source-only beta**. The current source version is **5.14.0** for both the userscript and the Manifest V3 Chrome extension.
 
 There is no Chrome Web Store package documented by this repository. The Chrome build is loaded as an unpacked extension; the userscript is installed through Tampermonkey.
 
