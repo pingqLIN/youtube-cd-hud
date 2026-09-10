@@ -17,9 +17,9 @@ Open the extension options page and use the Live Monitor stage:
   text and a persistent list on the right. Click either to preview it, then
   **Save and apply**. They remain available after browser restarts and do not
   replace your saved layout or A/B/C slots automatically.
-- Both built-in panels are centered with editing room around them. Tracklist
-  reader aligns three compact control rows with 8px gaps, a 16px column gap,
-  and a 4px snapping grid. Reload the built-in panel to use the revised layout;
+- Each built-in panel retains its authored positions, sizes, layers, and styling.
+  Tracklist reader includes a larger disc and the fixed list; Compact playback
+  keeps the list optional. Reload a built-in panel to use its current design;
   existing saved layouts retain their positions.
 - Click a component to select it. Click the stage background or press Escape to
   clear selection.
