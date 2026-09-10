@@ -1,16 +1,26 @@
-# YouTube CD HUD
+# Cue Fox · YouTube Track HUD
+
+旧称 **YouTube CD HUD**。中国語名は **曲狐**。Repository slug は `youtube-cd-hud` のままです。
 
 YouTube の DJ セット、ミックス、音楽動画に、複数の情報源を切り替えられる再生位置同期トラックリスト HUD を追加します。
 
 [English](README.md) · [繁體中文](README.zh-tw.md) · [インターフェース言語ガイド](docs/i18n.ja.md)
 
-![Cue Fox synchronizing timestamp cards around a circular playback timeline](docs/assets/readme/youtube-cd-hud-cue-fox-sync-banner-v1.png)
+![Cue Fox synchronizing timestamp cards around a circular playback timeline](docs/assets/readme/cue-fox-banner-v1.png)
 
 > トラックリストを見つけ、再生位置に合わせ、現在の曲を表示します。
 
 [![Version 5.12.0](https://img.shields.io/badge/version-5.12.0-2563eb)](package.json)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Tampermonkey userscript](https://img.shields.io/badge/Tampermonkey-userscript-111111?logo=tampermonkey&logoColor=white)](src/youtube-cd-hud.user.js)
+
+## 再生中の表示
+
+![以前の README に掲載されていた再生画面](docs/assets/readme/youtube-cd-hud-preview-02.png)
+
+*過去の再生画面です。今回の変更のライブ動作検証を示すものではありません。*
+
+[HDR 元画像](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg) · [新しいレイアウト操作の説明（English）](README.md#shape-your-layout)
 
 ---
 

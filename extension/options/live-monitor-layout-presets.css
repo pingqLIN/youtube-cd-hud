@@ -55,3 +55,6 @@
     .lm-layout-slot-status { grid-column: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .lm-layout-controls * { transition: none; } }
+.lm-layout-pack { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; grid-column: 1 / -1; }
+.lm-layout-pack input { width: 72px; }
+.lm-layout-pack select, .lm-layout-pack input, .lm-layout-pack button { min-height: 32px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); }

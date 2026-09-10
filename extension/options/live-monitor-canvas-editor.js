@@ -250,6 +250,24 @@
             onChange(state.layout, 'viewport');
         }
 
+        function scaleGroup(factor, scope = 'all') {
+            let ids = null;
+            if (scope !== 'all') {
+                ids = state.selected && state.selected !== 'panel-base' ? [state.selected] : [];
+                if (scope === 'group' && ids.length) {
+                    const group = composer.overlapGroupFor(state.layout, state.selected, false);
+                    if (group.length) ids = group.map(item => item.id);
+                }
+            }
+            const result = resizeEngine.scaleGroup(state.layout, factor, ids);
+            if (!result.updated) return result;
+            state.layout = result.layout;
+            render();
+            onSelect(state.selected, componentFor(state.selected), state.selectedPart);
+            onChange(state.layout, 'group-scale');
+            return result;
+        }
+
         function updateSplit(componentId, enabled) {
             const result = composer.updateSplit(state.layout, componentId, enabled);
             if (!result.updated) return result;
@@ -303,6 +321,7 @@
             updatePalette,
             updateSizingMode,
             updateViewport,
+            scaleGroup,
             updateSplit,
             setLayout,
             getLayout: () => composer.normalizeLayout(state.layout),

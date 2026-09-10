@@ -7,7 +7,7 @@
     const CANVAS = Object.freeze({
         width: 1280,
         height: 720,
-        sizingMode: 'absolute',
+        sizingMode: 'relative',
         collisionPolicy: 'no-overlap-closed',
         alignmentGrid: Object.freeze({ enabled: true, unitWidth: 8, unitHeight: 8, visible: false }),
     });
@@ -76,7 +76,7 @@
 
     const registry = Object.freeze({
         'panel-base': definition('panel-base', 'Panel base', {
-            minSize: { width: 320, height: 96 }, maxSize: { width: 1280, height: 720 },
+            minSize: { width: 320, height: 48 }, maxSize: { width: 1280, height: 720 },
             supportedProperties: ['backgroundColor', 'opacity', 'padding'],
             supportedEffects: ['shadow', 'accentRail'],
             boundary: { mode: 'dynamic-envelope', collision: false, padding: 18 },
@@ -86,7 +86,7 @@
             flags: { required: true, removable: false, catalog: false, special: 'dynamic-base', opacityMinimum: 0 },
         }),
         disc: definition('disc', 'Disc control', {
-            minSize: { width: 60, height: 60 }, maxSize: { width: 720, height: 720 },
+            minSize: { width: 40, height: 40 }, maxSize: { width: 720, height: 720 },
             supportedProperties: ['backgroundColor', 'opacity', 'size', 'texture'],
             boundary: null,
             geometry: { x: .125, y: .5, width: 100, height: 100, z: 1 },
@@ -94,35 +94,35 @@
             flags: { supportsZAxis: true, zAxisAlways: true, allowCanvasOverflow: true, fixedRoundShape: true },
         }),
         'track-title': definition('track-title', 'Track title', {
-            minSize: { width: 180, height: 48 }, maxSize: { width: 720, height: 120 },
+            minSize: { width: 180, height: 32 }, maxSize: { width: 720, height: 120 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
             geometry: { x: .34, y: .43, width: 430, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 14, textAlign: 'left' },
             effects: { marquee: true }, supportedEffects: ['marquee'], flags: { supportsZAxis: true },
         }),
         'time-readout': definition('time-readout', 'Time readout', {
-            minSize: { width: 90, height: 48 }, maxSize: { width: 320, height: 96 },
+            minSize: { width: 90, height: 32 }, maxSize: { width: 320, height: 96 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
             geometry: { x: .23, y: .515, width: 120, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 12, textAlign: 'left' },
             flags: { supportsZAxis: true },
         }),
         'source-selector': definition('source-selector', 'Source selector', {
-            minSize: { width: 180, height: 48 }, maxSize: { width: 520, height: 96 },
+            minSize: { width: 180, height: 32 }, maxSize: { width: 520, height: 96 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
             geometry: { x: .39, y: .61, width: 280, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 9, textAlign: 'center' },
             effects: { statusLamp: true }, supportedEffects: ['statusLamp'], flags: { supportsZAxis: true },
         }),
         'tracklist-toggle': definition('tracklist-toggle', 'Tracklist toggle', {
-            minSize: { width: 48, height: 48 }, maxSize: { width: 112, height: 96 },
+            minSize: { width: 48, height: 32 }, maxSize: { width: 112, height: 96 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
             geometry: { x: .526, y: .61, width: 48, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 11, textAlign: 'center' },
             flags: { supportsZAxis: true },
         }),
         'transport-controls': definition('transport-controls', 'Track controls', {
-            minSize: { width: 128, height: 48 }, maxSize: { width: 360, height: 112 },
+            minSize: { width: 128, height: 32 }, maxSize: { width: 360, height: 112 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
             geometry: { x: .625, y: .61, width: 128, height: 48, z: 0 },
             arrangement: {
@@ -134,21 +134,21 @@
             flags: { supportsZAxis: true, supportsSplit: true },
         }),
         'close-control': definition('close-control', 'Close control', {
-            minSize: { width: 48, height: 48 }, maxSize: { width: 96, height: 96 },
+            minSize: { width: 48, height: 32 }, maxSize: { width: 96, height: 96 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
             geometry: { x: .72, y: .43, width: 48, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 16, textAlign: 'center' },
             flags: { supportsZAxis: true },
         }),
         'text-size-control': definition('text-size-control', 'Text size control', {
-            minSize: { width: 64, height: 48 }, maxSize: { width: 128, height: 96 },
+            minSize: { width: 64, height: 32 }, maxSize: { width: 128, height: 96 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
             geometry: { x: .72, y: .515, width: 64, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 14, textAlign: 'center' },
             flags: { supportsZAxis: true },
         }),
         'tracklist-panel': definition('tracklist-panel', 'Tracklist panel', {
-            minSize: { width: 220, height: 120 }, maxSize: { width: 720, height: 640 },
+            minSize: { width: 220, height: 64 }, maxSize: { width: 720, height: 640 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'],
             supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
             geometry: { x: .8375, y: .2222222222222222, width: 280, height: 256, z: 0 },
@@ -352,7 +352,7 @@
     function fitPartGeometry(value, canvas, fallback, z = 0) {
         const source = value && typeof value === 'object' ? value : {};
         const scale = sizeScale(canvas);
-        const limits = { minWidth: 64 * scale, maxWidth: 180 * scale, minHeight: 48 * scale, maxHeight: 112 * scale };
+        const limits = { minWidth: 64 * scale, maxWidth: 180 * scale, minHeight: 32 * scale, maxHeight: 112 * scale };
         let width = clamp(source.width, limits.minWidth, limits.maxWidth, fallback.width);
         let height = clamp(source.height, limits.minHeight, limits.maxHeight, fallback.height);
         if (canvas.alignmentGrid?.enabled) {
@@ -471,7 +471,7 @@
         });
     }
 
-    function overlapGroupFor(layout, componentId) {
+    function overlapGroupFor(layout, componentId, sameLayerOnly = true) {
         const initial = getComponent(layout, componentId);
         if (!initial) return [];
         const group = [];
@@ -482,7 +482,7 @@
             if (seen.has(component.id)) continue;
             seen.add(component.id);
             group.push(component);
-            physicalOverlapsFor(component, layout.components, layout.canvas, true)
+            physicalOverlapsFor(component, layout.components, layout.canvas, sameLayerOnly)
                 .filter(other => !seen.has(other.id))
                 .forEach(other => queued.push(other));
         }
@@ -604,7 +604,10 @@
 
     function normalizeLayout(value) {
         const source = value && typeof value === 'object' ? value : {};
-        const canvas = normalizeCanvas(source.canvas);
+        const sizingMode = SIZING_MODES.includes(source.canvas?.sizingMode)
+            ? source.canvas.sizingMode
+            : Array.isArray(source.components) ? 'absolute' : CANVAS.sizingMode;
+        const canvas = normalizeCanvas({ ...source.canvas, sizingMode });
         const palette = normalizePalette(source.palette);
         const sourceComponents = Array.isArray(source.components) ? source.components : [];
         const components = [];

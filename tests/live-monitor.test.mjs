@@ -9,6 +9,181 @@ import { fileURLToPath } from 'node:url';
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = relativePath => fs.readFileSync(path.join(projectRoot, relativePath), 'utf8');
 
+function loadResizeEngine(composer) {
+  const context = { YtCdHudLiveMonitorComposer: composer };
+  vm.runInNewContext(read('extension/options/live-monitor-resize-engine.js'), context);
+  return context.YtCdHudLiveMonitorResizeEngine;
+}
+
+test('scale controls invoke the real editor, undo atomically, and preserve intervening edits', async () => {
+  class Element {
+    constructor(tag) {
+      this.tagName = tag.toUpperCase(); this.children = []; this.dataset = {}; this.listeners = {};
+      this.classList = { add() {} }; this.style = { setProperty() {} };
+    }
+    append(...items) { this.children.push(...items); }
+    appendChild(item) { this.append(item); return item; }
+    replaceChildren(...items) { this.children = items; }
+    setAttribute(name, value) { this[name] = value; }
+    addEventListener(name, listener) { this.listeners[name] = listener; }
+    querySelectorAll() { return []; }
+    checkValidity() { return Number(this.value) >= Number(this.min) && Number(this.value) <= Number(this.max); }
+    reportValidity() { this.invalidReported = true; }
+  }
+  const composer = loadComposer();
+  const document = { createElement: tag => new Element(tag), getElementById: () => null, documentElement: { lang: 'en' } };
+  const context = { document, YtCdHudLiveMonitorComposer: composer, YtCdHudLiveMonitorResizeEngine: loadResizeEngine(composer) };
+  vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'), context);
+  const changes = [];
+  const onChange = (_layout, reason) => changes.push(reason);
+  const editor = context.YtCdHudLiveMonitorCanvasEditor.createEditor({ preview: new Element('div'), layout: composer.createDefaultLayout(), onChange });
+  const original = JSON.stringify(editor.getLayout());
+  const presets = loadLayoutPresets(composer, { document });
+  const controls = presets.createControls({ host: new Element('div'), editor, onChange });
+  await controls.render();
+  const pack = controls.element.children.find(element => element.className === 'lm-layout-pack');
+  const [scope, scale, apply, undo] = pack.children;
+  scope.value = 'all'; scale.value = '110';
+  apply.listeners.click();
+  assert.equal(changes.at(-1), 'group-scale');
+  assert.notEqual(JSON.stringify(editor.getLayout()), original);
+  assert.equal(scale.value, '100');
+  assert.equal(undo.disabled, false);
+  undo.listeners.click();
+  assert.equal(changes.at(-1), 'group-scale-undo');
+  assert.equal(JSON.stringify(editor.getLayout()), original);
+  assert.equal(undo.disabled, true);
+  scale.value = '0'; apply.listeners.click();
+  assert.equal(scale.invalidReported, true);
+  assert.equal(JSON.stringify(editor.getLayout()), original);
+  editor.select('track-title'); scope.value = 'selected'; scale.value = '75'; apply.listeners.click();
+  assert.equal(editor.state.selected, 'track-title');
+  assert.equal(composer.getComponent(editor.state.layout, 'track-title').geometry.height, 36);
+  editor.updatePalette({ primaryColor: '#123456' });
+  const edited = JSON.stringify(editor.getLayout());
+  undo.listeners.click();
+  assert.equal(JSON.stringify(editor.getLayout()), edited);
+  assert.equal(undo.disabled, true);
+});
+
+test('cross-layer groups retain layer order and selected scaling detects collisions', () => {
+  const composer = loadComposer();
+  const layout = composer.createDefaultLayout();
+  layout.canvas.alignmentGrid.enabled = false;
+  layout.components.forEach(item => { if (item.id !== 'panel-base') item.present = ['track-title', 'time-readout'].includes(item.id); });
+  const title = composer.getComponent(layout, 'track-title');
+  const time = composer.getComponent(layout, 'time-readout');
+  title.geometry = { ...title.geometry, x: .4, y: .5, width: 200, height: 48 };
+  time.geometry = { ...time.geometry, x: .53, y: .5, width: 100, height: 48 };
+  const engine = loadResizeEngine(composer);
+  const failed = engine.scaleGroup(layout, 1.2, ['track-title']);
+  assert.equal(failed.updated, false);
+  assert.match(failed.reason, /collide/);
+  time.geometry.x = .4;
+  time.layer.enabled = true;
+  time.geometry.z = 1;
+  const normalized = composer.normalizeLayout(layout);
+  assert.equal(composer.overlapGroupFor(normalized, 'track-title').length, 0);
+  const group = composer.overlapGroupFor(normalized, 'track-title', false).map(item => item.id);
+  assert.deepEqual(Array.from(group).sort(), ['time-readout', 'track-title']);
+  const result = engine.scaleGroup(normalized, 1.1, group);
+  assert.equal(result.updated, true, result.reason);
+  assert.equal(composer.getComponent(result.layout, 'time-readout').geometry.z, 1);
+});
+
+test('new 720p layouts use percent controls while legacy pixel layouts retain their semantics', () => {
+  const composer = loadComposer();
+  assert.equal(composer.createDefaultLayout().canvas.sizingMode, 'relative');
+  assert.equal(composer.createDefaultLayout().canvas.width, 1280);
+  assert.equal(composer.createDefaultLayout().canvas.height, 720);
+  assert.equal(loadRuntimeLayoutNormalizer()(null).canvas.sizingMode, 'relative');
+  const legacy = { version: 2, canvas: { width: 1920, height: 1080, alignmentGrid: { enabled: false } }, components: [{ id: 'track-title', geometry: { x: .5, y: .5, width: 400, height: 50 } }] };
+  for (const normalize of [composer.normalizeLayout, loadRuntimeLayoutNormalizer()]) {
+    const result = normalize(legacy);
+    assert.equal(result.canvas.sizingMode, 'absolute');
+    assert.equal(result.components.find(item => item.id === 'track-title').geometry.width, 400);
+    assert.equal(result.components.find(item => item.id === 'track-title').geometry.height, 50);
+    assert.deepEqual(JSON.parse(JSON.stringify(normalize(result))), JSON.parse(JSON.stringify(result)));
+  }
+});
+
+test('compact height floors agree between editor and runtime and still contain text', () => {
+  const composer = loadComposer();
+  const runtime = loadRuntimeLayoutNormalizer();
+  for (const [id, height] of Object.entries({ disc: 40, 'track-title': 32, 'time-readout': 32, 'source-selector': 32, 'transport-controls': 32, 'close-control': 32, 'tracklist-toggle': 32, 'text-size-control': 32, 'tracklist-panel': 64 })) {
+    const source = composer.createDefaultLayout();
+    source.canvas.alignmentGrid.enabled = false;
+    source.components.forEach(item => { if (item.id !== 'panel-base') item.present = item.id === id; });
+    const item = composer.getComponent(source, id);
+    item.geometry = { ...item.geometry, x: .5, y: .5, height };
+    const normalized = composer.normalizeLayout(source);
+    const actual = composer.getComponent(normalized, id);
+    assert.equal(actual.geometry.height, height, id);
+    assert.equal(runtime(normalized).components.find(item => item.id === id).geometry.height, height, id + ' runtime');
+    if (actual.textStyle) assert.ok(height >= actual.textStyle.fontSize * 1.35 + 8, id + ' text fits');
+  }
+});
+
+test('group scaling preserves relative centers, aspect ratios, layers and saved geometry', () => {
+  const composer = loadComposer();
+  const engine = loadResizeEngine(composer);
+  const layout = composer.createDefaultLayout();
+  const before = JSON.stringify(layout);
+  const result = engine.scaleGroup(layout, 1.1);
+  assert.equal(result.updated, true, result.reason);
+  assert.equal(JSON.stringify(layout), before, 'input is not mutated');
+  assert.equal(result.layout.canvas.alignmentGrid.enabled, false);
+  const first = composer.getComponent(layout, 'track-title');
+  const firstScaled = composer.getComponent(result.layout, 'track-title');
+  for (const component of layout.components.filter(item => item.present && item.id !== 'panel-base')) {
+    const scaled = composer.getComponent(result.layout, component.id);
+    assert.ok(Math.abs(scaled.geometry.width / component.geometry.width - 1.1) < 1e-9);
+    assert.ok(Math.abs(scaled.geometry.height / component.geometry.height - 1.1) < 1e-9);
+    assert.ok(Math.abs((scaled.geometry.x - firstScaled.geometry.x) - (component.geometry.x - first.geometry.x) * 1.1) < 1e-9);
+    assert.ok(Math.abs((scaled.geometry.y - firstScaled.geometry.y) - (component.geometry.y - first.geometry.y) * 1.1) < 1e-9);
+    assert.deepEqual(scaled.layer, component.layer);
+    assert.equal(scaled.geometry.z, component.geometry.z);
+  }
+  assert.deepEqual(JSON.parse(JSON.stringify(composer.normalizeLayout(result.layout))), JSON.parse(JSON.stringify(result.layout)));
+  const runtime = loadRuntimeLayoutNormalizer()(result.layout);
+  for (const component of result.layout.components) assert.deepEqual(JSON.parse(JSON.stringify(runtime.components.find(item => item.id === component.id).geometry)), JSON.parse(JSON.stringify(component.geometry)), component.id);
+});
+
+test('group shrink supports selected units and rejects invalid scales atomically', () => {
+  const composer = loadComposer();
+  const engine = loadResizeEngine(composer);
+  const layout = composer.createDefaultLayout();
+  const result = engine.scaleGroup(layout, .75, ['track-title']);
+  assert.equal(result.updated, true, result.reason);
+  assert.equal(composer.getComponent(result.layout, 'track-title').geometry.width, composer.getComponent(layout, 'track-title').geometry.width * .75);
+  assert.deepEqual(JSON.parse(JSON.stringify(composer.getComponent(result.layout, 'time-readout'))), JSON.parse(JSON.stringify(composer.getComponent(layout, 'time-readout'))));
+  for (const factor of [0, -1, NaN, Infinity, 5, .01, 4]) {
+    const failed = engine.scaleGroup(layout, factor);
+    assert.equal(failed.updated, false, String(factor));
+    assert.deepEqual(JSON.parse(JSON.stringify(failed.layout)), JSON.parse(JSON.stringify(layout)));
+  }
+  assert.equal(engine.scaleGroup(layout, 1.1, []).updated, false);
+});
+
+test('split transport positions scale with the group and round trip into runtime', () => {
+  const composer = loadComposer();
+  const engine = loadResizeEngine(composer);
+  const source = composer.createDefaultLayout();
+  source.components.forEach(item => { if (item.id !== 'panel-base') item.present = item.id === 'transport-controls'; });
+  const transport = composer.getComponent(source, 'transport-controls');
+  transport.arrangement.split = true;
+  const layout = composer.normalizeLayout(source);
+  const result = engine.scaleGroup(layout, 1.25);
+  assert.equal(result.updated, true, result.reason);
+  const actual = composer.getComponent(result.layout, 'transport-controls');
+  const original = composer.getComponent(layout, 'transport-controls');
+  assert.equal(actual.arrangement.split, true);
+  assert.equal(actual.arrangement.partSize.width, original.arrangement.partSize.width * 1.25);
+  assert.ok(Math.abs((actual.arrangement.positions.next.x - actual.arrangement.positions.previous.x) - (original.arrangement.positions.next.x - original.arrangement.positions.previous.x) * 1.25) < 1e-9);
+  const runtime = loadRuntimeLayoutNormalizer()(result.layout).components.find(item => item.id === 'transport-controls');
+  assert.deepEqual(JSON.parse(JSON.stringify(runtime.arrangement)), JSON.parse(JSON.stringify(actual.arrangement)));
+});
+
 function loadComposer() {
   const context = { console, Object, JSON, Number, Math, Set, Map };
   vm.runInNewContext(read('extension/options/live-monitor-composer.js'), context);
@@ -146,7 +321,7 @@ test('enforces closed-state non-overlap and canvas bounds', () => {
   assert.equal(layered.updated, true);
   const layeredTitle = composer.getComponent(layered.layout, 'track-title');
   assert.equal(composer.canPlace(layered.layout, 'track-title', { ...layeredTitle.geometry, x: time.geometry.x, y: time.geometry.y }).valid, true);
-  assert.deepEqual(JSON.parse(JSON.stringify(composer.clampSize('disc', 1, 9999))), { width: 60, height: 720 });
+  assert.deepEqual(JSON.parse(JSON.stringify(composer.clampSize('disc', 1, 9999))), { width: 40, height: 720 });
   const overflowDisc = composer.fitGeometry('disc', { ...disc.geometry, x: -.25, y: 1.25, width: 240, height: 240 }, layout.canvas, disc.layer);
   assert.equal(overflowDisc.x, 0);
   assert.equal(overflowDisc.y, 1);
@@ -778,7 +953,7 @@ test('switches 16:9 viewport presets with distinct absolute and relative size se
   assert.deepEqual(JSON.parse(JSON.stringify(composer.VIEWPORT_PRESETS.map(({ width, height }) => [width, height]))), [[1280, 720], [1920, 1080], [3840, 2160]]);
   const initial = composer.createDefaultLayout();
   const initialTitle = composer.getComponent(initial, 'track-title');
-  const absolute = composer.updateViewport(initial, 1920, 1080);
+  const absolute = composer.updateViewport(composer.updateSizingMode(initial, 'absolute'), 1920, 1080);
   assert.equal(absolute.canvas.sizingMode, 'absolute');
   assert.equal(composer.getComponent(absolute, 'track-title').geometry.width, initialTitle.geometry.width);
   assert.ok(composer.getComponent(absolute, 'track-title').geometry.width / absolute.canvas.width < initialTitle.geometry.width / initial.canvas.width);

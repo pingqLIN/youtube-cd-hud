@@ -955,7 +955,63 @@
         status.setAttribute('role', 'status');
         status.setAttribute('aria-live', 'polite');
         status.textContent = 'A / B / C are kept for this browser session.';
-        shell.append(bundled, foundation, reset, align, slots, actions, status);
+        const pack = document.createElement('div');
+        pack.className = 'lm-layout-pack';
+        const scope = document.createElement('select');
+        scope.setAttribute('aria-label', 'Resize scope / 縮放範圍');
+        [['all', '全部 / All'], ['selected', '選取 / Selected'], ['group', '重疊群組 / Overlap group']].forEach(([value, label]) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            scope.appendChild(option);
+        });
+        const scale = document.createElement('input');
+        scale.type = 'number';
+        scale.min = '1';
+        scale.max = '400';
+        scale.step = '1';
+        scale.value = '100';
+        scale.setAttribute('aria-label', 'Scale percent / 縮放百分比');
+        const applyScale = document.createElement('button');
+        applyScale.type = 'button';
+        applyScale.textContent = '打包縮放 / SCALE %';
+        const undoScale = document.createElement('button');
+        undoScale.type = 'button';
+        undoScale.textContent = '復原縮放 / UNDO';
+        undoScale.disabled = true;
+        let beforeScale = null;
+        let afterScale = null;
+        applyScale.addEventListener('click', () => {
+            if (!scale.checkValidity()) return scale.reportValidity();
+            const previous = editor.getLayout();
+            const result = editor.scaleGroup(Number(scale.value) / 100, scope.value);
+            if (!result.updated) {
+                status.textContent = result.reason;
+                return;
+            }
+            beforeScale = previous;
+            afterScale = JSON.stringify(editor.getLayout());
+            undoScale.disabled = false;
+            status.textContent = '已按比例縮放；自動對齊已關閉以保留位置。Scaled proportionally; auto align is off to preserve positions.';
+            scale.value = '100';
+            sync();
+        });
+        undoScale.addEventListener('click', () => {
+            if (!beforeScale) return;
+            if (JSON.stringify(editor.getLayout()) !== afterScale) {
+                status.textContent = 'Layout changed after scaling; undo is unavailable to preserve your edits.';
+                undoScale.disabled = true;
+                return;
+            }
+            editor.setLayout(beforeScale);
+            onChange(editor.state.layout, 'group-scale-undo');
+            beforeScale = null;
+            undoScale.disabled = true;
+            status.textContent = '縮放已復原 / Scale undone.';
+            sync();
+        });
+        pack.append(scope, scale, applyScale, undoScale);
+        shell.append(bundled, foundation, pack, reset, align, slots, actions, status);
         host.appendChild(shell);
         globalThis.YtCdHudI18n?.localizeDocument(shell, document.documentElement.lang);
         let selectedSlot = 'A';
