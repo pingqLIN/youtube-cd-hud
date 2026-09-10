@@ -6,6 +6,9 @@
 
 ## 操作
 
+- 每次安裝都附有兩套「內建面板」：「精簡播放」以小面板保留主要操作；
+  「曲目閱讀」加大文字，並在右側固定顯示曲目列表。點選後先預覽，再按
+  「儲存並套用」。重新啟動瀏覽器後仍可使用，不會自動覆蓋既有版面或 A/B/C 暫存槽。
 - 點選元件選取；點舞台空白或按 Escape 取消選取。
 - 拖曳時只限制元件不得離開畫布，不即時阻擋碰撞。放開滑鼠後若偵測到同層重疊，
   可選擇自動替整組衝突元件啟用 Z 軸並配置不同層；若不啟用，衝突元件會全部移出
@@ -83,5 +86,5 @@ Layout 以 schema version 2 存在 Chrome local storage 的
 吸附格另存於 `canvas.alignmentGrid`，目前為
 `{"enabled":true,"unitWidth":8,"unitHeight":8,"visible":false}`，不等同於可見背景格線。
 
-目前不包含雲端同步、複製 instance、持久 templates、import/export 或 undo history。
+目前不包含雲端同步、複製 instance、使用者持久範本庫、import/export 或 undo history。
 Local checks 仍不能取代 Chrome Options 與真實 YouTube 的可視驗收。

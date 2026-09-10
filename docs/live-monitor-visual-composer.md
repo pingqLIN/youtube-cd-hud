@@ -9,6 +9,11 @@ collision boundaries, and min/max dimensions.
 
 Open the extension options page and use the Live Monitor stage:
 
+- **Built-in panels** are included with every installation: **Compact playback**
+  keeps the essential controls in a small panel; **Tracklist reader** uses larger
+  text and a persistent list on the right. Click either to preview it, then
+  **Save and apply**. They remain available after browser restarts and do not
+  replace your saved layout or A/B/C slots automatically.
 - Click a component to select it. Click the stage background or press Escape to
   clear selection.
 - Dragging is clamped to the canvas but does not reject collisions in flight.
@@ -99,7 +104,7 @@ industrial palette.
 The snap grid is separately stored in `canvas.alignmentGrid` as an enabled,
 invisible 8×8 unit grid; it is not the decorative background grid.
 
-The composer does not include cloud sync, duplicate instances, persistent templates,
+The composer does not include cloud sync, duplicate instances, a persistent user-template library,
 import/export, or undo history. Custom CSS remains an advanced override and can
 intentionally supersede Composer styling.
 

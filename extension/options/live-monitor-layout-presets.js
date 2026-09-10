@@ -4,7 +4,66 @@
     const composer = globalThis.YtCdHudLiveMonitorComposer;
     const STORAGE_KEY = 'ytCdHudLayoutSlotsV1';
     const SLOT_NAMES = Object.freeze(['A', 'B', 'C']);
+    const BUNDLED_PRESETS = Object.freeze([
+        Object.freeze({ id: 'compact-playback', labelKey: 'options.presetCompact', descriptionKey: 'options.presetCompactDescription' }),
+        Object.freeze({ id: 'tracklist-reader', labelKey: 'options.presetReader', descriptionKey: 'options.presetReaderDescription' }),
+    ]);
     let memorySlots = {};
+
+    function createBundledLayout(id) {
+        if (!BUNDLED_PRESETS.some(preset => preset.id === id)) return null;
+        const reader = id === 'tracklist-reader';
+        const layout = composer.createDefaultLayout();
+        const palette = reader
+            ? { primaryColor: '#18181b', secondaryColor: '#fbbf24' }
+            : { primaryColor: '#111827', secondaryColor: '#7dd3fc' };
+        // Pixel centers on the shipped 1280 × 720 canvas; normalization applies
+        // the same size, alignment, and collision rules as manually edited layouts.
+        const frames = reader ? {
+            disc: [136, 256, 128, 128],
+            'track-title': [480, 192, 560, 64],
+            'time-readout': [288, 264, 176, 48],
+            'source-selector': [544, 264, 256, 48],
+            'tracklist-toggle': [728, 264, 48, 48],
+            'transport-controls': [296, 336, 192, 48],
+            'close-control': [824, 192, 48, 48],
+            'text-size-control': [448, 336, 64, 48],
+            'tracklist-panel': [1040, 344, 368, 400],
+        } : {
+            disc: [144, 552, 88, 88],
+            'track-title': [376, 512, 336, 48],
+            'time-readout': [280, 568, 144, 48],
+            'source-selector': [464, 568, 192, 48],
+            'tracklist-toggle': [592, 568, 48, 48],
+            'transport-controls': [288, 624, 160, 48],
+            'close-control': [592, 512, 48, 48],
+        };
+        const themed = composer.applyPalette(layout, palette, true);
+        for (const component of themed.components) {
+            const frame = frames[component.id];
+            if (component.id === 'panel-base') {
+                component.boundary.padding = 12;
+                component.style.opacity = .92;
+            } else {
+                component.present = Boolean(frame);
+                if (frame) {
+                    const [x, y, width, height] = frame;
+                    component.geometry = { ...component.geometry, x: x / layout.canvas.width, y: y / layout.canvas.height, width, height };
+                }
+            }
+            component.style.cornerEnabled = true;
+            component.style.cornerRadiusLevel = 4;
+            if (component.textStyle) {
+                component.textStyle.fontSize = reader ? 14 : 12;
+                if (['track-title', 'tracklist-panel'].includes(component.id)) {
+                    component.textStyle.fontSize = reader ? (component.id === 'track-title' ? 24 : 18) : 18;
+                    component.textStyle.color = '#f8fafc';
+                }
+                if (component.id === 'time-readout') component.textStyle.fontSize = reader ? 18 : 16;
+            }
+        }
+        return composer.normalizeLayout(themed);
+    }
 
     function sessionStorage() {
         return globalThis.chrome?.storage?.session || null;
@@ -37,6 +96,40 @@
         const shell = document.createElement('section');
         shell.className = 'lm-layout-controls';
         shell.setAttribute('aria-label', 'Layout reset and temporary style slots');
+        const bundled = document.createElement('div');
+        bundled.className = 'lm-layout-bundled';
+        const bundledTitle = document.createElement('p');
+        bundledTitle.className = 'lm-layout-bundled-title';
+        bundledTitle.dataset.i18n = 'options.bundledPresets';
+        bundledTitle.textContent = 'Built-in panels';
+        const bundledChoices = document.createElement('div');
+        bundledChoices.className = 'lm-layout-bundled-choices';
+        const bundledHint = document.createElement('p');
+        bundledHint.className = 'lm-layout-bundled-hint';
+        bundledHint.dataset.i18n = 'options.presetHint';
+        bundledHint.textContent = 'Load a panel to preview it, then Save and apply. Built-in panels are always available.';
+        BUNDLED_PRESETS.forEach(preset => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'lm-layout-bundled-choice';
+            button.dataset.lmBundledPreset = preset.id;
+            const label = document.createElement('strong');
+            label.dataset.i18n = preset.labelKey;
+            label.textContent = preset.id === 'compact-playback' ? 'Compact playback' : 'Tracklist reader';
+            const description = document.createElement('span');
+            description.dataset.i18n = preset.descriptionKey;
+            description.textContent = preset.id === 'compact-playback' ? 'A small panel with playback essentials.' : 'Larger text with a persistent tracklist on the right.';
+            button.append(label, description);
+            button.addEventListener('click', () => {
+                editor.setLayout(createBundledLayout(preset.id));
+                onChange(editor.state.layout, 'bundled-preset-load');
+                status.textContent = globalThis.YtCdHudI18n?.translate('options.presetLoaded', document.documentElement.lang)
+                    || 'Built-in panel loaded. Save and apply to use it on YouTube.';
+                sync();
+            });
+            bundledChoices.appendChild(button);
+        });
+        bundled.append(bundledTitle, bundledChoices, bundledHint);
         const foundation = document.createElement('div');
         foundation.className = 'lm-layout-foundation';
         const primaryLabel = document.createElement('label');
@@ -100,8 +193,9 @@
         status.setAttribute('role', 'status');
         status.setAttribute('aria-live', 'polite');
         status.textContent = 'A / B / C are kept for this browser session.';
-        shell.append(foundation, reset, align, slots, actions, status);
+        shell.append(bundled, foundation, reset, align, slots, actions, status);
         host.appendChild(shell);
+        globalThis.YtCdHudI18n?.localizeDocument(shell, document.documentElement.lang);
         let selectedSlot = 'A';
         let storedSlots = {};
 
@@ -185,5 +279,5 @@
         return Object.freeze({ element: shell, render, sync, readSlots });
     }
 
-    globalThis.YtCdHudLiveMonitorLayoutPresets = Object.freeze({ STORAGE_KEY, SLOT_NAMES, readSlots, writeSlots, createControls });
+    globalThis.YtCdHudLiveMonitorLayoutPresets = Object.freeze({ STORAGE_KEY, SLOT_NAMES, BUNDLED_PRESETS, createBundledLayout, readSlots, writeSlots, createControls });
 })();

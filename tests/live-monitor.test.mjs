@@ -38,7 +38,7 @@ function loadRuntimeLayoutNormalizer() {
   return loadRuntimeTestApi().normalizeHudLayout;
 }
 
-function loadLayoutPresets(composer) {
+function loadLayoutPresets(composer, overrides = {}) {
   const state = {};
   const context = {
     console,
@@ -47,6 +47,7 @@ function loadLayoutPresets(composer) {
       async get(key) { return { [key]: state[key] }; },
       async set(value) { Object.assign(state, value); },
     } } },
+    ...overrides,
   };
   vm.runInNewContext(read('extension/options/live-monitor-layout-presets.js'), context);
   return context.YtCdHudLiveMonitorLayoutPresets;
@@ -185,6 +186,98 @@ test('keeps A/B/C layouts in browser-session storage and normalizes restored dat
   assert.deepEqual(JSON.parse(JSON.stringify(Object.keys(slots))), ['A']);
   assert.equal(composer.getComponent(slots.A, 'track-title').style.opacity, .55);
   assert.equal(presets.STORAGE_KEY, 'ytCdHudLayoutSlotsV1');
+});
+
+test('ships two fresh built-in panels without relying on session slots', async () => {
+  const composer = loadComposer();
+  const presets = loadLayoutPresets(composer);
+  assert.deepEqual([...presets.BUNDLED_PRESETS].map(preset => preset.id), ['compact-playback', 'tracklist-reader']);
+  assert.deepEqual(Object.keys(await presets.readSlots()), []);
+  assert.equal(presets.createBundledLayout('unknown'), null);
+  const compact = presets.createBundledLayout('compact-playback');
+  const reader = presets.createBundledLayout('tracklist-reader');
+  assert.equal(composer.getComponent(compact, 'tracklist-panel').present, false);
+  assert.equal(composer.getComponent(reader, 'tracklist-panel').present, true);
+  assert.ok(composer.getComponent(compact, 'panel-base').geometry.width < composer.getComponent(reader, 'panel-base').geometry.width);
+  assert.ok(composer.getComponent(reader, 'track-title').textStyle.fontSize > composer.getComponent(compact, 'track-title').textStyle.fontSize);
+  composer.getComponent(compact, 'track-title').textStyle.fontSize = 99;
+  await presets.writeSlots({ A: compact });
+  assert.equal(composer.getComponent(presets.createBundledLayout('compact-playback'), 'track-title').textStyle.fontSize, 18);
+  const nextSession = loadLayoutPresets(composer);
+  assert.deepEqual(Object.keys(await nextSession.readSlots()), []);
+  assert.deepEqual(JSON.parse(JSON.stringify(nextSession.createBundledLayout('tracklist-reader'))), JSON.parse(JSON.stringify(reader)));
+});
+
+test('built-in panels survive storage and runtime normalization with usable geometry', async () => {
+  const composer = loadComposer();
+  const presets = loadLayoutPresets(composer);
+  const runtimeNormalize = loadRuntimeLayoutNormalizer();
+  const storage = {};
+  const context = { console, YtCdHudLiveMonitorComposer: composer, chrome: { storage: { local: {
+    async get() { return JSON.parse(JSON.stringify(storage)); },
+    async set(value) { Object.assign(storage, JSON.parse(JSON.stringify(value))); },
+  } } } };
+  vm.runInNewContext(read('extension/options/live-monitor-layout-store.js'), context);
+  const store = context.YtCdHudLiveMonitorLayoutStore;
+  for (const preset of presets.BUNDLED_PRESETS) {
+    const layout = presets.createBundledLayout(preset.id);
+    for (const id of ['panel-base', 'disc', 'track-title', 'time-readout', 'source-selector', 'transport-controls', 'tracklist-toggle', 'close-control']) {
+      assert.equal(composer.getComponent(layout, id).present, true, preset.id + ': ' + id);
+    }
+    for (const component of layout.components.filter(item => item.present && item.boundary?.collision)) {
+      assert.equal(composer.collisionFor(component, layout.components, layout.canvas), null);
+      const rect = composer.componentRect(component.geometry, layout.canvas);
+      assert.ok(rect.left >= 0 && rect.top >= 0 && rect.right <= layout.canvas.width && rect.bottom <= layout.canvas.height);
+    }
+    await store.save(layout);
+    assert.deepEqual(JSON.parse(JSON.stringify(await store.load())), JSON.parse(JSON.stringify(layout)));
+    const runtime = runtimeNormalize(storage[composer.STORAGE_KEY]);
+    for (const component of layout.components) {
+      const restored = runtime.components.find(item => item.id === component.id);
+      assert.equal(restored.present, component.present);
+      assert.deepEqual(JSON.parse(JSON.stringify(restored.geometry)), JSON.parse(JSON.stringify(component.geometry)));
+    }
+  }
+});
+
+test('loading a built-in panel previews it and leaves storage untouched until explicit save', async () => {
+  class Element {
+    constructor(tag) { this.tagName = tag.toUpperCase(); this.children = []; this.dataset = {}; this.listeners = {}; }
+    append(...items) { this.children.push(...items); }
+    appendChild(item) { this.append(item); return item; }
+    replaceChildren(...items) { this.children = items; }
+    setAttribute(name, value) { this[name] = value; }
+    addEventListener(name, listener) { this.listeners[name] = listener; }
+  }
+  const composer = loadComposer();
+  const storedLayout = composer.createDefaultLayout();
+  composer.getComponent(storedLayout, 'track-title').textStyle.fontSize = 31;
+  let writes = 0;
+  const presets = loadLayoutPresets(composer, {
+    document: { createElement: tag => new Element(tag), getElementById: () => null, documentElement: { lang: 'en' } },
+    chrome: { storage: { session: {
+      async get(key) { return { [key]: { A: storedLayout } }; },
+      async set() { writes += 1; },
+    } } },
+  });
+  const changes = [];
+  const editor = {
+    state: { layout: composer.normalizeLayout(storedLayout) },
+    setLayout(layout) { this.state.layout = composer.normalizeLayout(layout); },
+  };
+  const controls = presets.createControls({ host: new Element('div'), editor, onChange: (layout, reason) => changes.push(reason) });
+  await controls.render();
+  assert.equal(composer.getComponent(editor.state.layout, 'track-title').textStyle.fontSize, 31);
+  const descendants = element => [element, ...element.children.flatMap(descendants)];
+  const buttons = descendants(controls.element).filter(element => element.dataset.lmBundledPreset);
+  assert.equal(buttons.length, 2);
+  for (const button of buttons) {
+    button.listeners.click();
+    assert.deepEqual(JSON.parse(JSON.stringify(editor.state.layout)), JSON.parse(JSON.stringify(presets.createBundledLayout(button.dataset.lmBundledPreset))));
+  }
+  assert.deepEqual(changes, ['bundled-preset-load', 'bundled-preset-load']);
+  assert.equal(writes, 0);
+  assert.equal(composer.getComponent((await controls.readSlots()).A, 'track-title').textStyle.fontSize, 31);
 });
 
 test('defers drag collision handling until pointer release and presents the layer decision', () => {

@@ -16,6 +16,13 @@
     padding-bottom: 10px;
     border-bottom: 1px solid var(--line-soft);
 }
+.lm-layout-bundled { grid-column: 1 / -1; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); }
+.lm-layout-bundled-title { margin: 0 0 8px; color: var(--ink); font: 700 12px/1.4 var(--mono); }
+.lm-layout-bundled-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.lm-layout-controls .lm-layout-bundled-choice { padding: 10px; text-align: left; white-space: normal; letter-spacing: normal; }
+.lm-layout-bundled-choice strong { display: block; font-size: 12px; line-height: 1.5; }
+.lm-layout-bundled-choice span { display: block; margin-top: 4px; color: var(--muted); font: 11px/1.5 system-ui, sans-serif; }
+.lm-layout-bundled-hint { margin: 8px 0 0; color: var(--muted); font: 11px/1.5 system-ui, sans-serif; }
 .lm-layout-foundation label { display: grid; gap: 5px; color: var(--muted); font: 700 8px/1 var(--mono); letter-spacing: .1em; }
 .lm-layout-foundation input[type="color"] { width: 100%; height: 30px; padding: 2px; border: 1px solid var(--line); background: var(--panel); }
 .lm-layout-foundation select { min-height: 30px; color: var(--ink); border: 1px solid var(--line); background: var(--panel); font: 700 9px/1 var(--mono); }
@@ -42,6 +49,7 @@
 .lm-layout-slot-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .lm-layout-slot-status { grid-column: 1 / -1; margin: 0; color: var(--muted); font: 8px/1.4 var(--mono); letter-spacing: .05em; }
 @media (max-width: 720px) {
+    .lm-layout-bundled-choices { grid-template-columns: 1fr; }
     .lm-layout-controls { grid-template-columns: 1fr; }
     .lm-layout-foundation { grid-column: 1; grid-template-columns: 1fr 1fr; }
     .lm-layout-slot-status { grid-column: 1; }

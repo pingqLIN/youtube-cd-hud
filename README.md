@@ -211,6 +211,8 @@ The draggable HUD uses circular YouTube thumbnail artwork and a cover-derived ac
 
 See the [Live Monitor Visual Composer guide](docs/live-monitor-visual-composer.md) for selecting, moving, resizing, and styling HUD components, then applying the saved layout to YouTube.
 
+Two built-in panels ship with the extension: **Compact playback** and **Tracklist reader**. Choose one under **Built-in panels** in Live Monitor to preview it, then **Save and apply**.
+
 ### Options page walkthrough
 
 These existing options-page screenshots show version **5.8.3**, including its built-in sample HUD preview. The current version adds provider and language controls; the sample preview is not live YouTube playback.
