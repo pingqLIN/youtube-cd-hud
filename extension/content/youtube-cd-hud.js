@@ -2875,7 +2875,7 @@
                 -webkit-backdrop-filter: blur(8px) saturate(.86);
                 border: 1px solid var(--hud-border);
                 border-radius: 2px;
-                box-shadow: var(--hud-shadow), inset 3px 0 0 rgba(99, 179, 237, .72), inset 0 1px 0 rgba(247, 250, 252, .04);
+                box-shadow: var(--hud-shadow), inset 1px 0 0 rgba(99, 179, 237, .72), inset 0 1px 0 rgba(247, 250, 252, .04);
                 pointer-events: auto;
                 cursor: grab;
                 transition: opacity .2s ease, border-color .15s ease;
@@ -3092,7 +3092,7 @@
             }
             .cd-disc-wrapper[data-ytcd-texture="gold"] .cd-disc:after {
                 background:
-                    radial-gradient(circle at center, rgba(36,27,8,.96) 0 7%, rgba(255,240,170,.94) 7.5% 9%, rgba(60,42,8,.9) 9.5% 12%, transparent 12.5%),
+                    radial-gradient(circle at center, rgba(36,27,8,.96) 0 7%, rgba(255,240,170,.94) 7% calc(7% + 1px), rgba(60,42,8,.9) calc(7% + 1px) calc(7% + 4px), transparent calc(7% + 4px)),
                     repeating-radial-gradient(circle at center, transparent 0 3px, rgba(255,246,190,.28) 3.5px 4px),
                     conic-gradient(from 12deg, rgba(114,81,17,.42), rgba(244,215,122,.34), rgba(154,106,22,.46), rgba(255,241,168,.28), rgba(114,81,17,.42));
             }
@@ -3101,7 +3101,7 @@
             }
             .cd-disc-wrapper[data-ytcd-texture="transparent-grooves"] .cd-disc:after {
                 background:
-                    radial-gradient(circle at center, rgba(10,24,30,.82) 0 7%, rgba(235,250,255,.9) 7.5% 9%, rgba(20,42,50,.72) 9.5% 12%, transparent 12.5%),
+                    radial-gradient(circle at center, rgba(10,24,30,.82) 0 7%, rgba(235,250,255,.9) 7% calc(7% + 1px), rgba(20,42,50,.72) calc(7% + 1px) calc(7% + 4px), transparent calc(7% + 4px)),
                     repeating-radial-gradient(circle at center, rgba(235,250,255,.58) 0 1px, rgba(150,205,220,.12) 1px 4px, transparent 4px 7px),
                     linear-gradient(125deg, rgba(255,255,255,.26), transparent 34%, rgba(95,150,170,.16) 74%, rgba(235,250,255,.18));
                 box-shadow: inset 0 0 0 1px rgba(235,250,255,.3), inset 0 0 14px rgba(160,220,235,.18);
@@ -3166,9 +3166,9 @@
                 background:
                     radial-gradient(circle at center,
                         rgba(17, 24, 39, .98) 0 7%,
-                        rgba(226, 232, 240, .92) 7.5% 9%,
-                        rgba(17, 24, 39, .94) 9.5% 12%,
-                        transparent 12.5%),
+                        rgba(226, 232, 240, .92) 7% calc(7% + 1px),
+                        rgba(17, 24, 39, .94) calc(7% + 1px) calc(7% + 4px),
+                        transparent calc(7% + 4px)),
                     repeating-radial-gradient(circle at center,
                         transparent 0 3px,
                         rgba(247, 250, 252, .055) 3.5px 4px),
@@ -3538,7 +3538,7 @@
                 color: var(--hud-text);
                 font-size: 11px;
                 line-height: 1.5;
-                box-shadow: var(--hud-shadow), inset 3px 0 0 rgba(99, 179, 237, .5);
+                box-shadow: var(--hud-shadow), inset 1px 0 0 rgba(99, 179, 237, .5);
                 cursor: grab;
                 user-select: none;
                 -webkit-user-select: none;
@@ -3566,7 +3566,7 @@
                 text-align-last: var(--ytcd-unit-text-align, left);
                 transform: none;
             }
-            .yt-tracklist-panel.ytcd-layout-tracklist:not(.ytcd-effect-shadow) { box-shadow: inset 3px 0 0 rgba(99, 179, 237, .5); }
+            .yt-tracklist-panel.ytcd-layout-tracklist:not(.ytcd-effect-shadow) { box-shadow: inset 1px 0 0 rgba(99, 179, 237, .5); }
             .yt-tracklist-panel.ytcd-layout-tracklist:not(.ytcd-effect-accent-rail) { box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha)); }
             .yt-tracklist-panel.ytcd-layout-tracklist:not(.ytcd-effect-accent-rail):not(.ytcd-effect-shadow) { box-shadow: none; }
             .yt-tracklist-panel.ytcd-layout-tracklist .tracklist-control-button,
@@ -3667,9 +3667,9 @@
                 -webkit-backdrop-filter: var(--ytcd-unit-backdrop-filter);
             }
             #yt-cd-hud.ytcd-layout-v2 .hud-panel-surface.ytcd-effect-accent-rail {
-                box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha)), inset 3px 0 0 var(--ytcd-secondary-color);
+                box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha)), inset 1px 0 0 var(--ytcd-secondary-color);
             }
-            #yt-cd-hud.ytcd-layout-v2 .hud-panel-surface.ytcd-effect-accent-rail:not(.ytcd-effect-shadow) { box-shadow: inset 3px 0 0 var(--ytcd-secondary-color); }
+            #yt-cd-hud.ytcd-layout-v2 .hud-panel-surface.ytcd-effect-accent-rail:not(.ytcd-effect-shadow) { box-shadow: inset 1px 0 0 var(--ytcd-secondary-color); }
             #yt-cd-hud.ytcd-layout-v2 :where(.hud-chapter, .hud-time, .hud-source-selector, .hud-tracklist-button, .hud-transport-controls, .hud-close-button, .hud-text-size-button),
             .yt-tracklist-panel.ytcd-layout-tracklist {
                 border: var(--ytcd-unit-border-width) solid var(--ytcd-secondary-color);
@@ -3686,9 +3686,9 @@
                 align-content: center;
             }
             .yt-tracklist-panel.ytcd-layout-tracklist.ytcd-effect-accent-rail {
-                box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha)), inset 3px 0 0 var(--ytcd-secondary-color);
+                box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha)), inset 1px 0 0 var(--ytcd-secondary-color);
             }
-            .yt-tracklist-panel.ytcd-layout-tracklist.ytcd-effect-accent-rail:not(.ytcd-effect-shadow) { box-shadow: inset 3px 0 0 var(--ytcd-secondary-color); }
+            .yt-tracklist-panel.ytcd-layout-tracklist.ytcd-effect-accent-rail:not(.ytcd-effect-shadow) { box-shadow: inset 1px 0 0 var(--ytcd-secondary-color); }
             #yt-cd-hud.ytcd-layout-v2 .hud-source-selector > :where(.hud-source-caption, .hud-source-option, .hud-status-button) {
                 display: flex;
                 align-items: center;

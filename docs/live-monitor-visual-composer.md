@@ -9,6 +9,9 @@ collision boundaries, and min/max dimensions.
 
 Open the extension options page and use the Live Monitor stage:
 
+- **Save and apply** stays at the bottom of the window. Expand **HUD appearance**
+  or **Custom CSS** beside the preview for additional settings. Panel borders,
+  dividers, and accent lines use fixed 1px strokes as components resize.
 - **Built-in panels** are included with every installation: **Compact playback**
   keeps the essential controls in a small panel; **Tracklist reader** uses larger
   text and a persistent list on the right. Click either to preview it, then
