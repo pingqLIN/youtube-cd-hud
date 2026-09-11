@@ -55,16 +55,6 @@ Turn YouTube DJ sets, mixes, and music videos into a synchronized tracklist HUD 
 
 *Restored from the previous README. This is a historical playback screenshot, not a capture of the new editor or a new live-browser acceptance result.*
 
-<details>
-<summary>Original HDR artwork</summary>
-
-
-[Original HDR sync artwork](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg) · [Original HDR interface artwork](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg) · [Asset preservation guide](docs/assets/readme/ASSETS.md)
-
-The new banner is an SDR concept illustration. Original HDR JPEG files remain unchanged; HDR display depends on the browser, image delivery path and display.
-
-</details>
-
 ## Find the tracklist automatically
 
 Open a DJ set or a long mix and let CueFox QF help you follow the music. It reads available YouTube chapters and timestamped tracks, then can automatically search **1001Tracklists**. Once usable track data is loaded, the title and tracklist follow playback so you can jump back to a favorite section.
