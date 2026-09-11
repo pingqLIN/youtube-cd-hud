@@ -5,6 +5,44 @@ internal YouTube CD HUD layout. The editor is deliberately local and bounded:
 one instance of each functional unit, normalized coordinates, closed-state
 collision boundaries, and min/max dimensions.
 
+## Editing in action
+
+These are cropped captures of actual interactions with the options page. Select a component to change its appearance and text while viewing the layout on the canvas. Thumbnails provide navigation; the larger images below show the controls. Open any image at its original size. These captures show layouts during editing.
+
+| Colors | Title and layers | Component appearance | Text alignment | Fonts |
+| --- | --- | --- | --- | --- |
+| <a href="assets/composer/color-picker.png"><img src="assets/composer/color-picker.png" alt="Colors" width="120"></a> | <a href="assets/composer/title-layers.png"><img src="assets/composer/title-layers.png" alt="Title and layers" width="120"></a> | <a href="assets/composer/unit-appearance.png"><img src="assets/composer/unit-appearance.png" alt="Component appearance" width="120"></a> | <a href="assets/composer/text-alignment.png"><img src="assets/composer/text-alignment.png" alt="Text alignment" width="120"></a> | <a href="assets/composer/font-picker.png"><img src="assets/composer/font-picker.png" alt="Fonts" width="120"></a> |
+
+### Choose your panel colors
+
+Open the PRIMARY color picker and use its palette or RGB values to choose a main color. Pair it with SECONDARY to personalize the HUD. The main color is RGB 19 / 55 / 134 with a white secondary color; the blue panel below shows the current palette.
+
+<a href="assets/composer/color-picker.png"><img src="assets/composer/color-picker.png" alt="Primary color picker open over a blue panel" width="960"></a>
+
+### Style the title and arrange layers
+
+Select Track title to adjust its background, corners, size, text color and opacity. This capture shows Z axis enabled at 5, right-aligned text and MARQUEE enabled. Layers let you arrange the title in front of or behind other components.
+
+<a href="assets/composer/title-layers.png"><img src="assets/composer/title-layers.png" alt="Track title appearance controls and Z axis" width="960"></a>
+
+### Adjust each component's appearance
+
+With the source controls selected, adjust corner radius and component opacity, with ROUND CORNERS checked and BG BLUR unchecked in this capture. STATUS LAMP is also checked. The toolbar also offers font, text size and a status lamp toggle so the controls can match the rest of your panel.
+
+<a href="assets/composer/unit-appearance.png"><img src="assets/composer/unit-appearance.png" alt="Source controls selected with the appearance toolbar" width="960"></a>
+
+### Align component text
+
+TEXT ALIGN offers LFT (left), RGT (right), CTR (center) and JST (justify). The current value is CTR. RGT is highlighted in the open menu; this does not show right alignment already applied.
+
+<a href="assets/composer/text-alignment.png"><img src="assets/composer/text-alignment.png" alt="Text alignment menu open during editing" width="960"></a>
+
+### Pick a component font
+
+This capture shows Tracklist toggle selected with TEXT FONT open, including cascadia-mono, ocr-machine and jetbrains-mono. Combine font choices with text size, text opacity and corners to give individual components their own appearance.
+
+<a href="assets/composer/font-picker.png"><img src="assets/composer/font-picker.png" alt="Tracklist toggle with its font menu open" width="960"></a>
+
 ## Operation
 
 Open the extension options page and use the Live Monitor stage:

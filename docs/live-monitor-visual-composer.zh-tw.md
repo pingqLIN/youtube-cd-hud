@@ -4,6 +4,44 @@
 採每種最小功能單元一個 instance、normalized 座標、closed-state 碰撞邊界與
 最小／最大尺寸，避免把任意 CSS 當成狀態。
 
+## 編輯器操作實況
+
+以下為實際操作設定頁時擷取的局部畫面。選取元件後，可直接調整它的外觀與文字，並在畫布上查看變化。縮圖供快速導覽；下方大圖展示控制項，點選任一圖片可查看原尺寸。這些畫面呈現編輯中的配置。
+
+| 配色 | 曲名與圖層 | 元件外觀 | 文字對齊 | 字型 |
+| --- | --- | --- | --- | --- |
+| <a href="assets/composer/color-picker.png"><img src="assets/composer/color-picker.png" alt="配色" width="120"></a> | <a href="assets/composer/title-layers.png"><img src="assets/composer/title-layers.png" alt="曲名與圖層" width="120"></a> | <a href="assets/composer/unit-appearance.png"><img src="assets/composer/unit-appearance.png" alt="元件外觀" width="120"></a> | <a href="assets/composer/text-alignment.png"><img src="assets/composer/text-alignment.png" alt="文字對齊" width="120"></a> | <a href="assets/composer/font-picker.png"><img src="assets/composer/font-picker.png" alt="字型" width="120"></a> |
+
+### 自訂面板配色
+
+開啟 PRIMARY 色彩選擇器，以色盤或 RGB 數值挑選主色，搭配 SECONDARY 輔色塑造自己的 HUD 外觀。圖中主色 RGB 為 19／55／134，輔色為白色；下方藍色面板呈現目前配色。
+
+<a href="assets/composer/color-picker.png"><img src="assets/composer/color-picker.png" alt="開啟主色色盤並調整藍色面板" width="960"></a>
+
+### 曲名樣式與前後層次
+
+選取 Track title，調整背景、圓角、尺寸、文字顏色與透明度。圖中曲名啟用 Z 軸並設為 5，搭配靠右對齊與 MARQUEE 跑馬燈；可利用圖層安排文字與其他元件的前後關係。
+
+<a href="assets/composer/title-layers.png"><img src="assets/composer/title-layers.png" alt="曲名元件的外觀參數與 Z 軸控制" width="960"></a>
+
+### 逐一調整元件外觀
+
+選取來源控制列後，可調整圓角程度與元件透明度，圖中 ROUND CORNERS 已勾選、BG BLUR 未勾選，STATUS LAMP 已開啟。下方工具列也提供字型、字級與狀態燈開關，讓控制列配合整體面板風格。
+
+<a href="assets/composer/unit-appearance.png"><img src="assets/composer/unit-appearance.png" alt="來源控制列與外觀工具列" width="960"></a>
+
+### 選擇文字對齊方式
+
+TEXT ALIGN 選單提供 LFT（靠左）、RGT（靠右）、CTR（置中）及 JST（平均分散）。圖中目前值為 CTR，展開選單中的 RGT 呈反白狀態，尚不能視為已套用靠右對齊。
+
+<a href="assets/composer/text-alignment.png"><img src="assets/composer/text-alignment.png" alt="實際展開文字對齊選單" width="960"></a>
+
+### 更換元件字型
+
+圖中選取 Tracklist toggle 並展開 TEXT FONT，可挑選 cascadia-mono、ocr-machine、jetbrains-mono 等字型。搭配字級、文字透明度與圓角，讓個別元件呈現不同風格。
+
+<a href="assets/composer/font-picker.png"><img src="assets/composer/font-picker.png" alt="曲目列表切換元件的字型選單" width="960"></a>
+
 ## 操作
 
 - 「儲存並套用」固定於視窗底部；右側預覽區可展開「HUD 外觀」與「自訂 CSS」。

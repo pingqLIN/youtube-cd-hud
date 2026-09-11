@@ -55,7 +55,7 @@ YouTube の DJ セット、ミックス、音楽動画に、複数の情報源�
 
 *過去の再生画面です。今回の変更のライブ動作検証を示すものではありません。*
 
-[HDR 元画像](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg) · [新しいレイアウト操作の説明（English）](README.md#shape-your-layout)
+[新しいレイアウト操作の説明（English）](README.md#shape-your-layout)
 
 ---
 

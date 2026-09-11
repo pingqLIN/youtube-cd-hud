@@ -53,16 +53,6 @@
 
 *從前一版 README 恢復的實際播放截圖。此圖為歷史介面預覽，不是新版編輯器截圖，也不代表本次已完成即時瀏覽器驗收。*
 
-<details>
-<summary>HDR 原始插圖</summary>
-
-
-[HDR 同步插圖原檔](docs/assets/readme/youtube-cd-hud-cue-fox-sync-hdr.jpg) · [HDR 介面插圖原檔](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg) · [資產保留流程](docs/assets/readme/ASSETS.zh-tw.md)
-
-新版 Banner 為 SDR 概念插圖；既有 HDR JPEG 原檔完整保留。HDR 實際顯示效果取決於瀏覽器、圖片傳遞方式與顯示器。
-
-</details>
-
 ## 自動搜尋曲目，跟著播放進度聽
 
 打開一段 DJ Set 或長篇 Mix，讓 CueFox QF 幫你找出正在播放的曲目。它先讀取 YouTube 可用的章節與時間戳曲目，再依設定自動比對 **1001Tracklists**；找到可用歌單後，曲名與曲目列表跟著播放位置同步，想重聽某一段也能直接跳曲。
@@ -269,7 +259,7 @@ HUD 集中呈現目前曲目、資料來源與播放同步狀態，並提供曲�
 
 ![概念插圖：Cue Fox 操作唱盤，左側為 HUD，右側為曲目列表面板](docs/assets/readme/youtube-cd-hud-cue-fox-interface-hdr.jpg)
 
-*兩張 Cue Fox 圖皆為概念插圖，使用原始 HDR JPEG。實際介面可查看編輯器段落連結的原始設定頁局部截圖。*
+*兩張 Cue Fox 圖皆為概念插圖。實際介面可查看編輯器段落連結的原始設定頁局部截圖。*
 
 HUD 以 YouTube 縮圖呈現圓形唱片；Live Monitor 可在播放器畫布上調整各元件的位置、尺寸、文字與樣式。
 
