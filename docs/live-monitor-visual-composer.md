@@ -5,6 +5,44 @@ internal YouTube CD HUD layout. The editor is deliberately local and bounded:
 one instance of each functional unit, normalized coordinates, closed-state
 collision boundaries, and min/max dimensions.
 
+## Editing in action
+
+These are cropped captures of actual interactions with the options page. Select a component to change its appearance and text while viewing the layout on the canvas. Open a thumbnail for the original-size capture.
+
+| Colors | Title and layers | Component appearance | Text alignment | Fonts |
+| --- | --- | --- | --- | --- |
+| [![Colors](assets/composer/color-picker.png)](assets/composer/color-picker.png) | [![Title and layers](assets/composer/title-layers.png)](assets/composer/title-layers.png) | [![Component appearance](assets/composer/unit-appearance.png)](assets/composer/unit-appearance.png) | [![Text alignment](assets/composer/text-alignment.png)](assets/composer/text-alignment.png) | [![Fonts](assets/composer/font-picker.png)](assets/composer/font-picker.png) |
+
+### Choose your panel colors
+
+Open the PRIMARY color picker and use its palette or RGB values to choose a main color. Pair it with SECONDARY to personalize the HUD. The capture also shows the 1280 × 720 canvas reference, SCALE % and UNDO controls.
+
+![Primary color picker open over a blue panel](assets/composer/color-picker.png)
+
+### Style the title and arrange layers
+
+Select Track title to adjust its background, corners, size, text color and opacity. This capture shows Z axis enabled at 5, right-aligned text and MARQUEE enabled. Layers let you arrange the title in front of or behind other components.
+
+![Track title appearance controls and Z axis](assets/composer/title-layers.png)
+
+### Adjust each component's appearance
+
+With the source controls selected, adjust corner radius and component opacity, and independently enable background blur. The toolbar also offers font, text size and a status lamp toggle so the controls can match the rest of your panel.
+
+![Source controls selected with the appearance toolbar](assets/composer/unit-appearance.png)
+
+### Align component text
+
+TEXT ALIGN offers LFT (left), RGT (right), CTR (center) and JST (justify). Choose an alignment that suits the component width and surrounding layout to keep labels and information easy to read.
+
+![Text alignment menu open during editing](assets/composer/text-alignment.png)
+
+### Pick a component font
+
+This capture shows Tracklist toggle selected with TEXT FONT open, including cascadia-mono, ocr-machine and jetbrains-mono. Combine font choices with text size, text opacity and corners to give individual components their own appearance.
+
+![Tracklist toggle with its font menu open](assets/composer/font-picker.png)
+
 ## Operation
 
 Open the extension options page and use the Live Monitor stage:

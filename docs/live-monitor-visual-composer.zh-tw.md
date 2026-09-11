@@ -4,6 +4,44 @@
 採每種最小功能單元一個 instance、normalized 座標、closed-state 碰撞邊界與
 最小／最大尺寸，避免把任意 CSS 當成狀態。
 
+## 編輯器操作實況
+
+以下為實際操作設定頁時擷取的局部畫面。選取元件後，可直接調整它的外觀與文字，並在畫布上查看變化。點選縮圖可查看原尺寸截圖。
+
+| 配色 | 曲名與圖層 | 元件外觀 | 文字對齊 | 字型 |
+| --- | --- | --- | --- | --- |
+| [![配色](assets/composer/color-picker.png)](assets/composer/color-picker.png) | [![曲名與圖層](assets/composer/title-layers.png)](assets/composer/title-layers.png) | [![元件外觀](assets/composer/unit-appearance.png)](assets/composer/unit-appearance.png) | [![文字對齊](assets/composer/text-alignment.png)](assets/composer/text-alignment.png) | [![字型](assets/composer/font-picker.png)](assets/composer/font-picker.png) |
+
+### 自訂面板配色
+
+開啟 PRIMARY 色彩選擇器，以色盤或 RGB 數值挑選主色，搭配 SECONDARY 輔色塑造自己的 HUD 外觀。圖中同時可見 1280 × 720 畫布基準、打包縮放與復原縮放控制。
+
+![開啟主色色盤並調整藍色面板](assets/composer/color-picker.png)
+
+### 曲名樣式與前後層次
+
+選取 Track title，調整背景、圓角、尺寸、文字顏色與透明度。圖中曲名啟用 Z 軸並設為 5，搭配靠右對齊與 MARQUEE 跑馬燈；可利用圖層安排文字與其他元件的前後關係。
+
+![曲名元件的外觀參數與 Z 軸控制](assets/composer/title-layers.png)
+
+### 逐一調整元件外觀
+
+選取來源控制列後，可調整圓角程度與元件透明度，並獨立選擇是否啟用背景模糊。下方工具列也提供字型、字級與狀態燈開關，讓控制列配合整體面板風格。
+
+![來源控制列與外觀工具列](assets/composer/unit-appearance.png)
+
+### 選擇文字對齊方式
+
+TEXT ALIGN 選單提供 LFT（靠左）、RGT（靠右）、CTR（置中）及 JST（平均分散）。依元件寬度與排版選擇文字位置，讓按鈕標籤與其他資訊更容易閱讀。
+
+![實際展開文字對齊選單](assets/composer/text-alignment.png)
+
+### 更換元件字型
+
+圖中選取 Tracklist toggle 並展開 TEXT FONT，可挑選 cascadia-mono、ocr-machine、jetbrains-mono 等字型。搭配字級、文字透明度與圓角，讓個別元件呈現不同風格。
+
+![曲目列表切換元件的字型選單](assets/composer/font-picker.png)
+
 ## 操作
 
 - 「儲存並套用」固定於視窗底部；右側預覽區可展開「HUD 外觀」與「自訂 CSS」。
