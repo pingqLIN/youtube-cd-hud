@@ -83,7 +83,7 @@
     const HUD_LAYOUT_DEFAULTS = Object.freeze({
         version: 2,
         palette: Object.freeze({ primaryColor: '#1a202c', secondaryColor: '#63b3ed' }),
-        canvas: Object.freeze({ width: 1280, height: 720, sizingMode: 'relative', collisionPolicy: 'no-overlap-closed', alignmentGrid: Object.freeze({ enabled: true, unitWidth: 8, unitHeight: 8, visible: false }) }),
+        canvas: Object.freeze({ width: 1280, height: 720, sizingMode: 'absolute', collisionPolicy: 'no-overlap-closed', alignmentGrid: Object.freeze({ enabled: true, unitWidth: 8, unitHeight: 8, visible: false }) }),
         components: Object.freeze([
             Object.freeze({ id: 'panel-base', type: 'panel-base', present: true, geometry: Object.freeze({ x: .45625, y: .5222222222222223, width: 772, height: 212.00000000000006, z: -1 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: false, mode: 'dynamic-envelope', padding: 18 }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: .85 }), effects: Object.freeze({ shadow: true, accentRail: true }) }),
             Object.freeze({ id: 'disc', type: 'disc', present: true, geometry: Object.freeze({ x: .125, y: .5, width: 104, height: 104, z: 1 }), layer: Object.freeze({ enabled: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1, texture: 'classic' }), effects: Object.freeze({ glow: true }) }),
@@ -375,13 +375,15 @@
         const source = value && typeof value === 'object' ? value : {};
         const sourceComponents = Array.isArray(source.components) ? source.components : [];
         const palette = {
+            ...(source.palette?.primaryOpacity !== undefined ? { primaryOpacity: clamp(Number(source.palette.primaryOpacity), 0, 1, 1) } : {}),
+            ...(source.palette?.secondaryOpacity !== undefined ? { secondaryOpacity: clamp(Number(source.palette.secondaryOpacity), 0, 1, 1) } : {}),
             primaryColor: /^#[0-9a-f]{6}$/i.test(source.palette?.primaryColor) ? source.palette.primaryColor.toLowerCase() : '#1a202c',
             secondaryColor: /^#[0-9a-f]{6}$/i.test(source.palette?.secondaryColor) ? source.palette.secondaryColor.toLowerCase() : '#63b3ed',
         };
         const canvas = {
             width: clamp(Number(source.canvas?.width) || 1280, 320, 3840),
             height: clamp(Number(source.canvas?.height) || 720, 180, 2160),
-            sizingMode: ['absolute', 'relative'].includes(source.canvas?.sizingMode) ? source.canvas.sizingMode : (Array.isArray(source.components) ? 'absolute' : 'relative'),
+            sizingMode: 'absolute',
             collisionPolicy: 'no-overlap-closed',
             alignmentGrid: {
                 enabled: source.canvas?.alignmentGrid?.enabled !== false,
@@ -427,10 +429,11 @@
                 if (name === 'font') return [name, Object.hasOwn(HUD_FONT_STACKS, rawStyle.font) ? rawStyle.font : fallback];
                 if (name === 'fontSize') return [name, clamp(Number(rawStyle.fontSize), 8, 32, fallback)];
                 if (name === 'textAlign') return [name, ['left', 'right', 'center', 'justify'].includes(rawStyle.textAlign) ? rawStyle.textAlign : fallback];
-                if (name === 'opacity') return [name, clamp(Number(rawStyle.opacity), base.id === 'panel-base' ? 0 : .2, 1, fallback)];
+                if (name === 'opacity') return [name, clamp(Number(rawStyle.opacity), 0, 1, fallback)];
                 if (name === 'texture') return [name, ['classic', 'gold', 'transparent-grooves'].includes(rawStyle.texture) ? rawStyle.texture : fallback];
                 return [name, fallback];
             }));
+            if (rawStyle.backgroundEnabled === false) style.backgroundEnabled = false;
             const backgroundCandidate = rawStyle.backgroundColor || (base.id === 'panel-base' ? rawStyle.color : null);
             style.backgroundColor = /^#[0-9a-f]{6}$/i.test(backgroundCandidate)
                 ? backgroundCandidate.toLowerCase()
@@ -440,6 +443,7 @@
             style.cornerEnabled = base.id === 'disc' ? true : rawStyle.cornerEnabled === true;
             style.cornerRadiusLevel = Math.round(clamp(Number(rawStyle.cornerRadiusLevel), 1, 10, base.id === 'disc' ? 10 : 1));
             style.backgroundBlurEnabled = rawStyle.backgroundBlurEnabled === true;
+            if (rawStyle.secondaryOpacity !== undefined) style.secondaryOpacity = clamp(Number(rawStyle.secondaryOpacity), 0, 1, 1);
             const textStyle = base.textStyle ? Object.fromEntries(Object.entries({
                 color: palette.secondaryColor,
                 opacity: 1,
@@ -449,7 +453,7 @@
                 ...base.textStyle,
             }).map(([name, fallback]) => {
                 if (name === 'color') return [name, /^#[0-9a-f]{6}$/i.test(rawTextStyle[name]) ? rawTextStyle[name].toLowerCase() : fallback];
-                if (name === 'font') return [name, Object.hasOwn(HUD_FONT_STACKS, rawTextStyle.font) ? rawTextStyle.font : fallback];
+                if (name === 'font') return [name, (Object.hasOwn(HUD_FONT_STACKS, rawTextStyle.font) || /^[\p{L}\p{N} _-]{1,80}$/u.test(String(rawTextStyle.font || ''))) ? rawTextStyle.font : fallback];
                 if (name === 'fontSize') return [name, clamp(Number(rawTextStyle.fontSize), 8 * sizingScale, HUD_TEXT_SIZE_MAXIMUM * sizingScale, fallback * sizingScale)];
                 if (name === 'textAlign') return [name, ['left', 'right', 'center', 'justify'].includes(rawTextStyle.textAlign) ? rawTextStyle.textAlign : fallback];
                 if (name === 'opacity') return [name, clamp(Number(rawTextStyle.opacity), 0, 1, fallback)];
@@ -511,6 +515,8 @@
                 type: base.id,
                 present: base.id === 'panel-base' || (sourceItem ? item.present !== false : base.present !== false),
                 geometry,
+                locked: item.locked === true,
+                ...(item.hidden === true ? { hidden: true } : {}),
                 layer,
                 ...(arrangement ? { arrangement } : {}),
                 ...(base.boundary ? { boundary: {
@@ -523,10 +529,10 @@
             };
         });
         const base = components.find(component => component.id === 'panel-base');
-        const visible = components.filter(component => !['panel-base', 'disc'].includes(component.id) && component.present && component.boundary);
+        const visible = components.filter(component => component.id !== 'panel-base' && component.present);
         const layerValues = components.filter(component => component.id !== 'panel-base' && component.present).map(component => component.layer.enabled ? component.geometry.z : 0);
         if (base) base.geometry.z = Math.min(0, ...layerValues) - 1;
-        if (base && visible.length) {
+        if (base && visible.length && !source.manualBase) {
             const rectangles = visible.flatMap(component => {
                 const geometries = component.arrangement?.split
                     ? Object.values(component.arrangement.positions).map(position => ({ ...component.geometry, ...component.arrangement.partSize, ...position }))
@@ -553,7 +559,7 @@
             const baseTop = clamp((top + bottom - height) / 2, 0, canvas.height - height, 0);
             base.geometry = { x: (baseLeft + width / 2) / canvas.width, y: (baseTop + height / 2) / canvas.height, width, height, z: base.geometry.z };
         }
-        return { version: 2, palette, canvas, components };
+        return { version: 2, palette, canvas, components, manualBase: true, locked: source.locked !== false };
     }
 
     function getHudLayoutComponent(id) {
@@ -566,11 +572,11 @@
         if (!canvas || !base) return null;
         const viewportWidth = Math.max(1, Number(viewport.width) || canvas.width);
         const viewportHeight = Math.max(1, Number(viewport.height) || canvas.height);
-        const scale = Math.min(viewportWidth / canvas.width, viewportHeight / canvas.height);
+        const scale = 1;
         const canvasWidth = canvas.width * scale;
         const canvasHeight = canvas.height * scale;
-        const canvasLeft = (viewportWidth - canvasWidth) / 2;
-        const canvasTop = (viewportHeight - canvasHeight) / 2;
+        const canvasLeft = Math.max(-base.geometry.x * canvas.width + base.geometry.width / 2, Math.min(viewportWidth - base.geometry.x * canvas.width - base.geometry.width / 2, (viewportWidth - canvasWidth) / 2));
+        const canvasTop = Math.max(-base.geometry.y * canvas.height + base.geometry.height / 2, Math.min(viewportHeight - base.geometry.y * canvas.height - base.geometry.height / 2, (viewportHeight - canvasHeight) / 2));
         const baseLeft = base.geometry.x * canvas.width - base.geometry.width / 2;
         const baseTop = base.geometry.y * canvas.height - base.geometry.height / 2;
         return {
@@ -585,6 +591,30 @@
             },
             base: { left: baseLeft, top: baseTop, width: base.geometry.width, height: base.geometry.height },
         };
+    }
+
+    function runtimeBaseConnected(layout) {
+        const base = layout.components.find(item => item.id === 'panel-base').geometry;
+        const left = base.x * layout.canvas.width - base.width / 2;
+        const top = base.y * layout.canvas.height - base.height / 2;
+        return layout.components.filter(item => item.present && item.id !== 'panel-base').every(item => {
+            const geometries = item.arrangement?.split ? Object.values(item.arrangement.positions).map(position => ({ ...position, ...item.arrangement.partSize })) : [item.geometry];
+            return geometries.every(g => g.x * layout.canvas.width + g.width / 2 > left && g.x * layout.canvas.width - g.width / 2 < left + base.width && g.y * layout.canvas.height + g.height / 2 > top && g.y * layout.canvas.height - g.height / 2 < top + base.height);
+        });
+    }
+
+    function bindRuntimePanelLock(hud, player) {
+        if (hud.querySelector('.ytcd-panel-lock')) return;
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'ytcd-panel-lock hud-control-button';
+        button.style.cssText = 'pointer-events:auto;position:absolute;right:0;top:-26px;z-index:999;height:24px;color:#c5ee65;background:#101518;border:1px solid #596365;font:10px monospace;cursor:pointer';
+        button.addEventListener('click', async event => {
+            event.stopPropagation();
+            runtimeLayout.locked = !runtimeLayout.locked;
+            applyRuntimeLayout();
+            await persistRuntimeLayout();
+        });
+        hud.appendChild(button);
     }
 
     function projectHudGeometry(geometry, projection) {
@@ -641,6 +671,8 @@
         hud.style.maxHeight = `${projection.root.height}px`;
         hud.dataset.ytcdCanvasScale = String(projection.scale);
         hud.dataset.ytcdSizingMode = runtimeLayout.canvas.sizingMode;
+        bindRuntimePanelLock(hud, player);
+        hud.querySelector('.ytcd-panel-lock').textContent = runtimeLayout.locked ? 'UNLOCK' : 'LOCK';
         hud.style.setProperty('--ytcd-primary-color', runtimeLayout.palette.primaryColor);
         hud.style.setProperty('--ytcd-secondary-color', runtimeLayout.palette.secondaryColor);
         for (const [id, selector] of Object.entries(unitMap)) {
@@ -679,7 +711,9 @@
             }
             if (id === 'time-readout') element.style.removeProperty('font-size');
             element.dataset.ytcdLayoutUnit = id;
-            element.classList.toggle('ytcd-layout-unit-hidden', component.present === false);
+            element.classList.toggle('ytcd-layout-unit-hidden', component.present === false || component.hidden === true);
+            element.style.opacity = '';
+            element.style.pointerEvents = component.hidden ? 'none' : '';
             element.classList.toggle('ytcd-effect-shadow', component.effects.shadow === true);
             element.classList.toggle('ytcd-effect-accent-rail', component.effects.accentRail === true);
             element.classList.toggle('ytcd-effect-glow', component.effects.glow === true);
@@ -698,7 +732,7 @@
                 element.style.right = '';
                 element.style.width = '';
                 element.style.height = '';
-                element.style.borderColor = component.style.borderColor;
+                element.style.borderColor = runtimeColorWithAlpha(component.style.borderColor, component.style.secondaryOpacity ?? 1);
                 element.style.display = runtimeSettings.enabled ? 'block' : 'none';
                 element.classList.add('ytcd-layout-tracklist');
                 if (tracklistBtn) {
@@ -710,6 +744,8 @@
                 element.style.setProperty('--ytcd-unit-y', '50%');
                 element.style.setProperty('--ytcd-unit-width', '100%');
                 element.style.setProperty('--ytcd-unit-height', '100%');
+                element.style.pointerEvents = component.hidden ? 'none' : 'auto';
+                element.style.cursor = 'default';
                 element.style.backgroundColor = '';
                 element.style.borderColor = '';
             } else {
@@ -726,18 +762,18 @@
             const textStyle = component.textStyle || component.style;
             element.style.setProperty('--ytcd-unit-color', textStyle.color || runtimeSettings.accentColor);
             element.style.setProperty('--ytcd-unit-text-opacity', String(textStyle.opacity ?? 1));
-            element.style.setProperty('--ytcd-unit-background-color', component.style.backgroundColor || component.style.color || '#1a202c');
-            element.style.setProperty('--ytcd-secondary-color', runtimeLayout.palette.secondaryColor);
+            element.style.setProperty('--ytcd-unit-background-color', component.style.backgroundEnabled === false ? 'transparent' : component.style.backgroundColor || component.style.color || '#1a202c');
+            element.style.setProperty('--ytcd-secondary-color', runtimeColorWithAlpha(runtimeLayout.palette.secondaryColor, component.style.secondaryOpacity ?? 1));
             element.style.setProperty('--ytcd-unit-border-width', component.style.borderEnabled === false ? '0px' : '1px');
             element.style.setProperty('--ytcd-unit-border-radius', component.style.cornerEnabled && id !== 'disc'
                 ? String(component.style.cornerRadiusLevel * 2 * projection.scale) + 'px'
                 : '0px');
             element.style.setProperty('--ytcd-unit-backdrop-filter', component.style.backgroundBlurEnabled ? 'blur(8px) saturate(.86)' : 'none');
             element.style.setProperty('--ytcd-unit-font-size', String((textStyle.fontSize || runtimeSettings.titleFontSize) * projection.scale) + 'px');
-            element.style.setProperty('--ytcd-unit-font', HUD_FONT_STACKS[textStyle.font] || HUD_FONT_STACKS[runtimeSettings.fontFamily]);
+            element.style.setProperty('--ytcd-unit-font', HUD_FONT_STACKS[textStyle.font] || (/^[\p{L}\p{N} _-]{1,80}$/u.test(String(textStyle.font || '')) ? '"' + textStyle.font + '", Consolas, monospace' : HUD_FONT_STACKS[runtimeSettings.fontFamily]));
             element.style.setProperty('--ytcd-unit-text-align', textStyle.textAlign || 'left');
             element.dataset.ytcdTextAlign = textStyle.textAlign || 'left';
-            const draggable = ['track-title', 'time-readout', 'tracklist-panel'].includes(id) && component.present;
+            const draggable = component.present && !component.hidden && !runtimeLayout.locked && !component.locked;
             element.dataset.ytcdLayoutDraggable = String(draggable);
             if (draggable) bindRuntimeLayoutUnitDragging(element, player, id);
             if (id === 'transport-controls') {
@@ -746,6 +782,8 @@
                 const parts = { previous: element.querySelector('.hud-previous-track'), next: element.querySelector('.hud-next-track') };
                 for (const [part, button] of Object.entries(parts)) {
                     if (!button) continue;
+                    button.style.opacity = '';
+                    button.style.pointerEvents = component.hidden ? 'none' : '';
                     const buttonWidth = split
                         ? component.arrangement.partSize.width * projection.scale
                         : null;
@@ -767,11 +805,13 @@
                     button.style.setProperty('--ytcd-unit-width', String(projected.width) + '%');
                     button.style.setProperty('--ytcd-unit-height', String(projected.height) + '%');
                     button.style.setProperty('--ytcd-unit-z', String(component.geometry.z + 101));
+                    button.style.opacity = '';
+                    button.style.pointerEvents = component.hidden ? 'none' : '';
                     button.style.setProperty('--ytcd-unit-opacity', String(component.style.opacity ?? 1));
                     button.style.setProperty('--ytcd-unit-color', component.textStyle?.color || runtimeSettings.accentColor);
                     button.style.setProperty('--ytcd-unit-text-opacity', String(component.textStyle?.opacity ?? 1));
                     button.style.setProperty('--ytcd-unit-background-color', component.style.backgroundColor || runtimeLayout.palette.primaryColor);
-                    button.style.setProperty('--ytcd-secondary-color', runtimeLayout.palette.secondaryColor);
+                    button.style.setProperty('--ytcd-secondary-color', runtimeColorWithAlpha(runtimeLayout.palette.secondaryColor, component.style.secondaryOpacity ?? 1));
                     button.style.setProperty('--ytcd-unit-border-width', component.style.borderEnabled === false ? '0px' : '1px');
                     button.style.setProperty('--ytcd-unit-border-radius', component.style.cornerEnabled
                         ? String(component.style.cornerRadiusLevel * 2 * projection.scale) + 'px'
@@ -799,8 +839,8 @@
 
         const hud = document.getElementById('yt-cd-hud');
         if (hud) {
-            hud.classList.toggle('ytcd-hide-disc', !runtimeSettings.showDisc);
-            hud.classList.toggle('ytcd-hide-transport', !runtimeSettings.showTransport);
+            hud.classList.toggle('ytcd-hide-disc', runtimeLayout ? false : !runtimeSettings.showDisc);
+            hud.classList.toggle('ytcd-hide-transport', runtimeLayout ? false : !runtimeSettings.showTransport);
             hud.classList.toggle(
                 'ytcd-hide-1001',
                 !runtimeSettings.enable1001 && !runtimeSettings.enableMixesDb && !runtimeSettings.enableTrackId
@@ -816,7 +856,7 @@
             customStyle.id = 'yt-cd-hud-custom-style';
             (document.head || document.documentElement).appendChild(customStyle);
         }
-        customStyle.textContent = runtimeSettings.customCss;
+        customStyle.textContent = '';
         applySizing();
     }
 
@@ -2990,7 +3030,7 @@
             #yt-cd-hud.ytcd-layout-v2 .cd-disc-wrapper {
                 display: grid;
                 place-items: center;
-                opacity: var(--ytcd-unit-opacity);
+                opacity: 1;
             }
             #yt-cd-hud.ytcd-layout-v2 .cd-disc-wrapper .cd-disc {
                 width: 100%;
@@ -4307,94 +4347,98 @@
         return true;
     }
 
-    function bindRuntimeLayoutUnitDragging(element, player, componentId) {
-        if (!element || !player || element._ytCdLayoutUnitDragBound) return;
-        element._ytCdLayoutUnitDragBound = true;
-        let dragState = null;
+    function runtimeColorWithAlpha(color, opacity = 1) {
+        const alpha = clamp(Number(opacity), 0, 1, 1);
+        return alpha === 1 ? color : `color-mix(in srgb, ${color} ${alpha * 100}%, transparent)`;
+    }
 
+    function runtimeEdgeAt(rect, x, y, circular = false) {
+        let edge = (y - rect.top <= 8 ? 'n' : rect.bottom - y <= 8 ? 's' : '') + (x - rect.left <= 8 ? 'w' : rect.right - x <= 8 ? 'e' : '');
+        if (!edge && circular) {
+            const dx = (x - (rect.left + rect.width / 2)) / (rect.width / 2);
+            const dy = (y - (rect.top + rect.height / 2)) / (rect.height / 2);
+            if (Math.hypot(dx, dy) >= .85) edge = (Math.abs(dy) > .35 ? dy < 0 ? 'n' : 's' : '') + (Math.abs(dx) > .35 ? dx < 0 ? 'w' : 'e' : '');
+        }
+        return edge;
+    }
+
+    function bindRuntimeLayoutUnitDragging(element, player, componentId) {
+        if (element._ytCdLayoutDragBound) return;
+        element._ytCdLayoutDragBound = true;
+        let gesture = null;
+        const editable = () => {
+            const component = getHudLayoutComponent(componentId);
+            return component?.present && !component.hidden && !runtimeLayout.locked && !component.locked;
+        };
         const finish = async (event, cancelled = false) => {
-            if (!dragState || (event && event.pointerId !== dragState.pointerId)) return;
-            const finished = dragState;
-            dragState = null;
+            if (!gesture || (event && event.pointerId !== gesture.pointerId)) return;
+            const finished = gesture; gesture = null; clearTimeout(finished.timer);
             element.classList.remove('ytcd-layout-unit-dragging');
-            if (cancelled) {
-                runtimeLayout = finished.originalLayout;
-                applyRuntimeLayout();
-                return;
-            }
+            if (cancelled || !editable()) { runtimeLayout = finished.originalLayout; applyRuntimeLayout(); return; }
             if (!finished.moved) return;
             element._ytCdSuppressClick = true;
             const overlaps = runtimeOverlapGroup(componentId);
-            if (overlaps.length) {
-                const enableLayers = globalThis.confirm('元件已重疊。是否自動開啟層次功能並最佳化 Z 軸？\n選擇「取消」會從面板移除所有衝突元件。');
-                if (enableLayers) {
-                    if (!optimizeRuntimeOverlapLayers(componentId, overlaps)) {
-                        runtimeLayout = finished.originalLayout;
-                    }
-                } else {
-                    overlaps.forEach(component => { component.present = false; });
-                }
+            if (overlaps.some(item => item.locked)) runtimeLayout = finished.originalLayout;
+            else if (overlaps.length) {
+                const enableLayers = globalThis.confirm('元件已重疊。是否自動開啟層次功能並最佳化 Z 軸？\n選擇「取消」會保留原排版。');
+                if (!enableLayers || !optimizeRuntimeOverlapLayers(componentId, overlaps)) runtimeLayout = finished.originalLayout;
             }
             runtimeLayout = normalizeHudLayout(runtimeLayout);
             applyRuntimeLayout();
             await persistRuntimeLayout();
         };
-
         element.addEventListener('pointerdown', event => {
-            if (event.button !== 0 || event.isPrimary === false) return;
+            if (event.button !== 0 || event.isPrimary === false || !editable()) return;
             const component = getHudLayoutComponent(componentId);
-            if (!component?.present) return;
-            if (componentId === 'tracklist-panel' && (!event.target.closest('.tracklist-header') || event.target.closest('.tracklist-header-action'))) return;
-            dragState = {
-                pointerId: event.pointerId,
-                startX: event.clientX,
-                startY: event.clientY,
-                geometry: { ...component.geometry },
-                originalLayout: JSON.parse(JSON.stringify(runtimeLayout)),
-                moved: false,
-            };
-            if (typeof element.setPointerCapture === 'function') element.setPointerCapture(event.pointerId);
+            const partNode = event.target.closest('[data-ytcd-layout-part]');
+            const part = component.arrangement?.split ? partNode?.dataset.ytcdLayoutPart : null;
+            const node = part ? partNode : element;
+            const edge = runtimeEdgeAt(node.getBoundingClientRect(), event.clientX, event.clientY, componentId === 'disc');
+            if (!edge) return;
+            event.preventDefault(); event.stopImmediatePropagation();
+            const geometry = part ? { ...component.geometry, ...component.arrangement.partSize, ...component.arrangement.positions[part] } : { ...component.geometry };
+            gesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, geometry, originalLayout: JSON.parse(JSON.stringify(runtimeLayout)), part, edge, mode: 'pending', moved: false };
+            gesture.timer = setTimeout(() => {
+                if (gesture && editable()) { gesture.mode = 'drag'; element.classList.add('ytcd-layout-unit-dragging'); }
+            }, 400);
+            node.setPointerCapture?.(event.pointerId);
         }, true);
-
         element.addEventListener('pointermove', event => {
-            if (!dragState || event.pointerId !== dragState.pointerId) return;
-            const deltaX = event.clientX - dragState.startX;
-            const deltaY = event.clientY - dragState.startY;
-            if (!dragState.moved && Math.hypot(deltaX, deltaY) < 3) return;
-            dragState.moved = true;
-            event.preventDefault();
-            event.stopPropagation();
-            const projection = projectHudLayout(runtimeLayout, { width: player.clientWidth, height: player.clientHeight });
-            const scale = projection?.scale || 1;
-            const canvas = runtimeLayout.canvas;
-            const grid = canvas.alignmentGrid;
-            const halfX = dragState.geometry.width / (2 * canvas.width);
-            const halfY = dragState.geometry.height / (2 * canvas.height);
-            let x = dragState.geometry.x + deltaX / scale / canvas.width;
-            let y = dragState.geometry.y + deltaY / scale / canvas.height;
-            if (grid.enabled) {
-                x = Math.round(x * canvas.width / grid.unitWidth) * grid.unitWidth / canvas.width;
-                y = Math.round(y * canvas.height / grid.unitHeight) * grid.unitHeight / canvas.height;
+            if (!gesture || event.pointerId !== gesture.pointerId) return;
+            if (!editable()) { clearTimeout(gesture.timer); gesture = null; return; }
+            const dx = event.clientX - gesture.startX, dy = event.clientY - gesture.startY;
+            if (gesture.mode === 'pending') {
+                if (Math.hypot(dx, dy) <= 3) return;
+                clearTimeout(gesture.timer); gesture.mode = 'resize';
             }
-            const next = JSON.parse(JSON.stringify(runtimeLayout));
-            const nextComponent = next.components.find(component => component.id === componentId);
-            nextComponent.geometry = {
-                ...nextComponent.geometry,
-                x: clamp(x, halfX, 1 - halfX, dragState.geometry.x),
-                y: clamp(y, halfY, 1 - halfY, dragState.geometry.y),
-            };
-            runtimeLayout = normalizeHudLayout(next);
+            event.preventDefault(); event.stopImmediatePropagation();
+            const next = JSON.parse(JSON.stringify(gesture.originalLayout));
+            next.canvas.alignmentGrid.enabled = false;
+            const component = next.components.find(item => item.id === componentId);
+            const geometry = { ...gesture.geometry };
+            if (gesture.mode === 'drag') {
+                geometry.x += dx / next.canvas.width; geometry.y += dy / next.canvas.height;
+            } else {
+                if (/[ew]/.test(gesture.edge)) { geometry.width += gesture.edge.includes('e') ? dx : -dx; geometry.x += dx / (2 * next.canvas.width); }
+                if (/[ns]/.test(gesture.edge)) { geometry.height += gesture.edge.includes('s') ? dy : -dy; geometry.y += dy / (2 * next.canvas.height); }
+            }
+            if (geometry.width <= 0 || geometry.height <= 0) return;
+            if (gesture.part) { component.arrangement.partSize = { width: geometry.width, height: geometry.height }; component.arrangement.positions[gesture.part] = { x: geometry.x, y: geometry.y }; }
+            else component.geometry = geometry;
+            const normalized = normalizeHudLayout(next);
+            const fitted = normalized.components.find(item => item.id === componentId);
+            const fittedGeometry = gesture.part ? { ...fitted.arrangement.partSize, ...fitted.arrangement.positions[gesture.part] } : fitted.geometry;
+            if (!['x', 'y', 'width', 'height'].every(key => Math.abs(geometry[key] - fittedGeometry[key]) < 1e-7) || !runtimeBaseConnected(normalized)) return;
+            runtimeLayout = normalized; gesture.moved = true;
             element.classList.add('ytcd-layout-unit-dragging');
             applyRuntimeLayout();
         }, true);
-
         element.addEventListener('pointerup', event => { void finish(event); }, true);
         element.addEventListener('pointercancel', event => { void finish(event, true); }, true);
+        element.addEventListener('lostpointercapture', event => { void finish(event); }, true);
         element.addEventListener('click', event => {
             if (!element._ytCdSuppressClick) return;
-            element._ytCdSuppressClick = false;
-            event.preventDefault();
-            event.stopImmediatePropagation();
+            element._ytCdSuppressClick = false; event.preventDefault(); event.stopImmediatePropagation();
         }, true);
     }
 

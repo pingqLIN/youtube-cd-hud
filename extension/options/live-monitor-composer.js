@@ -7,7 +7,7 @@
     const CANVAS = Object.freeze({
         width: 1280,
         height: 720,
-        sizingMode: 'relative',
+        sizingMode: 'absolute',
         collisionPolicy: 'no-overlap-closed',
         alignmentGrid: Object.freeze({ enabled: true, unitWidth: 8, unitHeight: 8, visible: false }),
     });
@@ -16,7 +16,7 @@
         Object.freeze({ id: 'fhd', width: 1920, height: 1080, label: '1920 × 1080' }),
         Object.freeze({ id: 'uhd', width: 3840, height: 2160, label: '3840 × 2160' }),
     ]);
-    const SIZING_MODES = Object.freeze(['absolute', 'relative']);
+    const SIZING_MODES = Object.freeze(['absolute']);
     const PALETTE_DEFAULTS = Object.freeze({ primaryColor: '#1a202c', secondaryColor: '#63b3ed' });
     const TEXT_SIZE_MAXIMUM = 192;
     const CORNER_RADIUS_LEVEL_MINIMUM = 1;
@@ -77,7 +77,7 @@
     const registry = Object.freeze({
         'panel-base': definition('panel-base', 'Panel base', {
             minSize: { width: 320, height: 48 }, maxSize: { width: 1280, height: 720 },
-            supportedProperties: ['backgroundColor', 'opacity', 'padding'],
+            supportedProperties: ['backgroundColor', 'opacity', 'size'],
             supportedEffects: ['shadow', 'accentRail'],
             boundary: { mode: 'dynamic-envelope', collision: false, padding: 18 },
             geometry: { x: .5, y: .5, width: 920, height: 154, z: -1 },
@@ -186,6 +186,8 @@
     function normalizePalette(value) {
         const source = value && typeof value === 'object' ? value : {};
         return {
+            ...(source.primaryOpacity !== undefined ? { primaryOpacity: clamp(source.primaryOpacity, 0, 1, 1) } : {}),
+            ...(source.secondaryOpacity !== undefined ? { secondaryOpacity: clamp(source.secondaryOpacity, 0, 1, 1) } : {}),
             primaryColor: /^#[0-9a-f]{6}$/i.test(source.primaryColor) ? source.primaryColor.toLowerCase() : PALETTE_DEFAULTS.primaryColor,
             secondaryColor: /^#[0-9a-f]{6}$/i.test(source.secondaryColor) ? source.secondaryColor.toLowerCase() : PALETTE_DEFAULTS.secondaryColor,
         };
@@ -203,7 +205,7 @@
         if (rule.supportedProperties.includes('font')) result.font = Object.hasOwn(FONT_STACKS, source.font) ? source.font : defaults.font;
         if (rule.supportedProperties.includes('fontSize')) result.fontSize = clamp(source.fontSize, 8, TEXT_SIZE_MAXIMUM, defaults.fontSize);
         if (rule.supportedProperties.includes('textAlign')) result.textAlign = TEXT_ALIGNMENTS.includes(source.textAlign) ? source.textAlign : defaults.textAlign;
-        if (rule.supportedProperties.includes('opacity')) result.opacity = clamp(source.opacity, rule.opacityMinimum ?? .2, 1, defaults.opacity ?? 1);
+        if (rule.supportedProperties.includes('opacity')) result.opacity = clamp(source.opacity, 0, 1, defaults.opacity ?? 1);
         if (rule.supportedProperties.includes('texture')) result.texture = DISC_TEXTURES.includes(source.texture) ? source.texture : defaults.texture;
         result.borderEnabled = source.borderEnabled === undefined ? defaults.borderEnabled !== false : source.borderEnabled !== false;
         result.cornerEnabled = rule.fixedRoundShape
@@ -216,6 +218,8 @@
             defaults.cornerRadiusLevel || CORNER_RADIUS_LEVEL_MINIMUM,
         ));
         result.backgroundBlurEnabled = source.backgroundBlurEnabled === true;
+        if (source.secondaryOpacity !== undefined) result.secondaryOpacity = clamp(source.secondaryOpacity, 0, 1, 1);
+        if (source.backgroundEnabled === false) result.backgroundEnabled = false;
         return result;
     }
 
@@ -230,7 +234,7 @@
         const limits = textSizeLimits(canvas);
         const result = {};
         if (rule.supportedTextProperties.includes('color')) result.color = /^#[0-9a-f]{6}$/i.test(source.color) ? source.color.toLowerCase() : defaults.color;
-        if (rule.supportedTextProperties.includes('font')) result.font = Object.hasOwn(FONT_STACKS, source.font) ? source.font : defaults.font;
+        if (rule.supportedTextProperties.includes('font')) result.font = Object.hasOwn(FONT_STACKS, source.font) || /^[\p{L}\p{N} _-]{1,80}$/u.test(String(source.font || '')) ? source.font : defaults.font;
         if (rule.supportedTextProperties.includes('fontSize')) result.fontSize = clamp(source.fontSize, limits.minimum, limits.maximum, defaults.fontSize * sizeScale(canvas));
         if (rule.supportedTextProperties.includes('textAlign')) result.textAlign = TEXT_ALIGNMENTS.includes(source.textAlign) ? source.textAlign : defaults.textAlign;
         if (rule.supportedTextProperties.includes('opacity')) result.opacity = clamp(source.opacity, 0, 1, defaults.opacity ?? 1);
@@ -546,6 +550,7 @@
     function normalizeComponent(value, id, canvas) {
         const rule = registry[id];
         const source = value && typeof value === 'object' ? value : {};
+        if (source.locked === true) canvas = { ...canvas, alignmentGrid: { ...canvas.alignmentGrid, enabled: false } };
         const legacyScale = Number.isFinite(Number(source.scale)) ? Number(source.scale) : 1;
         const suppliedGeometry = rawGeometry(source);
         const layer = {
@@ -564,6 +569,8 @@
             type: id,
             present: rule.required || (source.present === undefined ? rule.defaultPresent !== false : source.present !== false),
             geometry,
+            locked: source.locked === true,
+            ...(source.hidden === true ? { hidden: true } : {}),
             layer,
             ...(arrangement ? { arrangement } : {}),
             ...(rule.boundary ? { boundary: { state: 'closed', shape: rule.boundary.shape, collision: rule.boundary.collision, ...(rule.boundary.mode ? { mode: rule.boundary.mode, padding } : {}) } } : {}),
@@ -576,11 +583,11 @@
 
     function updateDynamicBase(layout) {
         const base = layout.components.find(component => component.id === 'panel-base');
-        const visible = layout.components.filter(component => !['panel-base', 'disc'].includes(component.id) && component.present && component.boundary);
+        const visible = layout.components.filter(component => component.id !== 'panel-base' && component.present);
         if (!base) return layout;
         const layerValues = layout.components.filter(component => component.id !== 'panel-base' && component.present).map(effectiveZ);
         base.geometry.z = Math.min(0, ...layerValues) - 1;
-        if (!visible.length) return layout;
+        if (layout.manualBase || !visible.length) return layout;
         const padding = base.boundary.padding;
         const rectangles = visible.flatMap(component => componentRects(component, layout.canvas));
         const left = Math.max(0, Math.min(...rectangles.map(rect => rect.left)) - padding);
@@ -614,10 +621,12 @@
         for (const id of Object.keys(registry)) {
             const component = normalizeComponent(sourceForId(sourceComponents, id), id, canvas);
             component.style.borderColor = palette.secondaryColor;
-            if (id !== 'panel-base' && component.present) component.geometry = findFreeGeometry(component, components, canvas) || component.geometry;
+            if (!source.manualBase && id !== 'panel-base' && component.present) component.geometry = findFreeGeometry(component, components, canvas) || component.geometry;
             components.push(component);
         }
-        return updateDynamicBase({ version: VERSION, palette, canvas, components });
+        const normalized = updateDynamicBase({ version: VERSION, palette, canvas, components, manualBase: source.manualBase === true, locked: source.locked === true });
+        normalized.manualBase = true;
+        return normalized;
     }
 
     function createDefaultLayout() {
@@ -630,7 +639,7 @@
 
     function canDelete(componentId, layout) {
         const rule = registry[componentId];
-        return Boolean(rule && rule.removable && getComponent(layout, componentId)?.present);
+        return Boolean(rule && rule.removable && !layout.locked && !getComponent(layout, componentId)?.locked && getComponent(layout, componentId)?.present);
     }
 
     function availableComponents(layout) {
@@ -642,12 +651,19 @@
         const normalized = normalizeLayout(layout);
         const component = getComponent(normalized, componentId);
         const rule = registry[componentId];
-        if (!component || !rule?.catalog || component.present) return { layout: normalized, added: false };
+        if (normalized.locked || !component || !rule?.catalog || component.present) return { layout: normalized, added: false };
         component.present = true;
         component.geometry = findFreeGeometry(component, normalized.components, normalized.canvas);
         if (!component.geometry) {
             component.present = false;
             return { layout: updateDynamicBase(normalized), added: false };
+        }
+        if (!connectedToBase(normalized, component)) {
+            const base = getComponent(normalized, 'panel-base');
+            component.geometry.x = base.geometry.x;
+            component.geometry.y = base.geometry.y;
+            component.layer.enabled = true;
+            component.geometry.z = Math.min(99, Math.max(0, ...normalized.components.map(effectiveZ)) + 1);
         }
         return { layout: updateDynamicBase(normalized), added: true };
     }
@@ -662,13 +678,13 @@
 
     function canPlace(layout, componentId, geometry) {
         const component = getComponent(layout, componentId);
-        if (!component || component.id === 'panel-base') return { valid: false, collisionWith: null };
+        if (!component || layout.locked || component.locked) return { valid: false, collisionWith: null };
         const candidate = JSON.parse(JSON.stringify(component));
         candidate.geometry = fitGeometry(componentId, geometry, layout.canvas, component.layer);
         ensureTextFits(candidate, layout.canvas);
         const fitted = candidate.geometry;
         const collision = collisionFor({ ...component, geometry: fitted }, layout.components, layout.canvas);
-        return { valid: !collision, collisionWith: collision?.id || null, geometry: fitted };
+        return { valid: !collision && connectedToBase(layout, candidate), collisionWith: collision?.id || null, geometry: fitted };
     }
 
     function fitInteractionGeometry(layout, componentId, part, geometry) {
@@ -699,12 +715,74 @@
 
     function canPlaceInteraction(layout, componentId, part, geometry) {
         const component = getComponent(layout, componentId);
-        if (!component || component.id === 'panel-base') return { valid: false, collisionWith: null };
+        if (!component || layout.locked || component.locked) return { valid: false, collisionWith: null };
         const fitted = fitInteractionGeometry(layout, componentId, part, geometry);
         const candidate = cloneLayout(component);
         applyInteractionGeometry(candidate, part, fitted);
         const collision = collisionFor(candidate, layout.components, layout.canvas);
-        return { valid: !collision, collisionWith: collision?.id || null, geometry: fitted };
+        return { valid: !collision && connectedToBase(layout, candidate), collisionWith: collision?.id || null, geometry: fitted };
+    }
+
+    function sizeFromInput(layout, id, part, dimension, value) {
+        if (!['width', 'height'].includes(dimension) || String(value).trim() === '' || !Number.isFinite(Number(value)) || Number(value) <= 0) return { valid: false };
+        const component = getComponent(layout, id);
+        if (!component) return { valid: false };
+        const pixels = Math.ceil(Number(value));
+        const unsnapped = cloneLayout(layout);
+        unsnapped.canvas.alignmentGrid.enabled = false;
+        const geometry = { ...interactionGeometry(component, part), [dimension]: pixels };
+        const result = canPlaceInteraction(unsnapped, id, part, geometry);
+        return result.valid && result.geometry[dimension] === pixels ? result : { valid: false };
+    }
+
+    function connectedToBase(layout, candidate) {
+        const base = candidate.id === 'panel-base' ? candidate : getComponent(layout, 'panel-base');
+        const box = componentRect(base, layout.canvas);
+        const units = candidate.id === 'panel-base' ? layout.components.filter(item => item.present && item.id !== 'panel-base') : [candidate];
+        return units.every(item => componentRects(item, layout.canvas).every(rect =>
+            rect.left < box.right && rect.right > box.left && rect.top < box.bottom && rect.bottom > box.top));
+    }
+
+    function colorWithAlpha(color, opacity = 1) {
+        const alpha = clamp(opacity, 0, 1, 1);
+        return alpha === 1 ? color : `color-mix(in srgb, ${color} ${alpha * 100}%, transparent)`;
+    }
+
+    // The first half covers everyday small text; the second half covers display sizes.
+    function fontSizeFromSlider(position, minimum = 8, maximum = TEXT_SIZE_MAXIMUM) {
+        const pivot = Math.min(32, maximum);
+        const t = clamp(position, 0, 1000, 0) / 1000;
+        return Math.round(t <= .5 ? minimum + (pivot - minimum) * t * 2 : pivot + (maximum - pivot) * (t - .5) * 2);
+    }
+
+    function fontSizeToSlider(size, minimum = 8, maximum = TEXT_SIZE_MAXIMUM) {
+        const pivot = Math.min(32, maximum);
+        const value = clamp(size, minimum, maximum, minimum);
+        return Math.round(value <= pivot ? (value - minimum) / Math.max(1, pivot - minimum) * 500 : 500 + (value - pivot) / Math.max(1, maximum - pivot) * 500);
+    }
+
+    function fontStack(font) {
+        if (FONT_STACKS[font]) return FONT_STACKS[font];
+        const name = String(font || '').trim();
+        return /^[\p{L}\p{N} _-]{1,80}$/u.test(name) ? '"' + name + '", Consolas, monospace' : FONT_STACKS['cascadia-mono'];
+    }
+
+    function exportCode(layout) {
+        return JSON.stringify({ format: 'youtube-cd-hud-panel', version: 1, layout: normalizeLayout(layout) }, null, 2);
+    }
+
+    function importCode(text) {
+        if (typeof text !== 'string' || text.length > 100000) throw new Error('面板程式碼上限為 100 KB。');
+        const data = JSON.parse(text);
+        if (data?.format !== 'youtube-cd-hud-panel' || data.version !== 1 || !Array.isArray(data.layout?.components)) throw new Error('請貼上完整的 HUD 面板 JSON 程式碼。');
+        const ids = data.layout.components.map(item => item?.id);
+        if (ids.length !== Object.keys(registry).length || new Set(ids).size !== ids.length || ids.some(id => !Object.hasOwn(registry, id))) throw new Error('元件清單不完整或包含未知元件。');
+        for (const item of data.layout.components) {
+            if (!['x', 'y', 'width', 'height'].every(key => Number.isFinite(item.geometry?.[key]))) throw new Error('元件尺寸必須是有效數字。');
+        }
+        const layout = normalizeLayout(data.layout);
+        if (!connectedToBase(layout, getComponent(layout, 'panel-base'))) throw new Error('所有元件都必須與底座接觸。');
+        return layout;
     }
 
     function refreshBase(layout) {
@@ -712,6 +790,7 @@
     }
 
     function updateAlignment(layout, enabled) {
+        if (layout.locked) return cloneLayout(layout);
         const next = cloneLayout(layout);
         next.canvas = normalizeCanvas({ ...next.canvas, alignmentGrid: { ...next.canvas?.alignmentGrid, enabled: Boolean(enabled) } });
         return normalizeLayout(next);
@@ -719,13 +798,20 @@
 
     function applyPalette(layout, requested, force = false) {
         const next = cloneLayout(layout);
+        if (layout.locked && !force) return next;
         const previous = normalizePalette(next.palette);
         const palette = normalizePalette({ ...previous, ...requested });
         const primaryChanged = force || palette.primaryColor !== previous.primaryColor;
         const secondaryChanged = force || palette.secondaryColor !== previous.secondaryColor;
         next.palette = palette;
         next.components.forEach(component => {
+            if (component.locked && !force) return;
             if (primaryChanged) component.style.backgroundColor = palette.primaryColor;
+            if (requested.primaryOpacity !== undefined) component.style.opacity = clamp(requested.primaryOpacity, 0, 1, 1);
+            if (requested.secondaryOpacity !== undefined) {
+                component.style.secondaryOpacity = clamp(requested.secondaryOpacity, 0, 1, 1);
+                if (component.textStyle) component.textStyle.opacity = component.style.secondaryOpacity;
+            }
             component.style.borderColor = palette.secondaryColor;
             if (secondaryChanged && component.textStyle) component.textStyle.color = palette.secondaryColor;
         });
@@ -753,20 +839,16 @@
                 unitHeight: next.canvas.alignmentGrid.unitHeight * scaleY,
             } } : {}),
         });
-        if (next.canvas.sizingMode === 'relative') {
-            next.components.forEach(component => {
-                component.geometry.width *= scaleX;
-                component.geometry.height *= scaleY;
-                if (component.arrangement) {
-                    component.arrangement.partSize.width *= scaleX;
-                    component.arrangement.partSize.height *= scaleY;
-                }
-                if (component.textStyle?.fontSize) component.textStyle.fontSize *= Math.min(scaleX, scaleY);
-                if (component.boundary?.mode === 'dynamic-envelope') component.boundary.padding *= Math.min(scaleX, scaleY);
+        next.components.forEach(component => {
+            component.geometry.x /= scaleX;
+            component.geometry.y /= scaleY;
+            if (component.arrangement) Object.values(component.arrangement.positions).forEach(position => {
+                position.x /= scaleX; position.y /= scaleY;
             });
-        }
+        });
         next.canvas = target;
-        return normalizeLayout(next);
+        const result = normalizeLayout(next);
+        return connectedToBase(result, getComponent(result, 'panel-base')) ? result : normalized;
     }
 
     function updateSplit(layout, componentId, enabled) {
@@ -809,15 +891,15 @@
             '--lm-font-size': String((textStyle.fontSize ?? 14) / layout.canvas.width * 100) + 'cqw',
             '--lm-color': textStyle.color || layout.palette?.secondaryColor || PALETTE_DEFAULTS.secondaryColor,
             '--lm-text-opacity': String(textStyle.opacity ?? 1),
-            '--lm-background-color': style.backgroundColor || layout.palette?.primaryColor || PALETTE_DEFAULTS.primaryColor,
-            '--lm-secondary-color': layout.palette?.secondaryColor || PALETTE_DEFAULTS.secondaryColor,
-            '--lm-border-color': layout.palette?.secondaryColor || PALETTE_DEFAULTS.secondaryColor,
+            '--lm-background-color': style.backgroundEnabled === false ? 'transparent' : style.backgroundColor || layout.palette?.primaryColor || PALETTE_DEFAULTS.primaryColor,
+            '--lm-secondary-color': colorWithAlpha(layout.palette?.secondaryColor || PALETTE_DEFAULTS.secondaryColor, style.secondaryOpacity ?? 1),
+            '--lm-border-color': colorWithAlpha(layout.palette?.secondaryColor || PALETTE_DEFAULTS.secondaryColor, style.secondaryOpacity ?? 1),
             '--lm-border-width': style.borderEnabled === false ? '0px' : '1px',
             '--lm-border-radius': style.cornerEnabled && !registry[component.id]?.fixedRoundShape
                 ? String(style.cornerRadiusLevel * CORNER_RADIUS_STEP_PX) + 'px'
                 : '0px',
             '--lm-backdrop-filter': style.backgroundBlurEnabled ? 'blur(8px) saturate(.86)' : 'none',
-            '--lm-font': FONT_STACKS[textStyle.font] || FONT_STACKS['cascadia-mono'],
+            '--lm-font': fontStack(textStyle.font),
             '--lm-text-align': textStyle.textAlign || 'left',
             '--lm-z': String((geometry.z ?? 0) + 101),
         };
@@ -838,7 +920,7 @@
         CORNER_RADIUS_LEVEL_MINIMUM, CORNER_RADIUS_LEVEL_MAXIMUM, CORNER_RADIUS_STEP_PX,
         COLLISION_GAP, FONT_STACKS, TEXT_ALIGNMENTS, DISC_TEXTURES, registry, requiredIds,
         normalizeLayout, createDefaultLayout, getComponent, canDelete, availableComponents, addComponent, removeComponent,
-        normalizePalette, sizeScale, textSizeLimits, sizeLimits, clampSize, ensureTextFits, fitGeometry, fitInteractionGeometry, applyInteractionGeometry, interactionGeometry,
+        sizeFromInput, colorWithAlpha, fontSizeFromSlider, fontSizeToSlider, connectedToBase, fontStack, exportCode, importCode, normalizePalette, sizeScale, textSizeLimits, sizeLimits, clampSize, ensureTextFits, fitGeometry, fitInteractionGeometry, applyInteractionGeometry, interactionGeometry,
         componentRect, componentRects, rectsOverlap, effectiveZ, physicalOverlapsFor, overlapGroupFor,
         collisionFor, canPlace, canPlaceInteraction, refreshBase, updateAlignment, updateSplit, updateLayer,
         applyPalette, updateSizingMode, updateViewport, optimizeOverlapLayers, removeOverlapGroup, toCss, toPartCss,

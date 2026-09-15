@@ -25,7 +25,7 @@
     };
 
     function getFormSettings() {
-        const raw = {};
+        const raw = { ...currentSettings, customCss: "" };
         for (const field of fields) raw[field.name] = field.type === 'checkbox' ? field.checked : field.value;
         return settingsApi.normalize(raw);
     }
@@ -39,8 +39,8 @@
 
     function updatePreview(settings) {
         preview.classList.toggle('off', !settings.enabled);
-        preview.classList.toggle('hide-disc', !settings.showDisc);
-        preview.classList.toggle('hide-transport', !settings.showTransport);
+        preview.classList.toggle('hide-disc', false);
+        preview.classList.toggle('hide-transport', false);
         preview.classList.toggle('hide-1001', !settings.enable1001 && !settings.enableMixesDb && !settings.enableTrackId);
         preview.style.setProperty('--preview-accent', settings.accentColor);
         preview.style.setProperty('--preview-opacity', String(settings.surfaceOpacity / 100));
@@ -104,11 +104,14 @@
         try {
             const settings = getFormSettings();
             const layout = bootstrap.getLayout();
+            layout.locked = true;
+            if (!composer.connectedToBase(layout, composer.getComponent(layout, 'panel-base'))) throw new Error('所有元件都必須與底座接觸。');
             await Promise.all([
                 chrome.storage.local.set({ [settingsApi.STORAGE_KEY]: settings }),
                 layoutStore.save(layout),
             ]);
             currentLayout = composer.normalizeLayout(layout);
+            bootstrap.setLayout(currentLayout);
             populate(settings);
             setStatus('options.saved', 'saved');
         } catch (error) {
@@ -124,5 +127,45 @@
         setStatus('options.resetLoaded');
     });
 
+    const code = document.getElementById('panel-code');
+    const codeStatus = document.getElementById('panel-code-status');
+    document.getElementById('panel-code-export').addEventListener('click', () => {
+        code.value = composer.exportCode(bootstrap.getLayout());
+        codeStatus.textContent = '已顯示目前面板；可複製保存。';
+    });
+    document.getElementById('panel-code-import').addEventListener('click', () => {
+        try {
+            const layout = composer.importCode(code.value);
+            bootstrap.setLayout(layout);
+            codeStatus.textContent = '已產生預覽；儲存並套用後生效。';
+            setStatus('options.unsaved');
+        } catch (error) { codeStatus.textContent = '匯入失敗：' + error.message; }
+    });
+    function applyTypography(font, fontSize) {
+        const layout = bootstrap.getLayout();
+        if (layout.locked) { codeStatus.textContent = '請先 UNLOCK 面板。'; return; }
+        layout.components.forEach(component => {
+            if (!component.textStyle || component.locked) return;
+            if (font) component.textStyle.font = font;
+            if (fontSize) component.textStyle.fontSize = fontSize;
+            composer.ensureTextFits(component, layout.canvas);
+        });
+        bootstrap.setLayout(layout);
+        setStatus('options.unsaved');
+    }
+    document.getElementById('theme-font').addEventListener('change', event => applyTypography(event.target.value));
+    document.getElementById('theme-custom-font').addEventListener('change', event => {
+        const value = event.target.value.trim();
+        if (!value) { event.target.setCustomValidity(''); return; }
+        if (!/^[\p{L}\p{N} _-]{1,80}$/u.test(value)) { event.target.setCustomValidity('請輸入本機字體名稱（文字、數字、空白、- 或 _）。'); event.target.reportValidity(); return; }
+        event.target.setCustomValidity('');
+        applyTypography(value);
+    });
+    document.getElementById('theme-font-size').addEventListener('input', event => {
+        const size = composer.fontSizeFromSlider(Number(event.target.value));
+        document.getElementById('theme-font-size-output').value = size + ' px';
+        event.target.setAttribute('aria-valuetext', size + ' px');
+        applyTypography(null, size);
+    });
     void load();
 })();

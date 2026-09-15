@@ -19,7 +19,7 @@
 .lm-editor-stage .preview-disc {
     width: var(--lm-width);
     height: var(--lm-height);
-    opacity: var(--lm-unit-opacity);
+    opacity: 1;
     border-radius: 50%;
 }
 .lm-editor-stage .preview-info { font-family: var(--lm-font); }
@@ -39,3 +39,25 @@
 @media (prefers-reduced-motion: reduce) {
     .lm-editor-stage [data-lm-component] { transition: none; }
 }
+
+/* Handles are hit targets only; selected outlines carry the visual treatment. */
+.lm-editor-stage .lm-resize-handle { display: block; padding: 0; margin: 0; flex: none; min-width: 0; width: 12px; height: 12px; border: 0; background: transparent; box-shadow: none; }
+.lm-editor-stage .lm-resize-handle[hidden] { display: none !important; }
+.lm-editor-stage .lm-component-transparent { opacity: 0; }
+.lm-editor-stage .lm-component-selected { outline: 2px solid var(--signal); }
+.lm-editor-stage .preview-resize { display: none; }
+
+.lm-editor-stage .lm-component-transparent [data-lm-part] { opacity: 0; }
+
+.lm-editor-stage .lm-resize-handle { box-sizing: border-box; background: var(--signal); border: 1px solid var(--paper); opacity: .85; z-index: 8; }
+.lm-resize-handle[data-lm-handle="n"], .lm-resize-handle[data-lm-handle="s"] { left: 50%; margin-left: -6px; height: 6px; cursor: ns-resize; }
+.lm-resize-handle[data-lm-handle="n"] { top: -3px; }
+.lm-resize-handle[data-lm-handle="s"] { bottom: -3px; }
+.lm-resize-handle[data-lm-handle="w"], .lm-resize-handle[data-lm-handle="e"] { top: 50%; margin-top: -6px; width: 6px; cursor: ew-resize; }
+.lm-resize-handle[data-lm-handle="w"] { left: -3px; }
+.lm-resize-handle[data-lm-handle="e"] { right: -3px; }
+.lm-editor-stage.lm-drag-mode, .lm-editor-stage.lm-drag-mode [data-lm-component] { cursor: grabbing; }
+.lm-editor-stage .lm-lock-overlay { position: absolute; inset: 0; width: auto; height: auto; margin: 0; padding: 0; border: 0; border-radius: inherit; background: var(--lm-lock-shade); opacity: .32; pointer-events: none; z-index: 7; display: block; }
+.lm-editor-stage .lm-lock-overlay[hidden] { display: none !important; }
+.lm-editor-stage .lm-transport-split > .lm-lock-overlay { display: none; }
+.lm-editor-stage .lm-component-hidden [data-lm-part] { display: none !important; }

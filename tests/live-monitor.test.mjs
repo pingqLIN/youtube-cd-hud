@@ -19,7 +19,7 @@ test('scale controls invoke the real editor, undo atomically, and preserve inter
   class Element {
     constructor(tag) {
       this.tagName = tag.toUpperCase(); this.children = []; this.dataset = {}; this.listeners = {};
-      this.classList = { add() {} }; this.style = { setProperty() {} };
+      this.classList = { add() {}, toggle() {} }; this.style = { setProperty() {} };
     }
     append(...items) { this.children.push(...items); }
     appendChild(item) { this.append(item); return item; }
@@ -91,12 +91,12 @@ test('cross-layer groups retain layer order and selected scaling detects collisi
   assert.equal(composer.getComponent(result.layout, 'time-readout').geometry.z, 1);
 });
 
-test('new 720p layouts use percent controls while legacy pixel layouts retain their semantics', () => {
+test('new and legacy layouts use fixed pixel controls', () => {
   const composer = loadComposer();
-  assert.equal(composer.createDefaultLayout().canvas.sizingMode, 'relative');
+  assert.equal(composer.createDefaultLayout().canvas.sizingMode, 'absolute');
   assert.equal(composer.createDefaultLayout().canvas.width, 1280);
   assert.equal(composer.createDefaultLayout().canvas.height, 720);
-  assert.equal(loadRuntimeLayoutNormalizer()(null).canvas.sizingMode, 'relative');
+  assert.equal(loadRuntimeLayoutNormalizer()(null).canvas.sizingMode, 'absolute');
   const legacy = { version: 2, canvas: { width: 1920, height: 1080, alignmentGrid: { enabled: false } }, components: [{ id: 'track-title', geometry: { x: .5, y: .5, width: 400, height: 50 } }] };
   for (const normalize of [composer.normalizeLayout, loadRuntimeLayoutNormalizer()]) {
     const result = normalize(legacy);
@@ -190,7 +190,7 @@ function loadComposer() {
   return context.YtCdHudLiveMonitorComposer;
 }
 
-function loadRuntimeTestApi() {
+function loadRuntimeTestApi(overrides = {}, instrumentGestures = false) {
   const sandbox = {
     URL,
     URLSearchParams,
@@ -203,10 +203,13 @@ function loadRuntimeTestApi() {
     setInterval,
     setTimeout,
   };
+  Object.assign(sandbox, overrides);
   sandbox.globalThis = sandbox;
   sandbox.window = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(read('src/youtube-cd-hud.user.js'), sandbox);
+  const source = read('src/youtube-cd-hud.user.js');
+  const evaluated = instrumentGestures ? source.replace('            projectHudLayout,', '            projectHudLayout, bindRuntimePanelLock, bindRuntimeLayoutUnitDragging, getRuntimeLayout: () => runtimeLayout, setRuntimeLayout: value => { runtimeLayout = normalizeHudLayout(value); },') : source;
+  vm.runInContext(evaluated, sandbox);
   return sandbox.__YT_CD_HUD_TEST_EXPORTS__;
 }
 
@@ -428,9 +431,11 @@ test('preserves every approved A/B layout value without recentering or restyling
   };
   for (const [id, digest] of Object.entries(expected)) {
     const layout = presets.createBundledLayout(id);
-    assert.equal(createHash('sha256').update(JSON.stringify(canonical(layout))).digest('hex'), digest, id);
+    const raw = JSON.parse(read('extension/options/live-monitor-layout-presets.js').match(/const BUNDLED_LAYOUTS = ([\s\S]*?);/)[1])[id];
+    assert.equal(createHash('sha256').update(JSON.stringify(canonical(raw))).digest('hex'), digest, id);
+    for (const item of layout.components.filter(item => item.id !== 'panel-base')) assert.deepEqual(JSON.parse(JSON.stringify(item.geometry)), raw.components.find(source => source.id === item.id).geometry);
     const normalized = composer.normalizeLayout(layout);
-    assert.equal(createHash('sha256').update(JSON.stringify(canonical(normalized))).digest('hex'), digest, id + ' after reload');
+    assert.deepEqual(JSON.parse(JSON.stringify(normalized)), JSON.parse(JSON.stringify(layout)));
   }
 });
 
@@ -471,12 +476,13 @@ test('loading a built-in panel previews it and leaves storage untouched until ex
   assert.equal(composer.getComponent(editor.state.layout, 'track-title').textStyle.fontSize, 31);
   const descendants = element => [element, ...element.children.flatMap(descendants)];
   const buttons = descendants(controls.element).filter(element => element.dataset.lmBundledPreset);
-  assert.equal(buttons.length, 2);
+  assert.equal(buttons.length, 3);
   for (const button of buttons) {
     button.listeners.click();
-    assert.deepEqual(JSON.parse(JSON.stringify(editor.state.layout)), JSON.parse(JSON.stringify(presets.createBundledLayout(button.dataset.lmBundledPreset))));
+    assert.equal(editor.state.layout.canvas.sizingMode, 'absolute');
+    assert.ok(composer.connectedToBase(editor.state.layout, composer.getComponent(editor.state.layout, 'panel-base')));
   }
-  assert.deepEqual(changes, ['bundled-preset-load', 'bundled-preset-load']);
+  assert.deepEqual(changes, ['bundled-preset-load', 'bundled-preset-load', 'bundled-preset-load']);
   assert.equal(writes, 0);
   assert.equal(composer.getComponent((await controls.readSlots()).A, 'track-title').textStyle.fontSize, 31);
 });
@@ -669,7 +675,7 @@ test('content runtime normalizes the composer schema without losing unit paramet
     JSON.parse(JSON.stringify(layout.components.map(component => component.id))),
   );
   const title = runtime.components.find(component => component.id === 'track-title');
-  assert.deepEqual(JSON.parse(JSON.stringify(Object.keys(title))), ['id', 'type', 'present', 'geometry', 'layer', 'boundary', 'style', 'textStyle', 'effects']);
+  assert.deepEqual(JSON.parse(JSON.stringify(Object.keys(title))), ['id', 'type', 'present', 'geometry', 'locked', 'layer', 'boundary', 'style', 'textStyle', 'effects']);
   assert.equal(title.boundary.state, 'closed');
   assert.equal(title.effects.marquee, true);
   assert.equal(title.textStyle.textAlign, 'left');
@@ -699,22 +705,23 @@ test('projects the editor canvas onto the YouTube player without moving any unit
   );
 
   const projection = runtimeApi.projectHudLayout(runtimeLayout, { width: 960, height: 540 });
-  assert.equal(projection.scale, 0.75);
-  assert.deepEqual(JSON.parse(JSON.stringify(projection.canvas)), { left: 0, top: 0, width: 960, height: 540 });
+  assert.equal(projection.scale, 1);
+  assert.equal(projection.canvas.width, 1280);
+  assert.equal(projection.canvas.height, 720);
 
   for (const component of runtimeLayout.components.filter(component => component.id !== 'panel-base')) {
     const projected = runtimeApi.projectHudGeometry(component.geometry, projection);
     const actualCenterX = projection.root.left + projected.x / 100 * projection.root.width;
     const actualCenterY = projection.root.top + projected.y / 100 * projection.root.height;
-    assert.ok(Math.abs(actualCenterX - component.geometry.x * 960) < 1e-9, `${component.id} x drifted`);
-    assert.ok(Math.abs(actualCenterY - component.geometry.y * 540) < 1e-9, `${component.id} y drifted`);
-    assert.ok(Math.abs(projected.width / 100 * projection.root.width - component.geometry.width * 0.75) < 1e-9, `${component.id} width drifted`);
-    assert.ok(Math.abs(projected.height / 100 * projection.root.height - component.geometry.height * 0.75) < 1e-9, `${component.id} height drifted`);
+    assert.ok(Math.abs(actualCenterX - (projection.canvas.left + component.geometry.x * 1280)) < 1e-9, `${component.id} x drifted`);
+    assert.ok(Math.abs(actualCenterY - (projection.canvas.top + component.geometry.y * 720)) < 1e-9, `${component.id} y drifted`);
+    assert.ok(Math.abs(projected.width / 100 * projection.root.width - component.geometry.width) < 1e-9, `${component.id} width drifted`);
+    assert.ok(Math.abs(projected.height / 100 * projection.root.height - component.geometry.height) < 1e-9, `${component.id} height drifted`);
   }
 
   const tracklist = runtimeLayout.components.find(component => component.id === 'tracklist-panel');
   const canvasTracklist = runtimeApi.projectCanvasGeometry(tracklist.geometry, projection);
-  assert.deepEqual(JSON.parse(JSON.stringify(canvasTracklist)), { left: 699, top: 24, width: 210, height: 192 });
+  assert.deepEqual(JSON.parse(JSON.stringify(canvasTracklist)), { left: projection.canvas.left + 932, top: projection.canvas.top + 32, width: 280, height: 256 });
 
   const source = read('src/youtube-cd-hud.user.js');
   assert.match(source, /hud\.style\.left = `\$\{projection\.root\.left\}px`/);
@@ -750,7 +757,7 @@ test('wires every component property to an auditable control and keeps component
   for (const rule of Object.values(composer.registry)) {
     for (const property of rule.supportedTextProperties) assert.ok(declaredText.has(property), `${rule.type}.textStyle.${property} has no toolbar control`);
   }
-  assert.match(toolbar, /input\.min = String\(rule\.opacityMinimum \?\? \.2\)/);
+  assert.match(toolbar, /input\.min = '0'/);
   assert.equal(composer.normalizeLayout({ components: [{ id: 'panel-base', style: { opacity: 0 } }] }).components[0].style.opacity, 0);
   assert.equal(composer.registry.disc.maxSize.width, 720);
   assert.equal(composer.registry.disc.allowCanvasOverflow, true);
@@ -948,29 +955,19 @@ test('applies global primary and secondary colors before allowing component over
   assert.equal(composer.getComponent(overridden, 'track-title').style.borderColor, '#aabbcc');
 });
 
-test('switches 16:9 viewport presets with distinct absolute and relative size semantics', () => {
+test('viewport changes preserve pixel sizes and distances between units', () => {
   const composer = loadComposer();
-  assert.deepEqual(JSON.parse(JSON.stringify(composer.VIEWPORT_PRESETS.map(({ width, height }) => [width, height]))), [[1280, 720], [1920, 1080], [3840, 2160]]);
   const initial = composer.createDefaultLayout();
-  const initialTitle = composer.getComponent(initial, 'track-title');
-  const absolute = composer.updateViewport(composer.updateSizingMode(initial, 'absolute'), 1920, 1080);
-  assert.equal(absolute.canvas.sizingMode, 'absolute');
-  assert.equal(composer.getComponent(absolute, 'track-title').geometry.width, initialTitle.geometry.width);
-  assert.ok(composer.getComponent(absolute, 'track-title').geometry.width / absolute.canvas.width < initialTitle.geometry.width / initial.canvas.width);
-
-  const relative = composer.updateViewport(composer.updateSizingMode(initial, 'relative'), 1920, 1080);
-  assert.equal(relative.canvas.sizingMode, 'relative');
-  assert.equal(composer.getComponent(relative, 'track-title').geometry.width, initialTitle.geometry.width * 1.5);
-  assert.equal(composer.getComponent(relative, 'track-title').textStyle.fontSize, initialTitle.textStyle.fontSize * 1.5);
-  assert.equal(composer.getComponent(relative, 'track-title').geometry.width / relative.canvas.width, initialTitle.geometry.width / initial.canvas.width);
-  assert.equal(composer.getComponent(relative, 'track-title').geometry.x, initialTitle.geometry.x);
-  assert.equal(composer.getComponent(relative, 'track-title').geometry.y, initialTitle.geometry.y);
-  assert.deepEqual(JSON.parse(JSON.stringify(relative.canvas.alignmentGrid)), { enabled: true, unitWidth: 12, unitHeight: 12, visible: false });
-  const uhd = composer.updateViewport(relative, 3840, 2160);
-  assert.equal(composer.getComponent(uhd, 'track-title').geometry.width, initialTitle.geometry.width * 3);
-  assert.equal(composer.getComponent(uhd, 'track-title').geometry.height, initialTitle.geometry.height * 3);
-  assert.equal(composer.getComponent(uhd, 'track-title').textStyle.fontSize, initialTitle.textStyle.fontSize * 3);
-  assert.deepEqual(JSON.parse(JSON.stringify(uhd.canvas.alignmentGrid)), { enabled: true, unitWidth: 24, unitHeight: 24, visible: false });
+  const title = composer.getComponent(initial, 'track-title');
+  for (const preset of composer.VIEWPORT_PRESETS) {
+    const result = composer.updateViewport(initial, preset.width, preset.height);
+    const next = composer.getComponent(result, 'track-title');
+    assert.equal(result.canvas.sizingMode, 'absolute');
+    assert.equal(next.geometry.width, title.geometry.width);
+    assert.equal(next.textStyle.fontSize, title.textStyle.fontSize);
+    assert.ok(Math.abs(next.geometry.x * result.canvas.width - title.geometry.x * initial.canvas.width) < 1e-7);
+    assert.equal(composer.connectedToBase(result, composer.getComponent(result, 'panel-base')), true);
+  }
 });
 
 test('exposes the foundation palette, viewport, sizing mode, and English alignment abbreviations', () => {
@@ -980,21 +977,20 @@ test('exposes the foundation palette, viewport, sizing mode, and English alignme
   assert.match(presets, /dataset\.lmPalette = 'primaryColor'/);
   assert.match(presets, /dataset\.lmPalette = 'secondaryColor'/);
   assert.match(presets, /dataset\.lmCanvasPreset = 'true'/);
-  assert.match(presets, /\['absolute', 'ABS · PX'\]/);
-  assert.match(presets, /\['relative', 'REL · %'\]/);
+  assert.doesNotMatch(presets, /SIZE MODE|REL · %/);
   assert.match(toolbar, /left: 'LFT', right: 'RGT', center: 'CTR', justify: 'JST'/);
   assert.doesNotMatch(toolbar, /左對齊|右對齊|置中|平均分散/);
   assert.match(css, /text-shadow:\s*0 0 6px color-mix\(in srgb, var\(--lm-secondary-color\)/);
   assert.match(css, /background:\s*color-mix\(in srgb, var\(--lm-background-color\) calc\(var\(--lm-unit-opacity\) \* 100%\), transparent\)/);
-  assert.match(read('extension/options/live-monitor-canvas-editor.css'), /\.preview-disc\s*\{[\s\S]*?opacity:\s*var\(--lm-unit-opacity\)/);
-  assert.match(read('src/youtube-cd-hud.user.js'), /\.cd-disc-wrapper\s*\{[\s\S]*?opacity:\s*var\(--ytcd-unit-opacity\)/);
-  assert.match(toolbar, /Text size · REL/);
+  assert.match(read('extension/options/live-monitor-canvas-editor.css'), /\.preview-disc\s*\{[\s\S]*?opacity:\s*1/);
+  assert.match(read('src/youtube-cd-hud.user.js'), /\.cd-disc-wrapper\s*\{[\s\S]*?opacity:\s*1/);
+  assert.match(toolbar, /fontSizeFromSlider/);
   assert.match(toolbar, /Text size · PX/);
   assert.match(toolbar, /SHOW BORDER/);
   assert.match(toolbar, /ROUND CORNERS/);
   assert.match(toolbar, /Corner radius · 1–10/);
   assert.match(toolbar, /BG BLUR/);
-  assert.match(toolbar, /input\.max = String\(textLimits\.maximum\)/);
+  assert.match(toolbar, /input\.max = '1000'/);
   assert.match(read('extension/options/live-monitor-canvas-editor.css'), /border-width:\s*var\(--lm-border-width\)/);
   assert.match(read('extension/options/live-monitor-canvas-editor.css'), /backdrop-filter:\s*var\(--lm-backdrop-filter\)/);
   assert.match(read('src/youtube-cd-hud.user.js'), /--ytcd-unit-border-width/);
@@ -1012,9 +1008,9 @@ test('connects the advertised title marquee effect to preview and runtime CSS', 
 
 test('enables bounded runtime dragging for non-button units and persists the canonical layout', () => {
   const source = read('src/youtube-cd-hud.user.js');
-  assert.match(source, /\['track-title', 'time-readout', 'tracklist-panel'\]\.includes\(id\)/);
+  assert.match(source, /!runtimeLayout\.locked && !component\.locked/);
   assert.match(source, /function bindRuntimeLayoutUnitDragging/);
-  assert.match(source, /Math\.hypot\(deltaX, deltaY\) < 3/);
+  assert.match(source, /Math\.hypot\(dx, dy\) <= 3/);
   assert.match(source, /runtimeOverlapGroup\(componentId\)/);
   assert.match(source, /chrome\.storage\.local\.set\(\{ \[HUD_LAYOUT_STORAGE_KEY\]: runtimeLayout \}\)/);
   assert.match(source, /if \(hud\.classList\.contains\('ytcd-layout-v2'\)\) return/);
@@ -1030,4 +1026,251 @@ test('keeps standalone HUD labels and v2 visibility rules aligned with the exten
   const source = read('src/youtube-cd-hud.user.js');
   assert.match(source, /ytcd-hide-transport \.hud-transport-controls \{ display: none !important; \}/);
   assert.match(source, /ytcd-hide-1001 \.hud-status-button \{ display: none !important; \}/);
+});
+
+
+test('panel JSON round trips locks, geometry, local fonts and zero opacity without executing code', () => {
+  const composer = loadComposer();
+  const layout = composer.createDefaultLayout();
+  layout.locked = true;
+  const title = composer.getComponent(layout, 'track-title');
+  title.locked = true;
+  title.style.opacity = 0;
+  title.textStyle.font = 'Noto Sans TC';
+  const normalized = composer.normalizeLayout(layout);
+  const restored = composer.importCode(composer.exportCode(normalized));
+  assert.deepEqual(JSON.parse(JSON.stringify(restored)), JSON.parse(JSON.stringify(normalized)));
+  const runtime = loadRuntimeLayoutNormalizer()(restored);
+  assert.equal(runtime.locked, true);
+  const runtimeTitle = runtime.components.find(item => item.id === 'track-title');
+  assert.equal(runtimeTitle.locked, true);
+  assert.equal(runtimeTitle.style.opacity, 0);
+  assert.equal(runtimeTitle.textStyle.font, 'Noto Sans TC');
+  assert.throws(() => composer.importCode('<script>alert(1)</script>'));
+  assert.throws(() => composer.importCode(JSON.stringify({ format: 'youtube-cd-hud-panel', version: 99, layout })));
+  const invalid = JSON.parse(composer.exportCode(layout));
+  invalid.layout.components[1].id = 'panel-base';
+  assert.throws(() => composer.importCode(JSON.stringify(invalid)), /元件/);
+  assert.throws(() => composer.importCode(' '.repeat(100001)), /100 KB/);
+  assert.equal(composer.fontStack('x"; url(https://example.com)'), composer.FONT_STACKS['cascadia-mono']);
+});
+
+test('permanent base retains manual size and rejects detached units or base removal', () => {
+  const composer = loadComposer();
+  const layout = composer.createDefaultLayout();
+  layout.canvas.alignmentGrid.enabled = false;
+  const base = composer.getComponent(layout, 'panel-base');
+  const original = { ...base.geometry };
+  composer.getComponent(layout, 'track-title').geometry.x += .001;
+  composer.refreshBase(layout);
+  assert.deepEqual(JSON.parse(JSON.stringify(base.geometry)), original);
+  const larger = composer.canPlaceInteraction(layout, 'panel-base', null, { ...original, height: original.height + 10 });
+  assert.equal(larger.valid, true);
+  assert.equal(composer.removeComponent(layout, 'panel-base').removed, false);
+  const title = composer.getComponent(layout, 'track-title');
+  assert.equal(composer.canPlaceInteraction(layout, title.id, null, { ...title.geometry, y: .95 }).valid, false);
+  const invalid = JSON.parse(composer.exportCode(layout));
+  invalid.layout.components.find(item => item.id === title.id).geometry.y = .95;
+  assert.throws(() => composer.importCode(JSON.stringify(invalid)), /底座/);
+  title.locked = true;
+  assert.equal(composer.removeComponent(layout, title.id).removed, false);
+  assert.equal(composer.canPlaceInteraction(layout, title.id, null, title.geometry).valid, false);
+  const engine = loadResizeEngine(composer);
+  assert.equal(engine.scaleGroup(layout, 1.1).updated, false);
+});
+
+test('keyboard nudges by one pixel, preserves edits through reload, and obeys unit and panel locks', () => {
+  const composer = loadComposer();
+  const listeners = {};
+  const focus = { tagName: 'DIV' };
+  const document = { activeElement: focus, addEventListener(name, fn) { listeners[name] = fn; } };
+  const preview = {
+    classList: { add() {}, toggle() {} }, dataset: {}, style: { setProperty() {} },
+    querySelectorAll() { return []; }, addEventListener() {}, contains(node) { return node === focus; },
+    parentElement: { clientWidth: 640, clientHeight: 480 },
+  };
+  const context = { document, YtCdHudLiveMonitorComposer: composer, YtCdHudLiveMonitorResizeEngine: loadResizeEngine(composer) };
+  vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'), context);
+  const editor = context.YtCdHudLiveMonitorCanvasEditor.createEditor({ preview, layout: composer.createDefaultLayout() }).init();
+  const press = (key, extra = {}) => listeners.keydown({ key, preventDefault() {}, ...extra });
+  editor.select('track-title');
+  const before = composer.getComponent(editor.state.layout, 'track-title').geometry.x;
+  press('ArrowRight');
+  const after = composer.getComponent(editor.getLayout(), 'track-title').geometry.x;
+  assert.ok(Math.abs((after - before) * 1280 - 1) < 1e-7);
+  press('Enter');
+  press('ArrowLeft'); press('Delete');
+  assert.equal(composer.getComponent(editor.getLayout(), 'track-title').geometry.x, after);
+  assert.equal(composer.getComponent(editor.getLayout(), 'track-title').present, true);
+  press('Enter');
+  editor.setLocked(true);
+  press('ArrowLeft'); press('Enter'); press('Delete');
+  assert.equal(composer.getComponent(editor.getLayout(), 'track-title').geometry.x, after);
+  editor.setLocked(false);
+  document.activeElement = { tagName: 'TEXTAREA' };
+  press('Delete');
+  assert.equal(composer.getComponent(editor.getLayout(), 'track-title').present, true);
+  document.activeElement = focus;
+  press('Delete');
+  assert.equal(composer.getComponent(editor.getLayout(), 'track-title').present, false);
+});
+
+test('successful group scaling changes fixed pixel geometry in editor and runtime', () => {
+  const composer = loadComposer();
+  const layout = composer.createDefaultLayout();
+  const result = loadResizeEngine(composer).scaleGroup(layout, 1.1);
+  assert.equal(result.updated, true, result.reason);
+  const runtimeApi = loadRuntimeTestApi();
+  const runtime = runtimeApi.normalizeHudLayout(result.layout);
+  for (const viewport of [{ width: 960, height: 540 }, { width: 1920, height: 1080 }]) {
+    const projection = runtimeApi.projectHudLayout(runtime, viewport);
+    assert.equal(projection.scale, 1);
+    for (const item of result.layout.components.filter(item => item.present)) {
+      const original = composer.getComponent(layout, item.id);
+      assert.ok(Math.abs(item.geometry.width - original.geometry.width * 1.1) < 1e-7);
+      const saved = runtime.components.find(unit => unit.id === item.id);
+      assert.ok(Math.abs(saved.geometry.width - item.geometry.width) < 1e-7);
+    }
+  }
+});
+
+
+test('enabling alignment preserves the exact position of a locked unit', () => {
+  const composer = loadComposer();
+  const layout = composer.createDefaultLayout();
+  layout.canvas.alignmentGrid.enabled = false;
+  const title = composer.getComponent(layout, 'track-title');
+  title.geometry.x += 1 / layout.canvas.width;
+  title.locked = true;
+  const result = composer.updateAlignment(layout, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(composer.getComponent(result, title.id).geometry)), JSON.parse(JSON.stringify(title.geometry)));
+});
+
+
+test('hidden is independent of every color alpha and persists across panel code and runtime', () => {
+  const composer = loadComposer();
+  const layout = composer.applyPalette(composer.createDefaultLayout(), { primaryOpacity: .25, secondaryOpacity: .4 });
+  for (const item of layout.components) { item.hidden = true; item.style.opacity = 0; }
+  const restored = composer.importCode(composer.exportCode(layout));
+  const runtime = loadRuntimeLayoutNormalizer()(restored);
+  for (const item of restored.components) {
+    assert.equal(item.hidden, true);
+    assert.equal(item.style.opacity, 0);
+    assert.equal(item.style.secondaryOpacity, .4);
+    assert.equal(runtime.components.find(unit => unit.id === item.id).hidden, true);
+  }
+  restored.components.forEach(item => { item.hidden = false; });
+  const shown = composer.normalizeLayout(restored);
+  assert.equal(shown.components.some(item => item.hidden), false);
+  assert.equal(shown.components.every(item => item.style.opacity === 0), true);
+  assert.equal(composer.toCss(shown.components[0], shown)['--lm-secondary-color'], 'color-mix(in srgb, #63b3ed 40%, transparent)');
+  assert.equal(runtime.palette.primaryOpacity, .25);
+  assert.equal(runtime.palette.secondaryOpacity, .4);
+});
+
+test('font sliders devote their first half to 8–32px and round trip every whole font size', () => {
+  const composer = loadComposer();
+  assert.equal(composer.fontSizeFromSlider(0), 8);
+  assert.equal(composer.fontSizeFromSlider(250), 20);
+  assert.equal(composer.fontSizeFromSlider(500), 32);
+  assert.equal(composer.fontSizeFromSlider(1000), 192);
+  for (let size = 8; size <= 192; size++) assert.equal(composer.fontSizeFromSlider(composer.fontSizeToSlider(size)), size);
+});
+
+test('border gestures resize immediately or drag after a long hold, with cancellation and locks', () => {
+  const composer = loadComposer();
+  const listeners = {}, timers = new Map(); let nextTimer = 0;
+  const document = { activeElement: null, addEventListener() {} };
+  const preview = { classList: { add() {}, toggle() {} }, dataset: {}, style: { setProperty() {} },
+    parentElement: { clientWidth: 640, clientHeight: 480 }, querySelectorAll() { return []; },
+    addEventListener(name, fn) { listeners[name] = fn; }, contains() { return true; },
+    getBoundingClientRect() { return { width: 1280, height: 720 }; } };
+  const context = { document, YtCdHudLiveMonitorComposer: composer, YtCdHudLiveMonitorResizeEngine: loadResizeEngine(composer),
+    setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); } };
+  vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'), context);
+  const editor = context.YtCdHudLiveMonitorCanvasEditor.createEditor({ preview, layout: composer.createDefaultLayout() }).init();
+  editor.state.layout.canvas.alignmentGrid.enabled = false;
+  const disc = () => composer.getComponent(editor.state.layout, 'disc');
+  const node = { dataset: { lmComponent: 'disc' }, focus() { document.activeElement = node; }, setPointerCapture() {},
+    getBoundingClientRect() { return { left: 108, right: 212, top: 308, bottom: 412, width: 104, height: 104 }; },
+    closest(selector) { return selector === '[data-lm-component]' ? node : null; } };
+  const event = (x, y) => ({ target: node, clientX: x, clientY: y, button: 0, pointerId: 1, preventDefault() {} });
+  const before = JSON.stringify(disc().geometry);
+  listeners.pointerdown(event(212, 360));
+  listeners.pointermove(event(228, 360));
+  assert.equal(disc().geometry.width, 120);
+  assert.equal(timers.size, 0);
+  listeners.pointercancel(event(228, 360));
+  assert.equal(JSON.stringify(disc().geometry), before);
+  listeners.pointerdown(event(212, 360));
+  for (const [id, fn] of timers) { timers.delete(id); fn(); }
+  listeners.pointermove(event(220, 360));
+  assert.equal(disc().geometry.width, 104);
+  assert.ok(Math.abs(disc().geometry.x * 1280 - 168) < 1e-7);
+  listeners.pointerup(event(220, 360));
+  editor.setLocked(true);
+  const locked = JSON.stringify(editor.getLayout());
+  listeners.pointerdown(event(212, 360)); listeners.pointermove(event(250, 360)); listeners.pointerup(event(250, 360));
+  assert.equal(JSON.stringify(editor.getLayout()), locked);
+  assert.equal(timers.size, 0);
+});
+
+
+test('YouTube locks prevent base and unit movement; unlocked border holds enable editing', async () => {
+  const timers = new Map(); let counter = 0; let writes = 0;
+  class Node {
+    constructor() { this.children = []; this.listeners = {}; this.style = {}; this.dataset = {}; this.classList = { add() {}, remove() {} }; }
+    appendChild(node) { this.children.push(node); }
+    querySelector() { return this.children.find(node => node.className?.includes('ytcd-panel-lock')) || null; }
+    addEventListener(type, fn) { this.listeners[type] = fn; }
+    getBoundingClientRect() { return { left: 108, right: 212, top: 308, bottom: 412, width: 104, height: 104 }; }
+    closest() { return null; }
+    setPointerCapture() {}
+  }
+  const api = loadRuntimeTestApi({
+    document: { getElementById() { return null; }, createElement() { return new Node(); } },
+    setTimeout(fn) { const id = ++counter; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); },
+    GM_setValue() { writes++; },
+  }, true);
+  const composer = loadComposer(); const layout = composer.createDefaultLayout(); layout.locked = true;
+  api.setRuntimeLayout(layout);
+  const hud = new Node(), player = new Node(), disc = new Node();
+  api.bindRuntimePanelLock(hud, player);
+  assert.equal(hud.listeners.pointerdown, undefined, 'lock controller never starts assembly movement');
+  api.bindRuntimeLayoutUnitDragging(disc, player, 'disc');
+  const event = (x, y) => ({ target: disc, clientX: x, clientY: y, button: 0, pointerId: 1, preventDefault() {}, stopImmediatePropagation() {}, stopPropagation() {} });
+  const locked = JSON.stringify(api.getRuntimeLayout());
+  disc.listeners.pointerdown(event(212, 360)); disc.listeners.pointermove(event(230, 360)); disc.listeners.pointerup(event(230, 360));
+  assert.equal(JSON.stringify(api.getRuntimeLayout()), locked);
+  assert.equal(timers.size, 0);
+  await hud.children[0].listeners.click(event(0, 0));
+  assert.equal(api.getRuntimeLayout().locked, false);
+  disc.listeners.pointerdown(event(212, 360));
+  for (const [id, fn] of timers) { timers.delete(id); fn(); }
+  disc.listeners.pointermove(event(220, 360)); disc.listeners.pointerup(event(220, 360));
+  const moved = api.getRuntimeLayout().components.find(item => item.id === 'disc');
+  assert.equal(moved.geometry.width, 104);
+  assert.ok(Math.abs(moved.geometry.x * 1280 - 168) < 1e-7);
+  assert.ok(writes > 0);
+  await hud.children[0].listeners.click(event(0, 0));
+  const relocked = JSON.stringify(api.getRuntimeLayout());
+  disc.listeners.pointerdown(event(212, 360)); disc.listeners.pointermove(event(240, 360)); disc.listeners.pointerup(event(240, 360));
+  assert.equal(JSON.stringify(api.getRuntimeLayout()), relocked);
+});
+
+
+test('dimension number inputs ceil fractional pixels and retain that size on save', () => {
+  const composer = loadComposer();
+  const layout = composer.createDefaultLayout();
+  const disc = composer.getComponent(layout, 'disc');
+  const placement = composer.sizeFromInput(layout, 'disc', null, 'width', '120.2');
+  assert.equal(placement.valid, true);
+  assert.equal(placement.geometry.width, 121);
+  layout.canvas.alignmentGrid.enabled = false;
+  composer.applyInteractionGeometry(disc, null, placement.geometry);
+  assert.equal(composer.getComponent(composer.normalizeLayout(layout), 'disc').geometry.width, 121);
+  assert.equal(composer.sizeFromInput(layout, 'disc', null, 'height', '120').geometry.height, 120);
+  for (const value of ['', 'NaN', '-3', '99999']) assert.equal(composer.sizeFromInput(layout, 'disc', null, 'width', value).valid, false);
+  disc.locked = true;
+  assert.equal(composer.sizeFromInput(layout, 'disc', null, 'width', '130.5').valid, false);
 });

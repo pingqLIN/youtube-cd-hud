@@ -23,14 +23,16 @@
                 button.className = 'lm-library-item';
                 button.dataset.lmAdd = rule.type;
                 const marker = document.createElement('span');
-                marker.textContent = '+';
+                marker.textContent = ({ disc: '◉', 'track-title': 'T', 'time-readout': '◷', 'source-selector': '⇄', 'tracklist-toggle': '≡', 'transport-controls': '⏮', 'close-control': '×', 'text-size-control': 'T±', 'tracklist-panel': '▤' })[rule.type] || '▦';
+                button.disabled = editor.state.layout.locked;
+                button.title = '加入 ' + rule.label;
                 marker.setAttribute('aria-hidden', 'true');
                 const copy = document.createElement('span');
                 const title = document.createElement('strong');
                 title.textContent = rule.label;
                 const detail = document.createElement('small');
                 detail.textContent = rule.type;
-                copy.append(title, detail);
+                copy.append(title);
                 button.append(marker, copy);
                 button.addEventListener('click', () => editor.add(rule.type));
                 host.appendChild(button);

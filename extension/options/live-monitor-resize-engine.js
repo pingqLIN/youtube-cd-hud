@@ -6,11 +6,16 @@
         return { ...baseGeometry, width, height };
     }
 
-    function geometryFromHandle(component, startGeometry, handle, deltaX, deltaY) {
+    function geometryFromHandle(component, startGeometry, handle, deltaX, deltaY, canvas) {
         const direction = String(handle || 'se').toLowerCase();
         const width = startGeometry.width + (direction.includes('e') ? deltaX : direction.includes('w') ? -deltaX : 0);
         const height = startGeometry.height + (direction.includes('s') ? deltaY : direction.includes('n') ? -deltaY : 0);
-        return geometryForSize(component, width, height, startGeometry);
+        const geometry = geometryForSize(component, width, height, startGeometry);
+        if (canvas) {
+            if (/[ew]/.test(direction)) geometry.x += deltaX / (2 * canvas.width);
+            if (/[ns]/.test(direction)) geometry.y += deltaY / (2 * canvas.height);
+        }
+        return geometry;
     }
 
     // Transform a complete set atomically; never relocate individual members to
@@ -22,6 +27,7 @@
         if (!Number.isFinite(factor) || factor <= 0 || factor > 4) return fail('Use a scale greater than 0% and at most 400%.');
         const next = JSON.parse(JSON.stringify(original));
         const members = next.components.filter(item => item.present && item.id !== 'panel-base' && (!componentIds || componentIds.includes(item.id)));
+        if (original.locked || members.some(item => item.locked) || (!componentIds && composer.getComponent(original, 'panel-base').locked)) return fail('請先解鎖面板與要縮放的元件。');
         if (!members.length) return fail('Select a component or choose all components.');
         if (factor === 1) return { updated: true, layout: original, componentIds: members.map(item => item.id) };
         const boxes = members.flatMap(item => composer.componentRects(item, next.canvas));
@@ -54,9 +60,16 @@
         }
         if (!componentIds) {
             const base = next.components.find(item => item.id === 'panel-base');
-            if (base?.boundary) base.boundary.padding = Math.min(96, base.boundary.padding * factor);
+            if (base) {
+                move(base.geometry);
+                base.geometry.width *= factor;
+                base.geometry.height *= factor;
+                const limits = composer.sizeLimits(base, next.canvas);
+                if (base.geometry.width < limits.minWidth || base.geometry.height < limits.minHeight || base.geometry.width > limits.maxWidth || base.geometry.height > limits.maxHeight) return fail('底座尺寸超過上下限。');
+            }
         }
         if (members.some(item => composer.collisionFor(item, next.components, next.canvas))) return fail('The group would collide with another component.');
+        if (!composer.connectedToBase(next, composer.getComponent(next, 'panel-base'))) return fail('縮放後元件會離開底座。');
         const normalized = composer.normalizeLayout(next);
         const same = (a, b) => ['x', 'y', 'width', 'height'].every(key => Math.abs(a[key] - b[key]) < 1e-7);
         for (const item of members) {

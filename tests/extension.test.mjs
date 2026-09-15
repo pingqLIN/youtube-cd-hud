@@ -114,18 +114,16 @@ test('uses external scripts and exposes the complete control surface', () => {
     'enableTrackId',
     'requestTimeoutMs',
     'maxCandidates',
-    'titleFontSize',
-    'timeFontSize',
-    'fontFamily',
-    'discScale',
-    'surfaceOpacity',
-    'accentColor',
-    'showDisc',
-    'showTransport',
-    'customCss',
   ]) {
     assert.match(html, new RegExp(`name="${setting}"`));
   }
+});
+
+test('panel studio replaces CSS overrides with safe panel code and theme controls', () => {
+  const html = read('extension/options/options.html');
+  for (const id of ['panel-code', 'panel-code-import', 'panel-code-export', 'theme-font', 'theme-custom-font', 'theme-font-size']) assert.ok(html.includes(`id="${id}"`));
+  assert.doesNotMatch(html, /name="customCss"/);
+  assert.ok(html.indexOf('id="panel-code"') > html.indexOf('id="hud-preview"'));
 });
 
 test('bridges only allowlisted tracklist providers with provider-specific credentials', () => {
