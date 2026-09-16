@@ -31,7 +31,8 @@ test('scale controls invoke the real editor, undo atomically, and preserve inter
     reportValidity() { this.invalidReported = true; }
   }
   const composer = loadComposer();
-  const document = { createElement: tag => new Element(tag), getElementById: () => null, documentElement: { lang: 'en' } };
+  const footer = new Element('span');
+  const document = { createElement: tag => new Element(tag), getElementById: id => id === 'live-monitor-panel-lock' ? footer : null, documentElement: { lang: 'en' } };
   const context = { document, YtCdHudLiveMonitorComposer: composer, YtCdHudLiveMonitorResizeEngine: loadResizeEngine(composer) };
   vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'), context);
   const changes = [];
@@ -41,7 +42,11 @@ test('scale controls invoke the real editor, undo atomically, and preserve inter
   const presets = loadLayoutPresets(composer, { document });
   const controls = presets.createControls({ host: new Element('div'), editor, onChange });
   await controls.render();
-  const pack = controls.element.children.find(element => element.className === 'lm-layout-pack');
+  assert.equal(footer.children.length, 1);
+  assert.match(footer.children[0].textContent, /LOCK/);
+  assert.equal(controls.element.children.includes(footer.children[0]), false);
+  const extra = controls.element.children.find(element => element.className === 'lm-layout-extra');
+  const pack = extra.children.find(element => element.className === 'lm-layout-pack');
   const [scope, scale, apply, undo] = pack.children;
   scope.value = 'all'; scale.value = '110';
   apply.listeners.click();
@@ -64,6 +69,10 @@ test('scale controls invoke the real editor, undo atomically, and preserve inter
   undo.listeners.click();
   assert.equal(JSON.stringify(editor.getLayout()), edited);
   assert.equal(undo.disabled, true);
+  footer.children[0].listeners.click(); controls.sync();
+  assert.equal(editor.state.layout.locked, true);
+  assert.equal(footer.children[0].dataset.lmLockState, 'true');
+  assert.match(footer.children[0].textContent, /UNLOCK/);
 });
 
 test('cross-layer groups retain layer order and selected scaling detects collisions', () => {
@@ -110,17 +119,19 @@ test('new and legacy layouts use fixed pixel controls', () => {
 test('compact height floors agree between editor and runtime and still contain text', () => {
   const composer = loadComposer();
   const runtime = loadRuntimeLayoutNormalizer();
-  for (const [id, height] of Object.entries({ disc: 40, 'track-title': 32, 'time-readout': 32, 'source-selector': 32, 'transport-controls': 32, 'close-control': 32, 'tracklist-toggle': 32, 'text-size-control': 32, 'tracklist-panel': 64 })) {
+  for (const [id, height] of Object.entries({ 'panel-base': 24, disc: 24, 'track-title': 24, 'time-readout': 24, 'source-selector': 24, 'transport-controls': 24, 'close-control': 24, 'tracklist-toggle': 24, 'text-size-control': 24, 'tracklist-panel': 48 })) {
     const source = composer.createDefaultLayout();
     source.canvas.alignmentGrid.enabled = false;
     source.components.forEach(item => { if (item.id !== 'panel-base') item.present = item.id === id; });
     const item = composer.getComponent(source, id);
+    if (item.textStyle) item.textStyle.fontSize = 12;
+    source.manualBase = true;
     item.geometry = { ...item.geometry, x: .5, y: .5, height };
     const normalized = composer.normalizeLayout(source);
     const actual = composer.getComponent(normalized, id);
     assert.equal(actual.geometry.height, height, id);
     assert.equal(runtime(normalized).components.find(item => item.id === id).geometry.height, height, id + ' runtime');
-    if (actual.textStyle) assert.ok(height >= actual.textStyle.fontSize * 1.35 + 8, id + ' text fits');
+    if (actual.textStyle) assert.ok(height >= actual.textStyle.fontSize * 1.35 + 4, id + ' text fits');
   }
 });
 
@@ -208,7 +219,7 @@ function loadRuntimeTestApi(overrides = {}, instrumentGestures = false) {
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   const source = read('src/youtube-cd-hud.user.js');
-  const evaluated = instrumentGestures ? source.replace('            projectHudLayout,', '            projectHudLayout, bindRuntimePanelLock, bindRuntimeLayoutUnitDragging, getRuntimeLayout: () => runtimeLayout, setRuntimeLayout: value => { runtimeLayout = normalizeHudLayout(value); },') : source;
+  const evaluated = instrumentGestures ? source.replace('            projectHudLayout,', '            projectHudLayout, translateRuntimeAssembly, bindRuntimeLayoutUnitDragging, getRuntimeLayout: () => runtimeLayout, setRuntimeLayout: value => { runtimeLayout = normalizeHudLayout(value); },') : source;
   vm.runInContext(evaluated, sandbox);
   return sandbox.__YT_CD_HUD_TEST_EXPORTS__;
 }
@@ -228,6 +239,7 @@ function loadLayoutPresets(composer, overrides = {}) {
     } } },
     ...overrides,
   };
+  vm.runInNewContext(read('extension/options/panel-presets.js'), context);
   vm.runInNewContext(read('extension/options/live-monitor-layout-presets.js'), context);
   return context.YtCdHudLiveMonitorLayoutPresets;
 }
@@ -324,7 +336,7 @@ test('enforces closed-state non-overlap and canvas bounds', () => {
   assert.equal(layered.updated, true);
   const layeredTitle = composer.getComponent(layered.layout, 'track-title');
   assert.equal(composer.canPlace(layered.layout, 'track-title', { ...layeredTitle.geometry, x: time.geometry.x, y: time.geometry.y }).valid, true);
-  assert.deepEqual(JSON.parse(JSON.stringify(composer.clampSize('disc', 1, 9999))), { width: 40, height: 720 });
+  assert.deepEqual(JSON.parse(JSON.stringify(composer.clampSize('disc', 1, 9999))), { width: 24, height: 720 });
   const overflowDisc = composer.fitGeometry('disc', { ...disc.geometry, x: -.25, y: 1.25, width: 240, height: 240 }, layout.canvas, disc.layer);
   assert.equal(overflowDisc.x, 0);
   assert.equal(overflowDisc.y, 1);
@@ -367,24 +379,24 @@ test('keeps A/B/C layouts in browser-session storage and normalizes restored dat
   assert.equal(presets.STORAGE_KEY, 'ytCdHudLayoutSlotsV1');
 });
 
-test('ships two fresh built-in panels without relying on session slots', async () => {
+test('ships three fresh built-in panels without relying on session slots', async () => {
   const composer = loadComposer();
   const presets = loadLayoutPresets(composer);
-  assert.deepEqual([...presets.BUNDLED_PRESETS].map(preset => preset.id), ['compact-playback', 'tracklist-reader']);
+  assert.deepEqual([...presets.BUNDLED_PRESETS].map(preset => preset.id), ['full', 'compact', 'invisible']);
   assert.deepEqual(Object.keys(await presets.readSlots()), []);
   assert.equal(presets.createBundledLayout('unknown'), null);
-  const compact = presets.createBundledLayout('compact-playback');
-  const reader = presets.createBundledLayout('tracklist-reader');
+  const compact = presets.createBundledLayout('compact');
+  const reader = presets.createBundledLayout('full');
   assert.equal(composer.getComponent(compact, 'tracklist-panel').present, false);
   assert.equal(composer.getComponent(reader, 'tracklist-panel').present, true);
   assert.ok(composer.getComponent(compact, 'panel-base').geometry.width < composer.getComponent(reader, 'panel-base').geometry.width);
   assert.ok(composer.getComponent(reader, 'track-title').textStyle.fontSize > composer.getComponent(compact, 'track-title').textStyle.fontSize);
   composer.getComponent(compact, 'track-title').textStyle.fontSize = 99;
   await presets.writeSlots({ A: compact });
-  assert.equal(composer.getComponent(presets.createBundledLayout('compact-playback'), 'track-title').textStyle.fontSize, 18);
+  assert.equal(composer.getComponent(presets.createBundledLayout('compact'), 'track-title').textStyle.fontSize, 18);
   const nextSession = loadLayoutPresets(composer);
   assert.deepEqual(Object.keys(await nextSession.readSlots()), []);
-  assert.deepEqual(JSON.parse(JSON.stringify(nextSession.createBundledLayout('tracklist-reader'))), JSON.parse(JSON.stringify(reader)));
+  assert.deepEqual(JSON.parse(JSON.stringify(nextSession.createBundledLayout('full'))), JSON.parse(JSON.stringify(reader)));
 });
 
 test('built-in panels survive storage and runtime normalization with usable geometry', async () => {
@@ -400,7 +412,7 @@ test('built-in panels survive storage and runtime normalization with usable geom
   const store = context.YtCdHudLiveMonitorLayoutStore;
   for (const preset of presets.BUNDLED_PRESETS) {
     const layout = presets.createBundledLayout(preset.id);
-    for (const id of ['panel-base', 'disc', 'track-title', 'time-readout', 'source-selector', 'transport-controls', 'tracklist-toggle', 'close-control']) {
+    for (const id of ['panel-base', 'track-title', 'time-readout', ...(preset.id === 'invisible' ? [] : ['transport-controls']), ...(preset.id === 'full' ? ['disc', 'source-selector', 'tracklist-toggle', 'close-control', 'text-size-control', 'tracklist-panel'] : [])]) {
       assert.equal(composer.getComponent(layout, id).present, true, preset.id + ': ' + id);
     }
     for (const component of layout.components.filter(item => item.present && item.boundary?.collision)) {
@@ -409,9 +421,10 @@ test('built-in panels survive storage and runtime normalization with usable geom
       assert.ok(rect.left >= 0 && rect.top >= 0 && rect.right <= layout.canvas.width && rect.bottom <= layout.canvas.height);
     }
     await store.save(layout);
-    assert.deepEqual(JSON.parse(JSON.stringify(await store.load())), JSON.parse(JSON.stringify(layout)));
+    const prepared = composer.prepareForSave(layout);
+    assert.deepEqual(JSON.parse(JSON.stringify(await store.load())), JSON.parse(JSON.stringify(prepared)));
     const runtime = runtimeNormalize(storage[composer.STORAGE_KEY]);
-    for (const component of layout.components) {
+    for (const component of prepared.components) {
       const restored = runtime.components.find(item => item.id === component.id);
       assert.equal(restored.present, component.present);
       assert.deepEqual(JSON.parse(JSON.stringify(restored.geometry)), JSON.parse(JSON.stringify(component.geometry)));
@@ -437,6 +450,108 @@ test('preserves every approved A/B layout value without recentering or restyling
     const normalized = composer.normalizeLayout(layout);
     assert.deepEqual(JSON.parse(JSON.stringify(normalized)), JSON.parse(JSON.stringify(layout)));
   }
+});
+
+test('split controls retain 24px height through normalization and panel code', () => {
+  const composer = loadComposer();
+  const layout = composer.createDefaultLayout();
+  const unit = composer.getComponent(layout, 'transport-controls');
+  unit.textStyle.fontSize = 12;
+  unit.arrangement.split = true;
+  unit.arrangement.partSize.height = 24;
+  const restored = composer.importCode(composer.exportCode(layout));
+  assert.equal(composer.getComponent(restored, unit.id).arrangement.partSize.height, 24);
+  assert.equal(loadRuntimeLayoutNormalizer()(restored).components.find(item => item.id === unit.id).arrangement.partSize.height, 24);
+});
+
+test('lower height floors preserve previously saved large text heights', () => {
+  const composer = loadComposer();
+  const source = composer.createDefaultLayout();
+  source.canvas.alignmentGrid.enabled = true;
+  const title = composer.getComponent(source, 'track-title');
+  title.textStyle.fontSize = 192;
+  title.geometry.height = 272;
+  assert.equal(composer.getComponent(composer.normalizeLayout(source), title.id).geometry.height, 272);
+  assert.equal(loadRuntimeLayoutNormalizer()(source).components.find(item => item.id === title.id).geometry.height, 272);
+});
+
+test('font weights survive panel code and runtime normalization with bounded input and legacy defaults', () => {
+  const composer = loadComposer();
+  const runtime = loadRuntimeLayoutNormalizer();
+  const source = composer.createDefaultLayout();
+  for (const [value, expected] of [[100, 100], [450, 450], [900, 900], [0, 100], [1000, 900], ['invalid', 700]]) {
+    composer.getComponent(source, 'track-title').textStyle.fontWeight = value;
+    const normalized = composer.normalizeLayout(source);
+    const restored = composer.importCode(composer.exportCode(normalized));
+    const actual = composer.getComponent(restored, 'track-title');
+    assert.equal(actual.textStyle.fontWeight, expected);
+    assert.equal(runtime(source).components.find(item => item.id === actual.id).textStyle.fontWeight, expected);
+    assert.equal(composer.toCss(actual, restored)['--lm-font-weight'], String(expected));
+  }
+  for (const unit of composer.createDefaultLayout().components.filter(item => item.textStyle)) {
+    assert.equal(unit.textStyle.fontWeight, undefined, 'legacy layouts keep implicit defaults');
+    assert.equal(composer.toCss(unit)['--lm-font-weight'], String(composer.defaultFontWeight(unit.id)));
+  }
+});
+
+test('authored slate presets retain surfaces and typography through export, save and runtime loading', async () => {
+  const composer = loadComposer();
+  const presets = loadLayoutPresets(composer);
+  const runtimeNormalize = loadRuntimeLayoutNormalizer();
+  const plain = value => JSON.parse(JSON.stringify(value));
+  const saved = {};
+  const context = { YtCdHudLiveMonitorComposer: composer, chrome: { storage: { local: {
+    async get() { return saved; }, async set(value) { Object.assign(saved, plain(value)); },
+  } } } };
+  vm.runInNewContext(read('extension/options/live-monitor-layout-store.js'), context);
+  for (const preset of presets.BUNDLED_PRESETS) {
+    const layout = presets.createBundledLayout(preset.id);
+    const base = composer.getComponent(layout, 'panel-base');
+    assert.equal(base.style.backgroundColor, '#404549');
+    assert.equal(base.style.opacity, preset.id === 'invisible' ? 0 : 1);
+    assert.equal(composer.getComponent(layout, 'track-title').style.backgroundEnabled !== false, preset.id !== 'invisible');
+    if (preset.id !== 'invisible') {
+      assert.equal(composer.getComponent(layout, 'track-title').style.backgroundColor, '#4a4e52');
+      assert.equal(composer.getComponent(layout, 'transport-controls').style.backgroundColor, '#2d3135');
+    }
+    assert.equal(composer.getComponent(layout, 'time-readout').textStyle.color, '#c5ee65');
+    layout.locked = true;
+    const imported = composer.importCode(composer.exportCode(layout));
+    await context.YtCdHudLiveMonitorLayoutStore.save(imported);
+    const runtime = runtimeNormalize(saved[composer.STORAGE_KEY]);
+    for (const component of layout.components.filter(item => item.present)) {
+      const actual = runtime.components.find(item => item.id === component.id);
+      assert.deepEqual(plain(actual.style), plain(component.style), preset.id + ': ' + component.id);
+      if (component.textStyle) assert.deepEqual(plain(actual.textStyle), plain(component.textStyle));
+    }
+  }
+});
+
+test('locking and saving preserve rendered component colors without inserting shade nodes', () => {
+  const composer = loadComposer();
+  const layout = loadLayoutPresets(composer).createBundledLayout('full');
+  const node = id => ({
+    dataset: { lmComponent: id }, values: {},
+    style: { setProperty(key, value) { this.owner.values[key] = value; } },
+    classList: { add() {}, toggle() {} }, setAttribute() {}, querySelectorAll() { return []; },
+  });
+  const units = layout.components.map(component => node(component.id));
+  units.forEach(item => { item.style.owner = item; });
+  const preview = node('preview'); preview.style.owner = preview;
+  preview.querySelectorAll = () => units;
+  const context = { YtCdHudLiveMonitorComposer: composer, document: {
+    createElement() { throw new Error('Locking must not append an appearance overlay.'); },
+  } };
+  vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'), context);
+  const editor = context.YtCdHudLiveMonitorCanvasEditor.createEditor({ preview, layout });
+  editor.render();
+  const before = JSON.stringify(units.map(item => item.values));
+  editor.setLocked(true);
+  assert.equal(JSON.stringify(units.map(item => item.values)), before);
+  editor.setLayout(composer.importCode(composer.exportCode(editor.getLayout())));
+  assert.equal(JSON.stringify(units.map(item => item.values)), before);
+  editor.setLocked(false);
+  assert.equal(JSON.stringify(units.map(item => item.values)), before);
 });
 
 test('ignores coordinate roundoff at touching edges while detecting real overlaps', () => {
@@ -634,6 +749,7 @@ test('package check covers every shipped live monitor script', () => {
   const check = packageJson.scripts.check;
   for (const file of [
     'live-monitor-composer.js',
+    'panel-presets.js',
     'live-monitor-layout-store.js',
     'live-monitor-resize-engine.js',
     'live-monitor-canvas-editor.js',
@@ -824,7 +940,7 @@ test('normalizes per-unit border, corner, blur, and expanded text-size controls 
   assert.equal(title.style.cornerRadiusLevel, 10);
   assert.equal(title.style.backgroundBlurEnabled, true);
   assert.equal(title.textStyle.fontSize, 192);
-  assert.equal(title.geometry.height, 272);
+  assert.equal(title.geometry.height, 264);
   assert.ok(composer.componentRect(title, layout.canvas).bottom <= layout.canvas.height);
   const css = composer.toCss(title, layout);
   assert.equal(css['--lm-border-width'], '0px');
@@ -884,7 +1000,7 @@ test('keeps split transport text containment and unit appearance on both atomic 
     style: { cornerEnabled: true, cornerRadiusLevel: 4, backgroundBlurEnabled: true },
   }] });
   const transport = composer.getComponent(layout, 'transport-controls');
-  assert.equal(transport.arrangement.partSize.height, 272);
+  assert.equal(transport.arrangement.partSize.height, 264);
   for (const part of Object.values(transport.arrangement.positions)) {
     const rect = composer.componentRect({ ...part, ...transport.arrangement.partSize }, layout.canvas);
     assert.ok(rect.top >= 0);
@@ -924,7 +1040,7 @@ test('keeps grid-aligned control minimums reachable and the dynamic base above i
   for (const rule of Object.values(composer.registry).filter(rule => rule.supportedTextProperties.length)) {
     const layout = composer.normalizeLayout({ components: [{ id: rule.type, textStyle: { fontSize: composer.TEXT_SIZE_MAXIMUM } }] });
     const component = composer.getComponent(layout, rule.type);
-    assert.ok(component.geometry.height >= 272, `${rule.type} cannot contain the 192px maximum text line`);
+    assert.ok(component.geometry.height >= 264, `${rule.type} cannot contain the 192px maximum text line`);
   }
   const layout = composer.createDefaultLayout();
   layout.components.forEach(component => {
@@ -982,8 +1098,8 @@ test('exposes the foundation palette, viewport, sizing mode, and English alignme
   assert.doesNotMatch(toolbar, /左對齊|右對齊|置中|平均分散/);
   assert.match(css, /text-shadow:\s*0 0 6px color-mix\(in srgb, var\(--lm-secondary-color\)/);
   assert.match(css, /background:\s*color-mix\(in srgb, var\(--lm-background-color\) calc\(var\(--lm-unit-opacity\) \* 100%\), transparent\)/);
-  assert.match(read('extension/options/live-monitor-canvas-editor.css'), /\.preview-disc\s*\{[\s\S]*?opacity:\s*1/);
-  assert.match(read('src/youtube-cd-hud.user.js'), /\.cd-disc-wrapper\s*\{[\s\S]*?opacity:\s*1/);
+  assert.match(read('extension/options/live-monitor-canvas-editor.css'), /\.preview-disc\s*\{[\s\S]*?opacity:\s*var\(--lm-disc-opacity, 1\)/);
+  assert.match(read('src/youtube-cd-hud.user.js'), /\.cd-disc-wrapper\s*\{[\s\S]*?opacity:\s*var\(--ytcd-disc-opacity, 1\)/);
   assert.match(toolbar, /fontSizeFromSlider/);
   assert.match(toolbar, /Text size · PX/);
   assert.match(toolbar, /SHOW BORDER/);
@@ -1006,12 +1122,13 @@ test('connects the advertised title marquee effect to preview and runtime CSS', 
   assert.match(runtime, /\.hud-chapter\.ytcd-effect-marquee:hover[\s\S]*?animation:\s*ytcd-title-marquee/);
 });
 
-test('enables bounded runtime dragging for non-button units and persists the canonical layout', () => {
+test('moves the runtime assembly and persists its canonical layout without lock controls', () => {
   const source = read('src/youtube-cd-hud.user.js');
-  assert.match(source, /!runtimeLayout\.locked && !component\.locked/);
+  assert.doesNotMatch(source, /function bindRuntimePanelLock/);
+  assert.match(source, /const draggable = component.present && !component.hidden;/);
   assert.match(source, /function bindRuntimeLayoutUnitDragging/);
   assert.match(source, /Math\.hypot\(dx, dy\) <= 3/);
-  assert.match(source, /runtimeOverlapGroup\(componentId\)/);
+  assert.match(source, /translateRuntimeAssembly\(gesture.originalLayout/);
   assert.match(source, /chrome\.storage\.local\.set\(\{ \[HUD_LAYOUT_STORAGE_KEY\]: runtimeLayout \}\)/);
   assert.match(source, /if \(hud\.classList\.contains\('ytcd-layout-v2'\)\) return/);
   assert.doesNotMatch(source, /\['disc', 'source-selector'/);
@@ -1177,7 +1294,7 @@ test('font sliders devote their first half to 8–32px and round trip every whol
   for (let size = 8; size <= 192; size++) assert.equal(composer.fontSizeFromSlider(composer.fontSizeToSlider(size)), size);
 });
 
-test('border gestures resize immediately or drag after a long hold, with cancellation and locks', () => {
+test('editor edges drag directly, Alt resizes, and editor locks still prevent editing', () => {
   const composer = loadComposer();
   const listeners = {}, timers = new Map(); let nextTimer = 0;
   const document = { activeElement: null, addEventListener() {} };
@@ -1196,7 +1313,7 @@ test('border gestures resize immediately or drag after a long hold, with cancell
     closest(selector) { return selector === '[data-lm-component]' ? node : null; } };
   const event = (x, y) => ({ target: node, clientX: x, clientY: y, button: 0, pointerId: 1, preventDefault() {} });
   const before = JSON.stringify(disc().geometry);
-  listeners.pointerdown(event(212, 360));
+  listeners.pointerdown({ ...event(212, 360), altKey: true });
   listeners.pointermove(event(228, 360));
   assert.equal(disc().geometry.width, 120);
   assert.equal(timers.size, 0);
@@ -1216,48 +1333,232 @@ test('border gestures resize immediately or drag after a long hold, with cancell
 });
 
 
-test('YouTube locks prevent base and unit movement; unlocked border holds enable editing', async () => {
-  const timers = new Map(); let counter = 0; let writes = 0;
+test('formal HUD edge drags move every unit together despite editor locks and suppress playback clicks', async () => {
+  let writes = 0;
   class Node {
-    constructor() { this.children = []; this.listeners = {}; this.style = {}; this.dataset = {}; this.classList = { add() {}, remove() {} }; }
-    appendChild(node) { this.children.push(node); }
-    querySelector() { return this.children.find(node => node.className?.includes('ytcd-panel-lock')) || null; }
-    addEventListener(type, fn) { this.listeners[type] = fn; }
-    getBoundingClientRect() { return { left: 108, right: 212, top: 308, bottom: 412, width: 104, height: 104 }; }
+    constructor(rect) { this.rect=rect; this.listeners={}; this.classList={ add() {}, remove() {} }; }
+    addEventListener(type, fn) { this.listeners[type]=fn; }
+    getBoundingClientRect() { return this.rect; }
     closest() { return null; }
     setPointerCapture() {}
   }
-  const api = loadRuntimeTestApi({
-    document: { getElementById() { return null; }, createElement() { return new Node(); } },
-    setTimeout(fn) { const id = ++counter; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); },
-    GM_setValue() { writes++; },
-  }, true);
-  const composer = loadComposer(); const layout = composer.createDefaultLayout(); layout.locked = true;
-  api.setRuntimeLayout(layout);
-  const hud = new Node(), player = new Node(), disc = new Node();
-  api.bindRuntimePanelLock(hud, player);
-  assert.equal(hud.listeners.pointerdown, undefined, 'lock controller never starts assembly movement');
-  api.bindRuntimeLayoutUnitDragging(disc, player, 'disc');
-  const event = (x, y) => ({ target: disc, clientX: x, clientY: y, button: 0, pointerId: 1, preventDefault() {}, stopImmediatePropagation() {}, stopPropagation() {} });
-  const locked = JSON.stringify(api.getRuntimeLayout());
-  disc.listeners.pointerdown(event(212, 360)); disc.listeners.pointermove(event(230, 360)); disc.listeners.pointerup(event(230, 360));
-  assert.equal(JSON.stringify(api.getRuntimeLayout()), locked);
-  assert.equal(timers.size, 0);
-  await hud.children[0].listeners.click(event(0, 0));
-  assert.equal(api.getRuntimeLayout().locked, false);
-  disc.listeners.pointerdown(event(212, 360));
-  for (const [id, fn] of timers) { timers.delete(id); fn(); }
-  disc.listeners.pointermove(event(220, 360)); disc.listeners.pointerup(event(220, 360));
-  const moved = api.getRuntimeLayout().components.find(item => item.id === 'disc');
-  assert.equal(moved.geometry.width, 104);
-  assert.ok(Math.abs(moved.geometry.x * 1280 - 168) < 1e-7);
-  assert.ok(writes > 0);
-  await hud.children[0].listeners.click(event(0, 0));
-  const relocked = JSON.stringify(api.getRuntimeLayout());
-  disc.listeners.pointerdown(event(212, 360)); disc.listeners.pointermove(event(240, 360)); disc.listeners.pointerup(event(240, 360));
-  assert.equal(JSON.stringify(api.getRuntimeLayout()), relocked);
+  const api=loadRuntimeTestApi({ document:{ getElementById() {return null;} }, GM_setValue() {writes++;} },true);
+  const composer=loadComposer();
+  const initial=loadLayoutPresets(composer).createBundledLayout('full');
+  initial.locked=true; initial.components.forEach(item=>{item.locked=true;});
+  const player={clientWidth:1280,clientHeight:720};
+  for(const id of initial.components.filter(item=>item.present).map(item=>item.id)) {
+    api.setRuntimeLayout(initial);
+    const before=JSON.parse(JSON.stringify(api.getRuntimeLayout()));
+    const bounds=composer.componentRect(before.components.find(item=>item.id===id).geometry,before.canvas);
+    const unit=new Node({...bounds,width:bounds.right-bounds.left,height:bounds.bottom-bounds.top});
+    api.bindRuntimeLayoutUnitDragging(unit,player,id);
+    const event=(x,y)=>({target:unit,clientX:x,clientY:y,button:0,pointerId:1,preventDefault(){},stopImmediatePropagation(){}});
+    const x=bounds.right-1,y=(bounds.top+bounds.bottom)/2;
+    unit.listeners.pointerdown(event(x,y));unit.listeners.pointermove(event(x+16,y+8));unit.listeners.pointerup(event(x+16,y+8));
+    const after=api.getRuntimeLayout();
+    assert.equal(after.locked,true);
+    for(const previous of before.components.filter(item=>item.present)) {
+      const actual=after.components.find(item=>item.id===previous.id);
+      assert.deepEqual(JSON.parse(JSON.stringify(actual.geometry)),previous.geometry,id+': preserves '+previous.id);
+      assert.equal(actual.geometry.width,previous.geometry.width);assert.equal(actual.geometry.height,previous.geometry.height);
+      assert.equal(actual.locked,true);
+    }
+    const beforeRoot=api.projectHudLayout(before,{width:1280,height:720}).root;
+    const afterRoot=api.projectHudLayout(after,{width:1280,height:720}).root;
+    assert.ok(Math.abs(afterRoot.left-beforeRoot.left-16)<1e-7);
+    assert.ok(Math.abs(afterRoot.top-beforeRoot.top-8)<1e-7);
+    let suppressed=false;unit.listeners.click({preventDefault(){suppressed=true;},stopImmediatePropagation(){}});assert.equal(suppressed,true);
+    const saved=JSON.stringify(after);
+    unit.listeners.pointerdown(event(x,y));unit.listeners.pointermove(event(x+24,y+16));unit.listeners.pointercancel(event(x+24,y+16));
+    assert.equal(JSON.stringify(api.getRuntimeLayout()),saved,'cancel restores entire assembly');
+    const center=event((bounds.left+bounds.right)/2,y);
+    if(id!=='panel-base') {
+      unit.listeners.pointerdown(center);unit.listeners.pointermove({...center,clientX:center.clientX+16});unit.listeners.pointerup(center);
+      assert.equal(JSON.stringify(api.getRuntimeLayout()),saved,'center retains control interaction');
+      let blocked = false;
+      unit.listeners.click({preventDefault(){blocked=true;},stopImmediatePropagation(){}});
+      assert.equal(blocked,false,'a cancelled drag must not swallow the next playback click');
+    }
+    const menu=event(x,y);menu.target={closest:selector=>selector==='.hud-1001-menu'?{}:null};
+    unit.listeners.pointerdown(menu);unit.listeners.pointermove(event(x+16,y));unit.listeners.pointerup(event(x+16,y));
+    assert.equal(JSON.stringify(api.getRuntimeLayout()),saved,'menu never starts assembly drag');
+    if(id==='panel-base') {
+      unit.listeners.pointerdown(center);unit.listeners.pointermove({...center,clientX:center.clientX+16});unit.listeners.pointerup(center);
+      assert.notEqual(JSON.stringify(api.getRuntimeLayout()),saved,'exposed base center also drags the assembly');
+      assert.equal(JSON.stringify(api.getRuntimeLayout().components),JSON.stringify(after.components));
+    }
+  }
+  assert.ok(writes>=10);
 });
 
+test('assembly translation preserves split controls and starts from the visible clamped position',()=>{
+  const composer=loadComposer();const api=loadRuntimeTestApi({},true);
+  const layout=loadLayoutPresets(composer).createBundledLayout('full');
+  const transport=composer.getComponent(layout,'transport-controls');
+  transport.arrangement.split=true;
+  transport.arrangement.partSize={width:72,height:48};
+  transport.arrangement.positions={previous:{x:.4,y:.5},next:{x:.47,y:.5}};
+  layout.locked=true;
+  const before=api.normalizeHudLayout(layout),viewport={width:900,height:600};
+  const moved=api.translateRuntimeAssembly(before,16,8,viewport);
+  assert.ok(moved);
+  const first=api.projectHudLayout(before,viewport),second=api.projectHudLayout(moved,viewport);
+  assert.ok(Math.abs(second.root.left-first.root.left-16)<1e-7);
+  assert.ok(Math.abs(second.root.top-first.root.top-8)<1e-7);
+  const a=before.components.find(item=>item.id===transport.id),b=moved.components.find(item=>item.id===transport.id);
+  for(const part of ['previous','next'])assert.ok(Math.abs((b.arrangement.positions[part].x-a.arrangement.positions[part].x)-(b.geometry.x-a.geometry.x))<1e-7);
+  const clamped=api.translateRuntimeAssembly(before,-9999,-9999,viewport);
+  assert.ok(clamped);assert.ok(Math.abs(api.projectHudLayout(clamped,viewport).root.left)<1e-7);assert.ok(Math.abs(api.projectHudLayout(clamped,viewport).root.top)<1e-7);
+});
+
+test('disc opacity persists independently of its background and hidden state',()=>{
+  const composer=loadComposer(),runtime=loadRuntimeLayoutNormalizer();
+  const source=composer.createDefaultLayout();const disc=composer.getComponent(source,'disc');
+  disc.style.opacity=.75;
+  for(const [value,expected] of [[0,0],[.35,.35],[1,1],[-1,0],[2,1],['invalid',1]]){
+    disc.style.discOpacity=value;
+    const restored=composer.importCode(composer.exportCode(source));
+    const actual=composer.getComponent(restored,'disc');
+    assert.equal(actual.style.discOpacity,expected);
+    assert.equal(actual.style.opacity,.75);assert.notEqual(actual.hidden,true);
+    assert.equal(runtime(restored).components.find(item=>item.id==='disc').style.discOpacity,expected);
+    assert.equal(composer.toCss(actual,restored)['--lm-disc-opacity'],String(expected));
+  }
+  delete disc.style.discOpacity;
+  assert.equal(composer.toCss(composer.getComponent(composer.normalizeLayout(source),'disc'))['--lm-disc-opacity'],'1');
+});
+
+test('studio viewport resizing retains actual pixel sizes and view origin without scrollbars',()=>{
+  const composer=loadComposer();let resized;
+  const host={clientWidth:640,clientHeight:360};
+  const preview={parentElement:host,style:{setProperty(){}},dataset:{},classList:{add(){},toggle(){}},querySelectorAll(){return[];},addEventListener(){}};
+  const context={YtCdHudLiveMonitorComposer:composer,document:{addEventListener(){}},ResizeObserver:class{constructor(callback){resized=callback;}observe(target){assert.equal(target,host);}}};
+  vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'),context);
+  const editor=context.YtCdHudLiveMonitorCanvasEditor.createEditor({preview,layout:composer.createDefaultLayout()}).init();
+  const before=JSON.stringify(editor.getLayout());
+  assert.equal(preview.style.transform,'none');
+  const origin=[preview.style.left,preview.style.top];
+  host.clientWidth=960;host.clientHeight=720;resized();
+  assert.equal(preview.style.transform,'none');
+  assert.deepEqual([preview.style.left,preview.style.top],origin);
+  assert.equal(preview.style.width,'1280px'); assert.equal(preview.style.height,'720px');
+  assert.equal(JSON.stringify(editor.getLayout()),before);
+  const css=read('extension/options/options.css');
+  assert.match(css,/\.preview-stage\s*\{[^}]*overflow:\s*hidden;[^}]*resize:\s*both;/);
+  assert.doesNotMatch(css,/\.preview-stage\s*\{[^}]*overflow:\s*auto/);
+});
+
+test('dragging the editor base moves its assembly at preview scale and cancellation restores all units',()=>{
+  const composer=loadComposer(),listeners={};
+  const layout=loadLayoutPresets(composer).createBundledLayout('full');
+  composer.getComponent(layout,'disc').locked=true;
+  const document={activeElement:null,addEventListener(){}};
+  const preview={parentElement:{clientWidth:640,clientHeight:360},style:{setProperty(){}},dataset:{},classList:{add(){},toggle(){}},
+    querySelectorAll(){return[];},addEventListener(name,fn){listeners[name]=fn;},contains(){return true;},getBoundingClientRect(){return{width:640,height:360};}};
+  const context={document,YtCdHudLiveMonitorComposer:composer};
+  vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'),context);
+  let selectedComponent;
+  const editor=context.YtCdHudLiveMonitorCanvasEditor.createEditor({preview,layout,onSelect(_id,component){selectedComponent=component;}}).init();
+  const before=JSON.parse(JSON.stringify(editor.getLayout()));
+  const node={dataset:{lmComponent:'panel-base'},focus(){},setPointerCapture(){},
+    closest(selector){return selector==='[data-lm-component]'?node:null;},getBoundingClientRect(){return{left:160,right:480,top:100,bottom:260,width:320,height:160};}};
+  const event=(x,y)=>({target:node,clientX:x,clientY:y,button:0,pointerId:1,preventDefault(){}});
+  listeners.pointerdown(event(479,180));listeners.pointermove(event(487,184));
+  for(const unit of before.components.filter(item=>item.present)){
+    const moved=composer.getComponent(editor.state.layout,unit.id);
+    assert.ok(Math.abs((moved.geometry.x-unit.geometry.x)*1280-16)<1e-7);
+    assert.ok(Math.abs((moved.geometry.y-unit.geometry.y)*720-8)<1e-7);
+    assert.equal(moved.geometry.width,unit.geometry.width);
+  }
+  assert.equal(composer.getComponent(editor.state.layout,'disc').locked,true);
+  listeners.pointercancel(event(487,184));
+  assert.deepEqual(JSON.parse(JSON.stringify(editor.getLayout())),before);
+  assert.equal(selectedComponent,composer.getComponent(editor.state.layout,'panel-base'),'cancellation refreshes toolbar references');
+  listeners.pointerdown(event(479,180));listeners.pointermove(event(486,185));listeners.pointerup(event(486,185));
+  assert.equal(selectedComponent,composer.getComponent(editor.state.layout,'panel-base'),'completed assembly movement refreshes toolbar references');
+  const stored=editor.getLayout();
+  for(const unit of editor.state.layout.components.filter(item=>item.present)) {
+    const saved=composer.getComponent(stored,unit.id).geometry;
+    for(const key of ['x','y','width','height','z']) {
+      assert.ok(Math.abs(saved[key]-unit.geometry[key])<1e-9,'saving must preserve the displayed '+unit.id+' '+key);
+    }
+  }
+});
+
+test('DB menu has independent width limits and wrapping labels',()=>{
+  const source=read('src/youtube-cd-hud.user.js');
+  assert.match(source,/\.hud-1001-menu\s*\{[^}]*width:\s*max-content;[^}]*min-width:\s*min\(240px, calc\(100vw - 24px\)\);/);
+  assert.match(source,/#yt-cd-hud \.hud-1001-menu :where\([^}]+white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;/);
+});
+
+test('saving raises menu owners, preserves locks and positions, and is stable at the layer ceiling', async()=>{
+  const composer=loadComposer();
+  for(const z of [0,20,99]) {
+    const layout=loadLayoutPresets(composer).createBundledLayout('full');
+    layout.locked=true; layout.components.forEach(item=>{item.locked=true;});
+    const list=composer.getComponent(layout,'tracklist-panel');list.layer.enabled=true;list.geometry.z=z;
+    const before=JSON.stringify(layout);
+    const prepared=composer.prepareForSave(layout);
+    const menu=composer.getComponent(prepared,'source-selector');
+    assert.ok(prepared.components.filter(i=>i.present&&i.id!==menu.id).every(i=>i.geometry.z<menu.geometry.z));
+    assert.equal(JSON.stringify(layout),before,'does not mutate caller');
+    assert.equal(JSON.stringify(composer.prepareForSave(prepared)),JSON.stringify(prepared));
+    for(const item of prepared.components) {
+      const original=composer.getComponent(layout,item.id);
+      assert.equal(item.locked,true);
+      for(const key of ['x','y','width','height'])assert.equal(item.geometry[key],original.geometry[key]);
+    }
+    let saved;
+    const context={YtCdHudLiveMonitorComposer:composer,chrome:{storage:{local:{async set(value){saved=value[composer.STORAGE_KEY];}}}}};
+    vm.runInNewContext(read('extension/options/live-monitor-layout-store.js'),context);
+    await context.YtCdHudLiveMonitorLayoutStore.save(layout);
+    assert.equal(JSON.stringify(saved),JSON.stringify(prepared));
+    const runtime=loadRuntimeLayoutNormalizer()(saved);
+    assert.equal(runtime.components.find(i=>i.id===menu.id).geometry.z,menu.geometry.z);
+  }
+  const source=read('src/youtube-cd-hud.user.js');
+  assert.match(source,/\.hud-source-selector\.ytcd-menu-open\s*\{\s*z-index:\s*1000/);
+  assert.match(source,/classList\.toggle\('ytcd-menu-open', expanded\)/);
+});
+
+test('assembly anchors reach a large player boundary without altering any component geometry',()=>{
+  const composer=loadComposer(),api=loadRuntimeTestApi({},true);
+  const original=api.normalizeHudLayout(loadLayoutPresets(composer).createBundledLayout('full'));
+  const viewport={width:2560,height:1440};
+  const moved=api.translateRuntimeAssembly(original,9999,9999,viewport);
+  assert.deepEqual(moved.components,original.components);
+  assert.equal(moved.placement.x,1);assert.equal(moved.placement.y,1);
+  const root=api.projectHudLayout(moved,viewport).root;
+  assert.equal(root.left+root.width,2560);assert.equal(root.top+root.height,1440);
+  const restored=api.normalizeHudLayout(composer.importCode(composer.exportCode(moved)));
+  assert.deepEqual(restored.placement,moved.placement);
+  const back=api.translateRuntimeAssembly(restored,-16,-8,viewport);
+  const backRoot=api.projectHudLayout(back,viewport).root;
+  assert.equal(backRoot.left,root.left-16);assert.equal(backRoot.top,root.top-8);
+  assert.deepEqual(back.components,original.components);
+});
+
+test('panning the studio changes only the view and remains available while the panel is locked',()=>{
+  const composer=loadComposer(),listeners={};
+  const host={clientWidth:640,clientHeight:360,classList:{add(){},remove(){}},setPointerCapture(){},
+    addEventListener(name,fn){listeners[name]=fn;},getBoundingClientRect(){return{right:640,bottom:360};}};
+  const preview={parentElement:host,style:{setProperty(){}},dataset:{},classList:{add(){},toggle(){}},querySelectorAll(){return[];},addEventListener(){}};
+  const context={YtCdHudLiveMonitorComposer:composer,document:{addEventListener(){}}};
+  vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'),context);
+  const editor=context.YtCdHudLiveMonitorCanvasEditor.createEditor({preview,layout:composer.createDefaultLayout()}).init();
+  editor.setLocked(true);
+  const before=JSON.stringify(editor.getLayout()),x=parseFloat(preview.style.left),y=parseFloat(preview.style.top);
+  const event=(clientX,clientY)=>({clientX,clientY,pointerId:1,button:0,target:{closest(){return null;}},preventDefault(){}});
+  listeners.pointerdown(event(100,100));listeners.pointermove(event(140,120));listeners.pointerup(event(140,120));
+  assert.equal(parseFloat(preview.style.left),x+40);assert.equal(parseFloat(preview.style.top),y+20);
+  assert.equal(JSON.stringify(editor.getLayout()),before);
+  listeners.pointerdown(event(100,100));listeners.pointermove(event(200,200));listeners.pointercancel(event(200,200));
+  assert.equal(parseFloat(preview.style.left),x+40);assert.equal(parseFloat(preview.style.top),y+20);
+  listeners.pointerdown(event(635,355));listeners.pointermove(event(630,340));
+  assert.equal(parseFloat(preview.style.left),x+40,'native resize corner does not pan');
+  editor.centerView();assert.equal(parseFloat(preview.style.left),x);
+});
 
 test('dimension number inputs ceil fractional pixels and retain that size on save', () => {
   const composer = loadComposer();

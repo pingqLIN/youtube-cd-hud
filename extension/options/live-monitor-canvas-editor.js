@@ -8,6 +8,8 @@
         if (!preview) throw new Error('Live Monitor preview stage is required.');
         const state = { layout: composer.normalizeLayout(layout), selected: null, selectedPart: null, dragging: null, resizing: null, pending: null };
         let initialized = false;
+        const view = { x: 0, y: 0 };
+        let panning = null;
         const componentFor = id => composer.getComponent(state.layout, id);
 
         function ensureHandle(node, direction) {
@@ -21,17 +23,6 @@
                 node.appendChild(handle);
             }
             return handle;
-        }
-
-        function renderOverlay(node, component) {
-            let overlay = node.querySelector(':scope > .lm-lock-overlay');
-            if (!overlay) { overlay = document.createElement('span'); overlay.className = 'lm-lock-overlay'; overlay.setAttribute('aria-hidden', 'true'); node.appendChild(overlay); }
-            overlay.hidden = !(state.layout.locked || component.locked);
-            const units = state.layout.components.filter(item => item.present && !item.hidden);
-            const index = units.findIndex(item => item.id === component.id);
-            const depth = index / Math.max(1, units.length - 1);
-            overlay.style.setProperty('--lm-lock-shade', `color-mix(in srgb, ${state.layout.palette.primaryColor} ${depth <= .5 ? 40 + depth * 120 : 100 - (depth - .5) * 120}%, ${depth <= .5 ? 'white' : 'black'})`);
-            overlay.dataset.order = String(index + 1);
         }
 
         function render() {
@@ -61,9 +52,7 @@
                 node.dataset.lmTextAlign = component.textStyle?.textAlign || 'left';
                 if (component.id === 'disc') node.dataset.lmTexture = component.style.texture;
                 node.setAttribute('aria-selected', state.selected === component.id ? 'true' : 'false');
-                renderOverlay(node, component);
                 node.querySelectorAll('[data-lm-part]').forEach(partNode => {
-                    renderOverlay(partNode, component);
                     const part = partNode.dataset.lmPart;
                     if (split) Object.entries(composer.toPartCss(component, part, state.layout)).forEach(([key, value]) => partNode.style.setProperty(key, value));
                     const selected = split && state.selected === component.id && state.selectedPart === part;
@@ -77,6 +66,7 @@
                 else node.querySelectorAll(':scope > .lm-resize-handle').forEach(handle => { handle.hidden = true; });
             });
             preview.classList.toggle('lm-drag-mode', Boolean(state.dragging));
+            applyView();
             onRender(state.layout);
         }
 
@@ -98,6 +88,35 @@
         }
 
         function updatePosition(component, clientX, clientY, start) {
+            if (component.id === 'panel-base') {
+                const next = JSON.parse(JSON.stringify(start.originalLayout));
+                const rect = preview.getBoundingClientRect();
+                const grid = next.canvas.alignmentGrid;
+                let pixelsX = (clientX - start.clientX) * next.canvas.width / rect.width;
+                let pixelsY = (clientY - start.clientY) * next.canvas.height / rect.height;
+                // Snap the shared delta so saving cannot snap individual units apart.
+                if (grid.enabled) {
+                    pixelsX = Math.round(pixelsX / grid.unitWidth) * grid.unitWidth;
+                    pixelsY = Math.round(pixelsY / grid.unitHeight) * grid.unitHeight;
+                }
+                const dx = pixelsX / next.canvas.width, dy = pixelsY / next.canvas.height;
+                for (const item of next.components.filter(item => item.present)) {
+                    item.geometry.x += dx; item.geometry.y += dy;
+                    if (item.arrangement?.split) for (const position of Object.values(item.arrangement.positions)) {
+                        position.x += dx; position.y += dy;
+                    }
+                    const geometries = item.arrangement?.split ? Object.values(item.arrangement.positions).map(position => ({ ...item.arrangement.partSize, ...position })) : [item.geometry];
+                    for (const geometry of geometries) {
+                        const bounds = composer.componentRect(geometry, next.canvas);
+                        if (composer.registry[item.id].allowCanvasOverflow
+                            ? geometry.x < 0 || geometry.x > 1 || geometry.y < 0 || geometry.y > 1
+                            : bounds.left < 0 || bounds.top < 0 || bounds.right > next.canvas.width || bounds.bottom > next.canvas.height) return;
+                    }
+                }
+                next.manualBase = true;
+                state.layout = next;
+                return;
+            }
             const geometry = composer.fitInteractionGeometry(
                 state.layout,
                 component.id,
@@ -166,6 +185,7 @@
             }
             composer.refreshBase(state.layout);
             render();
+            onSelect(state.selected, componentFor(state.selected), state.selectedPart);
             onChange(state.layout, 'gesture');
         }
 
@@ -188,6 +208,7 @@
                 clientX: event.clientX,
                 clientY: event.clientY,
                 geometry: composer.interactionGeometry(component, part),
+                originalLayout: component.id === 'panel-base' ? JSON.parse(JSON.stringify(state.layout)) : null,
             };
             const rect = (partNode || target).getBoundingClientRect();
             const edge = (event.clientY - rect.top <= 8 ? 'n' : rect.bottom - event.clientY <= 8 ? 's' : '')
@@ -200,20 +221,11 @@
             }
             if (!direction) return;
             clearPending();
-            state.pending = { ...start, handle: direction, timer: setTimeout(() => {
-                if (!state.pending || state.layout.locked || component.locked) return;
-                state.dragging = start;
-                state.pending = null;
-                render();
-            }, 400) };
+            if (handle || event.altKey) state.resizing = { ...start, handle: direction };
+            else state.dragging = start;
         }
 
         function onPointerMove(event) {
-            if (state.pending && Math.hypot(event.clientX - state.pending.clientX, event.clientY - state.pending.clientY) > 3) {
-                const pending = state.pending;
-                clearPending();
-                state.resizing = pending;
-            }
             if (state.dragging) updatePosition(state.dragging.component, event.clientX, event.clientY, state.dragging);
             if (state.resizing) updateSize(state.resizing.component, event.clientX, event.clientY, state.resizing);
             if (state.dragging || state.resizing) render();
@@ -351,12 +363,55 @@
             onChange(state.layout, 'panel-lock');
         }
 
-        function centerView() {
-            const base = componentFor('panel-base');
+        function applyView() {
+            preview.style.transform = 'none';
+            preview.style.left = view.x + 'px';
+            preview.style.top = view.y + 'px';
+        }
+
+        function centerView(componentId = null) {
             const host = preview.parentElement;
             if (!host) return;
-            host.scrollLeft = base.geometry.x * state.layout.canvas.width - host.clientWidth / 2;
-            host.scrollTop = base.geometry.y * state.layout.canvas.height - host.clientHeight / 2;
+            const width = host.clientWidth || state.layout.canvas.width;
+            const height = host.clientHeight || state.layout.canvas.height;
+            const units = componentId ? [componentFor(componentId)].filter(Boolean)
+                : state.layout.components.filter(item => item.present && !item.hidden);
+            const bounds = units.flatMap(item => composer.componentRects(item, state.layout.canvas));
+            const centerX = bounds.length ? (Math.min(...bounds.map(r => r.left)) + Math.max(...bounds.map(r => r.right))) / 2 : state.layout.canvas.width / 2;
+            const centerY = bounds.length ? (Math.min(...bounds.map(r => r.top)) + Math.max(...bounds.map(r => r.bottom))) / 2 : state.layout.canvas.height / 2;
+            view.x = width / 2 - centerX;
+            view.y = height / 2 - centerY;
+            applyView();
+        }
+
+        function bindViewPanning() {
+            const host = preview.parentElement;
+            if (!host?.addEventListener) return;
+            host.addEventListener('pointerdown', event => {
+                if (event.button !== 0 || event.isPrimary === false || event.target.closest('[data-lm-component]')) return;
+                const rect = host.getBoundingClientRect();
+                // Leave the native viewport resize corner available.
+                if (event.clientX >= rect.right - 20 && event.clientY >= rect.bottom - 20) return;
+                event.preventDefault();
+                panning = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, ...view };
+                host.setPointerCapture?.(event.pointerId);
+                host.classList.add('lm-view-panning');
+            });
+            host.addEventListener('pointermove', event => {
+                if (!panning || event.pointerId !== panning.pointerId) return;
+                view.x = panning.x + event.clientX - panning.clientX;
+                view.y = panning.y + event.clientY - panning.clientY;
+                applyView();
+            });
+            const finish = (event, cancel = false) => {
+                if (!panning || event.pointerId !== panning.pointerId) return;
+                if (cancel) { view.x = panning.x; view.y = panning.y; applyView(); }
+                panning = null;
+                host.classList.remove('lm-view-panning');
+            };
+            host.addEventListener('pointerup', event => finish(event));
+            host.addEventListener('pointercancel', event => finish(event, true));
+            host.addEventListener('lostpointercapture', event => finish(event));
         }
 
         function onKeyDown(event) {
@@ -387,13 +442,20 @@
         function init() {
             if (initialized) return api;
             initialized = true;
+            if (globalThis.ResizeObserver && preview.parentElement) {
+                const viewObserver = new ResizeObserver(applyView);
+                viewObserver.observe(preview.parentElement);
+            }
+            bindViewPanning();
             preview.addEventListener('pointerdown', onPointerDown);
             preview.addEventListener('pointermove', onPointerMove);
             preview.addEventListener('pointerup', finishGesture);
             preview.addEventListener('pointercancel', () => {
                 const start = state.dragging || state.resizing;
-                if (start) composer.applyInteractionGeometry(start.component, start.part, start.geometry);
+                if (start?.originalLayout) state.layout = start.originalLayout;
+                else if (start) composer.applyInteractionGeometry(start.component, start.part, start.geometry);
                 clearPending(); state.dragging = state.resizing = null; render();
+                onSelect(state.selected, componentFor(state.selected), state.selectedPart);
             });
             preview.addEventListener('lostpointercapture', finishGesture);
             preview.addEventListener('wheel', onWheel, { passive: false });

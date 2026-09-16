@@ -76,7 +76,7 @@
 
     const registry = Object.freeze({
         'panel-base': definition('panel-base', 'Panel base', {
-            minSize: { width: 320, height: 48 }, maxSize: { width: 1280, height: 720 },
+            minSize: { width: 320, height: 24 }, maxSize: { width: 1280, height: 720 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'],
             supportedEffects: ['shadow', 'accentRail'],
             boundary: { mode: 'dynamic-envelope', collision: false, padding: 18 },
@@ -86,44 +86,44 @@
             flags: { required: true, removable: false, catalog: false, special: 'dynamic-base', opacityMinimum: 0 },
         }),
         disc: definition('disc', 'Disc control', {
-            minSize: { width: 40, height: 40 }, maxSize: { width: 720, height: 720 },
-            supportedProperties: ['backgroundColor', 'opacity', 'size', 'texture'],
+            minSize: { width: 24, height: 24 }, maxSize: { width: 720, height: 720 },
+            supportedProperties: ['backgroundColor', 'opacity', 'discOpacity', 'size', 'texture'],
             boundary: null,
             geometry: { x: .125, y: .5, width: 100, height: 100, z: 1 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor, texture: 'classic' }, effects: { glow: true }, supportedEffects: ['glow'],
             flags: { supportsZAxis: true, zAxisAlways: true, allowCanvasOverflow: true, fixedRoundShape: true },
         }),
         'track-title': definition('track-title', 'Track title', {
-            minSize: { width: 180, height: 32 }, maxSize: { width: 720, height: 120 },
-            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
+            minSize: { width: 180, height: 24 }, maxSize: { width: 720, height: 120 },
+            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .34, y: .43, width: 430, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 14, textAlign: 'left' },
             effects: { marquee: true }, supportedEffects: ['marquee'], flags: { supportsZAxis: true },
         }),
         'time-readout': definition('time-readout', 'Time readout', {
-            minSize: { width: 90, height: 32 }, maxSize: { width: 320, height: 96 },
-            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
+            minSize: { width: 90, height: 24 }, maxSize: { width: 320, height: 96 },
+            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .23, y: .515, width: 120, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 12, textAlign: 'left' },
             flags: { supportsZAxis: true },
         }),
         'source-selector': definition('source-selector', 'Source selector', {
-            minSize: { width: 180, height: 32 }, maxSize: { width: 520, height: 96 },
-            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
+            minSize: { width: 180, height: 24 }, maxSize: { width: 520, height: 96 },
+            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .39, y: .61, width: 280, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 9, textAlign: 'center' },
             effects: { statusLamp: true }, supportedEffects: ['statusLamp'], flags: { supportsZAxis: true },
         }),
         'tracklist-toggle': definition('tracklist-toggle', 'Tracklist toggle', {
-            minSize: { width: 48, height: 32 }, maxSize: { width: 112, height: 96 },
-            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
+            minSize: { width: 48, height: 24 }, maxSize: { width: 112, height: 96 },
+            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .526, y: .61, width: 48, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 11, textAlign: 'center' },
             flags: { supportsZAxis: true },
         }),
         'transport-controls': definition('transport-controls', 'Track controls', {
-            minSize: { width: 128, height: 32 }, maxSize: { width: 360, height: 112 },
-            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
+            minSize: { width: 128, height: 24 }, maxSize: { width: 360, height: 112 },
+            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .625, y: .61, width: 128, height: 48, z: 0 },
             arrangement: {
                 split: false,
@@ -134,23 +134,23 @@
             flags: { supportsZAxis: true, supportsSplit: true },
         }),
         'close-control': definition('close-control', 'Close control', {
-            minSize: { width: 48, height: 32 }, maxSize: { width: 96, height: 96 },
-            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
+            minSize: { width: 48, height: 24 }, maxSize: { width: 96, height: 96 },
+            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .72, y: .43, width: 48, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 16, textAlign: 'center' },
             flags: { supportsZAxis: true },
         }),
         'text-size-control': definition('text-size-control', 'Text size control', {
-            minSize: { width: 64, height: 32 }, maxSize: { width: 128, height: 96 },
-            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
+            minSize: { width: 64, height: 24 }, maxSize: { width: 128, height: 96 },
+            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .72, y: .515, width: 64, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 14, textAlign: 'center' },
             flags: { supportsZAxis: true },
         }),
         'tracklist-panel': definition('tracklist-panel', 'Tracklist panel', {
-            minSize: { width: 220, height: 64 }, maxSize: { width: 720, height: 640 },
+            minSize: { width: 220, height: 48 }, maxSize: { width: 720, height: 640 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'],
-            supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'textAlign'],
+            supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .8375, y: .2222222222222222, width: 280, height: 256, z: 0 },
             style: { backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor, opacity: .88 },
             textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 11, textAlign: 'left' },
@@ -218,6 +218,7 @@
             defaults.cornerRadiusLevel || CORNER_RADIUS_LEVEL_MINIMUM,
         ));
         result.backgroundBlurEnabled = source.backgroundBlurEnabled === true;
+        if (rule.type === 'disc' && source.discOpacity !== undefined) result.discOpacity = clamp(source.discOpacity, 0, 1, 1);
         if (source.secondaryOpacity !== undefined) result.secondaryOpacity = clamp(source.secondaryOpacity, 0, 1, 1);
         if (source.backgroundEnabled === false) result.backgroundEnabled = false;
         return result;
@@ -228,6 +229,10 @@
         return { minimum: 8 * scale, maximum: TEXT_SIZE_MAXIMUM * scale };
     }
 
+    function defaultFontWeight(id) {
+        return id === 'track-title' ? 700 : ['time-readout', 'tracklist-panel'].includes(id) ? 500 : 600;
+    }
+
     function normalizeTextStyle(value, rule, canvas = CANVAS) {
         const source = value && typeof value === 'object' ? value : {};
         const defaults = rule.default.textStyle || {};
@@ -236,6 +241,7 @@
         if (rule.supportedTextProperties.includes('color')) result.color = /^#[0-9a-f]{6}$/i.test(source.color) ? source.color.toLowerCase() : defaults.color;
         if (rule.supportedTextProperties.includes('font')) result.font = Object.hasOwn(FONT_STACKS, source.font) || /^[\p{L}\p{N} _-]{1,80}$/u.test(String(source.font || '')) ? source.font : defaults.font;
         if (rule.supportedTextProperties.includes('fontSize')) result.fontSize = clamp(source.fontSize, limits.minimum, limits.maximum, defaults.fontSize * sizeScale(canvas));
+        if (source.fontWeight !== undefined && rule.supportedTextProperties.includes('fontWeight')) result.fontWeight = Math.round(clamp(source.fontWeight, 100, 900, defaultFontWeight(rule.type)));
         if (rule.supportedTextProperties.includes('textAlign')) result.textAlign = TEXT_ALIGNMENTS.includes(source.textAlign) ? source.textAlign : defaults.textAlign;
         if (rule.supportedTextProperties.includes('opacity')) result.opacity = clamp(source.opacity, 0, 1, defaults.opacity ?? 1);
         return result;
@@ -250,13 +256,13 @@
         const rule = registry[component?.id];
         if (!rule || !component?.textStyle || !component?.geometry) return component;
         const scale = sizeScale(canvas);
-        const rawRequiredHeight = Math.ceil(component.textStyle.fontSize * 1.35 + 8 * scale);
+        const rawRequiredHeight = Math.ceil(component.textStyle.fontSize * 1.35 + 4 * scale);
         const requiredHeight = canvas.alignmentGrid?.enabled
             ? Math.ceil(rawRequiredHeight / canvas.alignmentGrid.unitHeight) * canvas.alignmentGrid.unitHeight
             : rawRequiredHeight;
         const maximumHeight = Math.min(
             canvas.height,
-            Math.max(requiredHeight, rule.maxSize.height * scale, TEXT_SIZE_MAXIMUM * scale * 1.35 + 8 * scale),
+            Math.max(requiredHeight, sizeLimits(component, canvas).maxHeight),
         );
         component.geometry.height = clamp(component.geometry.height, requiredHeight, maximumHeight, requiredHeight);
         if (!rule.allowCanvasOverflow) {
@@ -296,7 +302,7 @@
         if (!rule) return { minWidth: 1, minHeight: 1, maxWidth: 3840, maxHeight: 2160 };
         const rawMaxHeight = Math.max(
             rule.maxSize.height * scale,
-            rule.supportedTextProperties.length ? TEXT_SIZE_MAXIMUM * scale * 1.35 + 8 * scale : 0,
+            rule.supportedTextProperties.length ? Math.ceil(TEXT_SIZE_MAXIMUM * scale * 1.35 + 8 * scale) : 0,
         );
         const gridMaxHeight = rule.supportedTextProperties.length && canvas.alignmentGrid?.enabled
             ? Math.ceil(rawMaxHeight / canvas.alignmentGrid.unitHeight) * canvas.alignmentGrid.unitHeight
@@ -356,7 +362,7 @@
     function fitPartGeometry(value, canvas, fallback, z = 0) {
         const source = value && typeof value === 'object' ? value : {};
         const scale = sizeScale(canvas);
-        const limits = { minWidth: 64 * scale, maxWidth: 180 * scale, minHeight: 32 * scale, maxHeight: 112 * scale };
+        const limits = { minWidth: 64 * scale, maxWidth: 180 * scale, minHeight: 24 * scale, maxHeight: 112 * scale };
         let width = clamp(source.width, limits.minWidth, limits.maxWidth, fallback.width);
         let height = clamp(source.height, limits.minHeight, limits.maxHeight, fallback.height);
         if (canvas.alignmentGrid?.enabled) {
@@ -626,7 +632,31 @@
         }
         const normalized = updateDynamicBase({ version: VERSION, palette, canvas, components, manualBase: source.manualBase === true, locked: source.locked === true });
         normalized.manualBase = true;
+        if (Number.isFinite(source.placement?.x) && Number.isFinite(source.placement?.y)) {
+            normalized.placement = { x: clamp(source.placement.x, 0, 1), y: clamp(source.placement.y, 0, 1) };
+        }
         return normalized;
+    }
+
+    function prepareForSave(value) {
+        const layout = normalizeLayout(value);
+        const menu = getComponent(layout, 'source-selector');
+        if (!menu?.present || menu.hidden) return layout;
+        // Menu contents are dynamic. Reserve the highest visible layer for its owner.
+        const others = layout.components.filter(item => item.present && !item.hidden && item.id !== menu.id && item.id !== 'panel-base');
+        let highest = Math.max(0, ...others.map(effectiveZ));
+        if (effectiveZ(menu) > highest) return layout;
+        if (highest >= 99) {
+            const levels = [...new Set(others.map(effectiveZ))].sort((a, b) => a - b);
+            for (const item of others) {
+                item.geometry.z = levels.indexOf(effectiveZ(item)) + 1;
+                item.layer.enabled = true;
+            }
+            highest = levels.length;
+        }
+        menu.layer.enabled = true;
+        menu.geometry.z = highest + 1;
+        return normalizeLayout(layout);
     }
 
     function createDefaultLayout() {
@@ -886,8 +916,10 @@
             '--lm-width': String(geometry.width / layout.canvas.width * 100) + '%',
             '--lm-height': String(geometry.height / layout.canvas.height * 100) + '%',
             '--lm-opacity': String(style.opacity ?? 1),
+            '--lm-disc-opacity': String(style.discOpacity ?? 1),
             '--lm-unit-opacity': String(style.opacity ?? 1),
             '--lm-surface-shadow-alpha': String((style.opacity ?? 1) * .35),
+            '--lm-font-weight': String(textStyle.fontWeight ?? defaultFontWeight(component.id)),
             '--lm-font-size': String((textStyle.fontSize ?? 14) / layout.canvas.width * 100) + 'cqw',
             '--lm-color': textStyle.color || layout.palette?.secondaryColor || PALETTE_DEFAULTS.secondaryColor,
             '--lm-text-opacity': String(textStyle.opacity ?? 1),
@@ -919,8 +951,8 @@
         VERSION, STORAGE_KEY, LEGACY_STORAGE_KEY, CANVAS, VIEWPORT_PRESETS, SIZING_MODES, PALETTE_DEFAULTS, TEXT_SIZE_MAXIMUM,
         CORNER_RADIUS_LEVEL_MINIMUM, CORNER_RADIUS_LEVEL_MAXIMUM, CORNER_RADIUS_STEP_PX,
         COLLISION_GAP, FONT_STACKS, TEXT_ALIGNMENTS, DISC_TEXTURES, registry, requiredIds,
-        normalizeLayout, createDefaultLayout, getComponent, canDelete, availableComponents, addComponent, removeComponent,
-        sizeFromInput, colorWithAlpha, fontSizeFromSlider, fontSizeToSlider, connectedToBase, fontStack, exportCode, importCode, normalizePalette, sizeScale, textSizeLimits, sizeLimits, clampSize, ensureTextFits, fitGeometry, fitInteractionGeometry, applyInteractionGeometry, interactionGeometry,
+        normalizeLayout, prepareForSave, createDefaultLayout, getComponent, canDelete, availableComponents, addComponent, removeComponent,
+        defaultFontWeight, sizeFromInput, colorWithAlpha, fontSizeFromSlider, fontSizeToSlider, connectedToBase, fontStack, exportCode, importCode, normalizePalette, sizeScale, textSizeLimits, sizeLimits, clampSize, ensureTextFits, fitGeometry, fitInteractionGeometry, applyInteractionGeometry, interactionGeometry,
         componentRect, componentRects, rectsOverlap, effectiveZ, physicalOverlapsFor, overlapGroupFor,
         collisionFor, canPlace, canPlaceInteraction, refreshBase, updateAlignment, updateSplit, updateLayer,
         applyPalette, updateSizingMode, updateViewport, optimizeOverlapLayers, removeOverlapGroup, toCss, toPartCss,

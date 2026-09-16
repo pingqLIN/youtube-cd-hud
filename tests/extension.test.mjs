@@ -774,7 +774,7 @@ test('keeps the settings preview aligned with the atomic bounded layout model', 
   assert.match(css, /\.preview-transport\s*\{[\s\S]*?grid-template-columns:\s*1fr\s+1fr/);
   assert.match(css, /\.hud-preview\.hide-disc\s+\.preview-disc\s*\{\s*visibility:\s*hidden/);
   assert.doesNotMatch(css, /\.hud-preview:before/);
-  assert.match(css, /font:\s*700\s+var\(--lm-font-size\)\/1\.35\s+var\(--lm-font\)/);
+  assert.match(css, /font:\s*var\(--lm-font-weight,\s*700\)\s+var\(--lm-font-size\)\/1\.35\s+var\(--lm-font\)/);
   assert.match(read('extension/options/options.js'), /settingsApi\.FONT_STACKS\[settings\.fontFamily\]/);
 });
 

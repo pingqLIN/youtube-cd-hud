@@ -4,6 +4,9 @@
     const composer = globalThis.YtCdHudLiveMonitorComposer;
 
     function createToolbar({ host, editor, onChange = () => {} }) {
+        // Page-local UI state survives component rerenders, but is never saved with a layout.
+        let detailsOpen = false;
+        let currentDetails = null;
         const toolbar = document.createElement('section');
         toolbar.className = 'lm-property-toolbar';
         toolbar.hidden = true;
@@ -151,6 +154,9 @@
         }
 
         function update(_id, component, selectedPart = null) {
+            // A native toggle event may still be queued when an edit rebuilds the toolbar.
+            if (currentDetails) detailsOpen = currentDetails.open;
+            currentDetails = null;
             toolbar.replaceChildren();
             if (!component) {
                 toolbar.hidden = true;
@@ -174,6 +180,8 @@
             const lock = document.createElement('button');
             lock.type = 'button';
             lock.textContent = component.locked ? 'UNLOCK · 解鎖元件' : 'LOCK · 定位元件';
+            lock.dataset.lmLockState = String(component.locked || editor.state.layout.locked);
+            lock.setAttribute('aria-pressed', String(component.locked || editor.state.layout.locked));
             lock.disabled = editor.state.layout.locked;
             lock.addEventListener('click', () => editor.toggleLock(component.id));
             toolbar.appendChild(lock);
@@ -291,6 +299,23 @@
                 });
                 addLabel('底色不透明度', input);
             }
+            if (rule.supportedProperties.includes('discOpacity')) {
+                const input = document.createElement('input');
+                input.type = 'range'; input.min = '0'; input.max = '1'; input.step = '.01';
+                input.dataset.lmProperty = 'discOpacity';
+                input.value = String(component.style.discOpacity ?? 1);
+                const output = document.createElement('output');
+                output.value = Math.round(Number(input.value) * 100) + '%';
+                input.setAttribute('aria-valuetext', output.value);
+                input.addEventListener('input', () => {
+                    component.style.discOpacity = Number(input.value);
+                    output.value = Math.round(Number(input.value) * 100) + '%';
+                    input.setAttribute('aria-valuetext', output.value);
+                    commit('disc-opacity');
+                });
+                addLabel('唱盤不透明度 · 0% 透明 / 100% 不透明', input);
+                toolbar.appendChild(output);
+            }
             if (rule.supportedProperties.includes('texture')) {
                 const input = document.createElement('select');
                 input.dataset.lmProperty = 'texture';
@@ -386,6 +411,24 @@
                     });
                     addLabel('Text font', input);
                 }
+                if (rule.supportedTextProperties.includes('fontWeight')) {
+                    const input = document.createElement('input');
+                    input.type = 'range'; input.min = '100'; input.max = '900'; input.step = '100';
+                    input.dataset.lmTextProperty = 'fontWeight';
+                    input.value = String(component.textStyle.fontWeight ?? composer.defaultFontWeight(component.id));
+                    const readout = document.createElement('output');
+                    readout.value = input.value;
+                    input.setAttribute('aria-valuetext', input.value);
+                    input.title = '使用字型支援的最接近字重；不合成假粗體。';
+                    input.addEventListener('input', () => {
+                        component.textStyle.fontWeight = Number(input.value);
+                        readout.value = input.value;
+                        input.setAttribute('aria-valuetext', input.value);
+                        commit('text-property');
+                    });
+                    addLabel('字重 / Weight · 400 標準 · 700 粗體', input);
+                    toolbar.appendChild(readout);
+                }
                 if (rule.supportedTextProperties.includes('fontSize')) {
                     const input = document.createElement('input');
                     input.type = 'range';
@@ -436,6 +479,11 @@
             deleteButton.addEventListener('click', () => editor.remove(component.id));
             const details = document.createElement('details');
             details.className = 'lm-unit-details';
+            details.open = detailsOpen;
+            currentDetails = details;
+            details.addEventListener('toggle', () => {
+                if (currentDetails === details) detailsOpen = details.open;
+            });
             const summary = document.createElement('summary');
             summary.textContent = '詳細設定 · 外觀、文字與效果';
             const body = document.createElement('div');

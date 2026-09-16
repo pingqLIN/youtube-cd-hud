@@ -15,7 +15,7 @@
     }
 
     async function save(layout) {
-        const normalized = composer.normalizeLayout(layout);
+        const normalized = composer.prepareForSave(layout);
         await chrome.storage.local.set({ [composer.STORAGE_KEY]: normalized });
         return normalized;
     }

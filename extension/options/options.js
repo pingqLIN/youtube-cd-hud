@@ -103,7 +103,7 @@
         event.preventDefault();
         try {
             const settings = getFormSettings();
-            const layout = bootstrap.getLayout();
+            const layout = composer.prepareForSave(bootstrap.getLayout());
             layout.locked = true;
             if (!composer.connectedToBase(layout, composer.getComponent(layout, 'panel-base'))) throw new Error('所有元件都必須與底座接觸。');
             await Promise.all([

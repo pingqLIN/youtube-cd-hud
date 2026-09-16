@@ -58,7 +58,7 @@
             </div>
 
             <div class="control-grid">
-                <div class="settings-rail">
+                <details class="settings-rail"><summary>曲目資料來源與查詢設定</summary>
                     <section class="control-section" aria-labelledby="source-title">
                         <div class="section-heading">
                             <p class="section-index" data-i18n="options.sourceIndex">資料來源</p>
@@ -107,19 +107,17 @@
                             </label>
                         </div>
                     </section>
-
-
-
-
-                </div>
+                </details>
 
                 <aside class="preview-rail" aria-labelledby="preview-title">
                     <div class="preview-heading">
                         <p class="section-index" data-i18n="options.previewIndex">即時監看</p>
                         <h2 id="preview-title" data-i18n="options.previewTitle">即時預覽</h2>
                     </div>
-                    <section class="studio-section theme-section" aria-labelledby="theme-title">
-                        <div class="studio-heading"><span>01 / THEME</span><h3 id="theme-title">主題方向</h3><p>先選面板，再調整整體色彩與文字。</p></div>
+                    <section class="studio-section" aria-labelledby="composition-title">
+                        <div class="studio-heading"><h3 id="composition-title">面板排版</h3><p>元件邊緣拖移 · 把手調整尺寸 · 空白處拖曳平移視野</p></div>
+                    <section class="theme-section" aria-labelledby="theme-title">
+                        <h4 id="theme-title" class="sr-only">主題方向</h4>
                         <div id="live-monitor-theme"></div>
                         <details class="studio-detail"><summary>文字與顯示 · 詳細設定</summary>
                             <div class="theme-type-grid">
@@ -130,15 +128,9 @@
                             <p class="field-note">字體使用本機已安裝的版本；找不到時回退至 Consolas。個別元件可在詳細設定另行調整。</p>
                         </details>
                     </section>
-                    <section class="studio-section" aria-labelledby="composition-title">
-                        <div class="studio-heading"><span>02 / COMPOSE</span><h3 id="composition-title">面板排版</h3><p>1 PX = 1 CSS 像素。方向鍵微調 · SHIFT 加速 · DEL 移回元件庫 · ENTER 鎖定／解鎖。</p></div>
-                    <section class="component-library-shell" aria-labelledby="component-library-title">
-                        <div class="component-library-heading">
-                            <h3 id="component-library-title">元件庫 / COMPONENT LIST</h3>
-                            <p>只顯示尚未加入面板的最小功能單元</p>
-                        </div>
+                    <details class="component-library-shell" aria-labelledby="component-library-title"><summary id="component-library-title">新增元件</summary>
                         <div id="live-monitor-library"></div>
-                    </section>
+                    </details>
                     <div id="live-monitor-layout-controls"></div>
                     <div class="preview-workbench">
                         <div class="preview-stage">
@@ -162,12 +154,12 @@
                                 <ol><li><time>00:00</time><span>Midnight Transit</span></li><li><time>04:18</time><span>Blue Hour</span></li><li><time>09:42</time><span>Last Platform</span></li></ol>
                             </section>
                             </div>
-                            <p id="live-monitor-canvas-status" class="preview-caption">YOUTUBE PLAYER / 1280×720 / REL</p>
+                            <p id="live-monitor-canvas-status" class="preview-caption">拖曳空白處平移視野 · 右下角調整工作區</p>
                         </div>
-                        <div id="live-monitor-properties" class="preview-properties"></div>
+                        <div id="live-monitor-properties" class="preview-properties"><p class="property-empty">點選畫布元件，或從上方選單選取，即可調整尺寸、文字與效果。</p></div>
                     </div>
                     </section>
-                    <details class="studio-section panel-code-section"><summary>03 / 面板程式碼 · 匯入與匯出</summary>
+                    <details class="studio-section panel-code-section"><summary>面板程式碼 · 匯入與匯出</summary>
                         <p class="field-note">顯示目前自建面板或載入的儲存面板。貼上完整 JSON 後按「產生面板」，確認預覽再儲存。</p>
                         <label class="css-editor"><span class="sr-only">面板 JSON 程式碼</span><textarea id="panel-code" spellcheck="false" maxlength="100000"></textarea></label>
                         <div class="panel-code-actions"><button id="panel-code-export" type="button">顯示目前面板程式碼</button><button id="panel-code-import" type="button">從程式碼產生面板</button></div>
@@ -185,6 +177,7 @@
                 <p id="save-status" role="status" aria-live="polite" data-i18n="options.waiting">等待調整</p>
                 <div>
                     <button id="reset-button" class="secondary-button" type="button" data-i18n="options.reset">恢復預設</button>
+                    <span id="live-monitor-panel-lock"></span>
                     <button class="primary-button" type="submit" data-i18n="options.save">儲存並套用</button>
                 </div>
             </footer>
