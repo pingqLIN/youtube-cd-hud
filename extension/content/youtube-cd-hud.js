@@ -1481,7 +1481,7 @@
                 ),
                 ontimeout: () => finish(reject, new Error('遠端請求逾時。')),
             });
-            if (rawRequest && typeof rawRequest.abort === 'function') {
+            if (!settled && rawRequest && typeof rawRequest.abort === 'function') {
                 trackedRequest = {
                     abort() {
                         rawRequest.abort();
@@ -2180,8 +2180,8 @@
             },
             timeout: runtimeSettings.requestTimeoutMs,
             onload: function (resp) {
-                activeSearchRequest = null;
                 if (!isCurrentSearch()) return;
+                activeSearchRequest = null;
                 const responseText = getResponseText(resp);
                 const contentType = getResponseHeader(resp, 'content-type') || 'unknown';
                 const finalUrl = resp.finalUrl || searchUrl;
@@ -2290,8 +2290,8 @@
                         },
                         timeout: runtimeSettings.requestTimeoutMs,
                         onload: function (resp2) {
-                            activeTracklistRequest = null;
                             if (!isCurrentSearch()) return;
+                            activeTracklistRequest = null;
                             const tracklistText = getResponseText(resp2);
                             const tracklistContentType = getResponseHeader(resp2, 'content-type') || 'unknown';
                             const finalTracklistUrl = resp2.finalUrl || href;
@@ -2385,6 +2385,7 @@
                             // A valid first result is sufficient; extra candidate GETs raise anti-bot risk.
                         },
                         onerror: function (err) {
+                            if (!isCurrentSearch()) return;
                             activeTracklistRequest = null;
                             if (tracklistCandidates['1001'].length) {
                                 console.warn('[CD HUD] Stopped collecting additional 1001 candidates after a network error.', err);
@@ -2396,6 +2397,7 @@
                             markSearchError('曲目頁網路請求失敗；請檢查連線權限或阻擋器。', err);
                         },
                         ontimeout: function () {
+                            if (!isCurrentSearch()) return;
                             activeTracklistRequest = null;
                             if (tracklistCandidates['1001'].length) {
                                 searchState = 'success';
@@ -2420,10 +2422,12 @@
                 scheduleCandidate(0);
             },
             onerror: function (err) {
+                if (!isCurrentSearch()) return;
                 activeSearchRequest = null;
                 markSearchError('1001Tracklists 搜尋網路請求失敗；請檢查連線權限或阻擋器。', err);
             },
             ontimeout: function () {
+                if (!isCurrentSearch()) return;
                 activeSearchRequest = null;
                 markSearchError('1001Tracklists 搜尋請求逾時。');
             },

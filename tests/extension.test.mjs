@@ -581,6 +581,7 @@ test('maps extension messaging success and runtime failures to GM callbacks', ()
   let sentMessage = null;
   let responseCallback = null;
   const context = {
+    URL,
     chrome: {
       runtime: {
         lastError: undefined,
