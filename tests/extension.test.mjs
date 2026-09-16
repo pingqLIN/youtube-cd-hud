@@ -36,11 +36,21 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
     'https://trackid.net/*',
   ]);
   assert.equal(manifest.options_page, 'options/options.html');
-  assert.equal(manifest.background.service_worker, 'background/service-worker.js');
+  assert.equal(manifest.background.service_worker, 'tunnal/worker.js');
+  assert.deepEqual(manifest.externally_connectable, { matches: ['http://127.0.0.1/*'] });
+  const imported = [];
+  vm.runInNewContext(read('extension/tunnal/worker.js'), {
+    importScripts: (...paths) => imported.push(...paths),
+  });
+  assert.deepEqual(imported, ['../shared/settings.js', '../options/live-monitor-composer.js', '../shared/settings-coordinator.js', '../background/service-worker.js', './runtime.js']);
+  for (const entry of imported) {
+    assert.ok(fs.existsSync(path.resolve(projectRoot, 'extension/tunnal', entry)));
+  }
   assert.ok(manifest.action);
   assert.deepEqual(manifest.content_scripts[0].js, [
     'shared/i18n.js',
     'shared/settings.js',
+    'shared/settings-client.js',
     'shared/1001-packet.js',
     'content/gm-xmlhttp-request.js',
     'content/youtube-cd-hud.js',

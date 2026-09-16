@@ -140,7 +140,7 @@
                                 <i class="preview-resize" aria-hidden="true"></i>
                             </div>
                             <div class="preview-disc" data-lm-component="disc" tabindex="0" role="button" aria-label="Select disc control"><i class="preview-disc-art" aria-hidden="true"></i><span></span></div>
-                            <strong id="preview-title-text" class="preview-title" data-lm-component="track-title" tabindex="0" role="button" aria-label="Select track title">Midnight Transit — Chapter 04</strong>
+                            <strong id="preview-title-text" class="preview-title" data-lm-component="track-title" tabindex="0" role="button" aria-label="Select track title"><span class="lm-marquee-viewport" aria-hidden="true"><span class="lm-marquee-track"><span class="lm-marquee-label">Midnight Transit — Chapter 04</span><span class="lm-marquee-label lm-marquee-copy" aria-hidden="true">Midnight Transit — Chapter 04</span></span></span></strong>
                             <time id="preview-time" class="preview-time" data-lm-component="time-readout" tabindex="0" role="button" aria-label="Select time readout">12:48 / 58:31</time>
                             <div class="preview-source-selector" data-lm-component="source-selector" tabindex="0" role="button" aria-label="Select source selector">
                                 <span>SRC</span><b>YT</b><b class="source-1001"><i></i>DB⌄</b>
@@ -174,6 +174,9 @@
             </div>
 
             <footer class="action-bar">
+                <button id="reload-settings" type="button" class="secondary-button">重新讀取 Chrome 設定</button>
+                <button id="export-settings-draft" type="button" class="secondary-button">匯出完整草稿／衝突資料</button>
+                <textarea id="settings-draft" aria-label="完整設定草稿" hidden readonly></textarea>
                 <p id="save-status" role="status" aria-live="polite" data-i18n="options.waiting">等待調整</p>
                 <div>
                     <button id="reset-button" class="secondary-button" type="button" data-i18n="options.reset">恢復預設</button>
@@ -186,6 +189,8 @@
 
     <script src="../shared/settings.js"></script>
     <script src="../shared/i18n.js"></script>
+    <script src="../shared/settings-client.js"></script>
+    <script src="options-host.js"></script>
     <script src="live-monitor-loader.js?v=2"></script>
 </body>
 </html>

@@ -447,14 +447,23 @@ code { color: var(--signal); font-family: inherit; }
     text-shadow: 0 0 6px color-mix(in srgb, var(--lm-secondary-color) 55%, transparent);
 }
 .preview-title { --lm-font-size: var(--preview-title-font-size, 14px); }
-.preview-title.lm-effect-marquee:hover {
+.preview-title.lm-effect-marquee {
+    display: flex;
+    align-items: center;
     overflow: hidden;
     text-overflow: clip;
-    animation: lm-preview-title-marquee 4s ease-in-out infinite alternate;
 }
+.preview-title .lm-marquee-viewport { display: block; min-width: 0; overflow: hidden; flex: 1 1 auto; }
+.preview-title .lm-marquee-track { display: inline-flex; min-width: max-content; white-space: nowrap; }
+.preview-title .lm-marquee-label { display: inline-block; flex: 0 0 auto; }
+.preview-title .lm-marquee-label:after { content: '  •  '; display: inline-block; padding: 0 .8em; }
+.preview-title .lm-marquee-copy { display: none; }
+.preview-title:not(.lm-effect-marquee) .lm-marquee-label:after { display: none; }
+.preview-title.lm-effect-marquee .lm-marquee-copy { display: inline-block; }
+.preview-title.lm-effect-marquee .lm-marquee-track { animation: lm-preview-title-marquee 12s linear infinite; will-change: transform; }
 @keyframes lm-preview-title-marquee {
-    from { text-indent: 0; }
-    to { text-indent: -42%; }
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
 }
 .preview-time { --lm-font-size: var(--preview-time-font-size, 12px); }
 .preview-time { font-weight: var(--lm-font-weight, 500); }
@@ -661,7 +670,9 @@ input:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-
 
 @media (prefers-reduced-motion: reduce) {
     *, *:before, *:after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
-    .preview-title.lm-effect-marquee:hover { animation: none; }
+    .preview-title.lm-effect-marquee .lm-marquee-track { animation: none; }
+    .preview-title.lm-effect-marquee .lm-marquee-copy,
+    .preview-title.lm-effect-marquee .lm-marquee-label:after { display: none; }
 }
 
 /* A resizable viewport displays the fixed-pixel design without scrollbars. */

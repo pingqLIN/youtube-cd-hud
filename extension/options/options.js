@@ -10,10 +10,19 @@
     const layoutStore = globalThis.YtCdHudLiveMonitorLayoutStore;
     const composer = globalThis.YtCdHudLiveMonitorComposer;
     const bootstrap = globalThis.YtCdHudLiveMonitorBootstrap;
+    const optionsHost = globalThis.YtCdHudOptionsHost;
+    let baseRevision = null;
+    let pendingOperation = null;
+    let saving = false;
+    let remoteSnapshot = null;
     let statusKey = 'options.waiting';
     let statusState = '';
     let currentSettings = settingsApi.DEFAULTS;
     let currentLayout = composer.createDefaultLayout();
+
+    function rememberDraft() {
+        optionsHost.rememberDraft?.({ settings:getFormSettings(), layout:bootstrap.getLayout(), revision:baseRevision });
+    }
 
     const outputFormatters = {
         requestTimeoutMs: value => String(Math.round(value / 1000)) + 's',
@@ -25,7 +34,7 @@
     };
 
     function getFormSettings() {
-        const raw = { ...currentSettings, customCss: "" };
+        const raw = { ...currentSettings };
         for (const field of fields) raw[field.name] = field.type === 'checkbox' ? field.checked : field.value;
         return settingsApi.normalize(raw);
     }
@@ -73,15 +82,13 @@
         statusKey = key; statusState = state; renderStatus();
     }
 
-    async function load() {
+    async function load(fresh = false) {
         try {
-            const [storedSettings, storedLayout] = await Promise.all([
-                chrome.storage.local.get(settingsApi.STORAGE_KEY),
-                layoutStore.load(),
-            ]);
-            populate(storedSettings[settingsApi.STORAGE_KEY] || settingsApi.DEFAULTS);
-            currentLayout = composer.normalizeLayout(storedLayout);
-            bootstrap.init({ preview, layout: currentLayout, onChange: () => setStatus('options.unsaved') });
+            const snapshot = fresh && optionsHost.reload ? await optionsHost.reload() : await optionsHost.read();
+            baseRevision = snapshot.revision;
+            populate(snapshot.settings);
+            currentLayout = composer.normalizeLayout(snapshot.layout);
+            bootstrap.init({ preview, layout: currentLayout, onChange: () => { setStatus('options.unsaved'); rememberDraft(); } });
             setStatus('options.loaded');
         } catch (error) {
             console.error('[CD HUD] Could not load options state.', error);
@@ -97,27 +104,63 @@
         updatePreview(settings);
         if (event.target.name === 'language' && i18n) i18n.localizeDocument(document, settings.language);
         setStatus('options.unsaved');
+        rememberDraft();
     });
 
     form.addEventListener('submit', async event => {
         event.preventDefault();
+        if (saving) return;
+        saving = true;
         try {
+            if (!baseRevision) throw new Error('尚未取得 Chrome 設定，請先重新讀取。');
+            if (pendingOperation) {
+                const previous = await optionsHost.operationStatus(pendingOperation);
+                if (previous.status !== 'STORED') throw new Error('上次儲存結果仍待確認；請先核對 Chrome 設定。');
+                baseRevision = previous.snapshot.revision;
+                pendingOperation = null;
+                status.textContent = '已確認上次儲存；目前草稿保留，請檢查後再儲存。';
+                return;
+            }
             const settings = getFormSettings();
             const layout = composer.prepareForSave(bootstrap.getLayout());
             layout.locked = true;
             if (!composer.connectedToBase(layout, composer.getComponent(layout, 'panel-base'))) throw new Error('所有元件都必須與底座接觸。');
-            await Promise.all([
-                chrome.storage.local.set({ [settingsApi.STORAGE_KEY]: settings }),
-                layoutStore.save(layout),
-            ]);
-            currentLayout = composer.normalizeLayout(layout);
+            pendingOperation = crypto.randomUUID();
+            const stored = await optionsHost.apply({ operationId: pendingOperation, baseRevision, payload: { settings, layout } });
+            if (stored.status !== 'STORED') throw new Error('INCOMPLETE');
+            pendingOperation = null;
+            baseRevision = stored.snapshot.revision;
+            currentLayout = composer.normalizeLayout(stored.snapshot.layout);
             bootstrap.setLayout(currentLayout);
-            populate(settings);
-            setStatus('options.saved', 'saved');
+            populate(stored.snapshot.settings);
+            rememberDraft();
+            status.textContent = stored.runtime?.status === 'APPLIED'
+                ? '已儲存並讀回確認；YouTube 已確認套用。'
+                : '已儲存並由 Chrome 讀回確認；播放器套用狀態待確認。';
+            status.className = 'saved';
         } catch (error) {
-            console.error('[CD HUD] Could not save options state.', error);
-            setStatus('options.saveFailed', 'error');
+            remoteSnapshot = error.snapshot || remoteSnapshot;
+            console.error('[CD HUD] Could not save options state:', error.message);
+            if (['CONFLICT','CANCELLED','SCHEMA_INVALID','BASE_REVISION_REQUIRED','LAYOUT_DISCONNECTED'].includes(error.message)) pendingOperation = null;
+            status.textContent = error.message === 'CONFLICT'
+                ? 'Chrome 設定已變更，草稿已保留。請匯出面板草稿，再重新讀取比較；未覆寫 Chrome。'
+                : '儲存未完成：' + error.message;
+            status.className = 'error';
+        } finally {
+            saving = false;
         }
+    });
+
+    document.getElementById('reload-settings').addEventListener('click', async () => {
+        if (saving || !window.confirm('重新讀取會取代目前草稿。請先匯出需要保留的草稿，是否繼續？')) return;
+        pendingOperation = null;
+        remoteSnapshot = null;
+        await load(true);
+    });
+    document.getElementById('export-settings-draft').addEventListener('click', () => {
+        const output = document.getElementById('settings-draft');
+        output.hidden = false;
+        output.value = JSON.stringify({draft:{settings:getFormSettings(),layout:bootstrap.getLayout(),baseRevision},remoteSnapshot},null,2);
     });
 
     document.getElementById('reset-button').addEventListener('click', () => {
@@ -125,6 +168,7 @@
         currentLayout = composer.createDefaultLayout();
         bootstrap.setLayout(currentLayout);
         setStatus('options.resetLoaded');
+        rememberDraft();
     });
 
     const code = document.getElementById('panel-code');
@@ -139,6 +183,7 @@
             bootstrap.setLayout(layout);
             codeStatus.textContent = '已產生預覽；儲存並套用後生效。';
             setStatus('options.unsaved');
+            rememberDraft();
         } catch (error) { codeStatus.textContent = '匯入失敗：' + error.message; }
     });
     function applyTypography(font, fontSize) {
@@ -152,6 +197,7 @@
         });
         bootstrap.setLayout(layout);
         setStatus('options.unsaved');
+        rememberDraft();
     }
     document.getElementById('theme-font').addEventListener('change', event => applyTypography(event.target.value));
     document.getElementById('theme-custom-font').addEventListener('change', event => {
