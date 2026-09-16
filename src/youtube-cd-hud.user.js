@@ -820,6 +820,30 @@
         }
     }
 
+    function setHudTitleText(element, value) {
+        if (!element) return;
+        const title = trim(String(value || '')) || t('albumMode');
+        let viewport = element.querySelector('.ytcd-marquee-viewport');
+        let track = viewport?.querySelector('.ytcd-marquee-track');
+        if (!viewport || !track) {
+            viewport = document.createElement('span');
+            viewport.className = 'ytcd-marquee-viewport';
+            viewport.setAttribute('aria-hidden', 'true');
+            track = document.createElement('span');
+            track.className = 'ytcd-marquee-track';
+            const label = document.createElement('span');
+            label.className = 'ytcd-marquee-label';
+            const copy = document.createElement('span');
+            copy.className = 'ytcd-marquee-label ytcd-marquee-copy';
+            copy.setAttribute('aria-hidden', 'true');
+            track.append(label, copy);
+            viewport.appendChild(track);
+            element.replaceChildren(viewport);
+        }
+        track.querySelectorAll('.ytcd-marquee-label').forEach(label => { label.textContent = title; });
+        element.dataset.ytcdMarqueeTitle = title;
+    }
+
     function applyRuntimeAppearance() {
         const root = document.documentElement;
         if (!root) return;
@@ -3111,14 +3135,48 @@
                 text-align: var(--ytcd-unit-text-align, left);
                 text-align-last: var(--ytcd-unit-text-align, left);
             }
-            #yt-cd-hud.ytcd-layout-v2 .hud-chapter.ytcd-effect-marquee:hover {
+            #yt-cd-hud.ytcd-layout-v2 .hud-chapter.ytcd-effect-marquee {
+                display: flex;
+                align-items: center;
                 overflow: hidden;
                 text-overflow: clip;
-                animation: ytcd-title-marquee 5s ease-in-out infinite alternate;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-chapter .ytcd-marquee-viewport {
+                display: block;
+                min-width: 0;
+                overflow: hidden;
+                flex: 1 1 auto;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-chapter .ytcd-marquee-track {
+                display: inline-flex;
+                min-width: max-content;
+                white-space: nowrap;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-chapter .ytcd-marquee-label {
+                display: inline-block;
+                flex: 0 0 auto;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-chapter .ytcd-marquee-label:after {
+                content: '  •  ';
+                display: inline-block;
+                padding: 0 .8em;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-chapter .ytcd-marquee-copy {
+                display: none;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-chapter:not(.ytcd-effect-marquee) .ytcd-marquee-label:after {
+                display: none;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-chapter.ytcd-effect-marquee .ytcd-marquee-copy {
+                display: inline-block;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-chapter.ytcd-effect-marquee .ytcd-marquee-track {
+                animation: ytcd-title-marquee 12s linear infinite;
+                will-change: transform;
             }
             @keyframes ytcd-title-marquee {
-                from { text-indent: 0; }
-                to { text-indent: -42%; }
+                from { transform: translateX(0); }
+                to { transform: translateX(-50%); }
             }
             #yt-cd-hud.ytcd-layout-v2 .hud-source-selector {
                 display: inline-flex;
@@ -3922,10 +3980,14 @@
                     transition: none;
                 }
                 .cd-art,
-                .hud-chapter.ytcd-effect-marquee,
+                .hud-chapter.ytcd-effect-marquee .ytcd-marquee-track,
                 .status-light.searching,
                 .hud-hover-marquee.hud-hover-marquee-active .hud-marquee-label {
                     animation: none;
+                }
+                #yt-cd-hud.ytcd-layout-v2 .hud-chapter.ytcd-effect-marquee .ytcd-marquee-copy,
+                #yt-cd-hud.ytcd-layout-v2 .hud-chapter.ytcd-effect-marquee .ytcd-marquee-label:after {
+                    display: none;
                 }
                 .cd-disc:before { transition: none; }
             }
@@ -3947,7 +4009,7 @@
             getCurrentTrack(video.currentTime),
             chapterText
         );
-        chapterEl.textContent = displayedTrack;
+        setHudTitleText(chapterEl, displayedTrack);
         chapterEl.href = getGoogleTrackSearchUrl(displayedTrack);
         chapterEl.title = t('searchGoogle', { track: displayedTrack });
         chapterEl.setAttribute('aria-label', t('searchGoogleAria', { track: displayedTrack }));
@@ -4221,7 +4283,7 @@
         }
 
         const signature = [
-            chapter.textContent,
+            chapter.dataset.ytcdMarqueeTitle || chapter.textContent,
             chapter.style.fontSize,
             time.style.fontSize,
             time.textContent.length,
@@ -4936,7 +4998,7 @@
             button.setAttribute('aria-label', title);
         };
         const chapter = hud?.querySelector('.hud-chapter');
-        if (chapter) chapter.title = t('searchGoogle', { track: chapter.textContent });
+        if (chapter) chapter.title = t('searchGoogle', { track: chapter.dataset.ytcdMarqueeTitle || chapter.textContent });
         const sourceSelector = hud?.querySelector('.hud-source-selector');
         if (sourceSelector) sourceSelector.setAttribute('aria-label', t('source'));
         setButtonCopy('.hud-source-youtube', 'YT', t('useYouTube'));
@@ -5246,11 +5308,11 @@
             const chapter = document.createElement('a');
             chapter.className = 'hud-chapter';
             chapter.id = 'hud-chapter';
-            chapter.textContent = t('albumMode');
-            chapter.href = getGoogleTrackSearchUrl(chapter.textContent);
+            setHudTitleText(chapter, t('albumMode'));
+            chapter.href = getGoogleTrackSearchUrl(chapter.dataset.ytcdMarqueeTitle);
             chapter.target = '_blank';
             chapter.rel = 'noopener noreferrer';
-            chapter.title = t('searchGoogle', { track: chapter.textContent });
+            chapter.title = t('searchGoogle', { track: chapter.dataset.ytcdMarqueeTitle });
             const time = document.createElement('div');
             time.className = 'hud-time';
             time.id = 'hud-time';

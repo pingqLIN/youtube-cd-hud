@@ -1129,8 +1129,14 @@ test('exposes the foundation palette, viewport, sizing mode, and English alignme
 test('connects the advertised title marquee effect to preview and runtime CSS', () => {
   const previewCss = read('extension/options/options.css');
   const runtime = read('src/youtube-cd-hud.user.js');
-  assert.match(previewCss, /\.preview-title\.lm-effect-marquee:hover[\s\S]*?animation:\s*lm-preview-title-marquee/);
-  assert.match(runtime, /\.hud-chapter\.ytcd-effect-marquee:hover[\s\S]*?animation:\s*ytcd-title-marquee/);
+  const optionsHtml = read('extension/options/options.html');
+  assert.match(previewCss, /\.preview-title\.lm-effect-marquee[\s\S]*?\.lm-marquee-track\s*\{\s*animation:\s*lm-preview-title-marquee 12s linear infinite/);
+  assert.match(runtime, /\.hud-chapter\.ytcd-effect-marquee[\s\S]*?\.ytcd-marquee-track\s*\{\s*animation:\s*ytcd-title-marquee 12s linear infinite/);
+  assert.doesNotMatch(previewCss, /\.preview-title\.lm-effect-marquee:hover/);
+  assert.doesNotMatch(runtime, /\.hud-chapter\.ytcd-effect-marquee:hover/);
+  assert.match(optionsHtml, /lm-marquee-label lm-marquee-copy/);
+  assert.match(previewCss, /transform:\s*translateX\(-50%\)/);
+  assert.match(runtime, /transform:\s*translateX\(-50%\)/);
 });
 
 test('moves the runtime assembly and persists its canonical layout without lock controls', () => {
