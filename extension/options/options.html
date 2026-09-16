@@ -174,6 +174,9 @@
             </div>
 
             <footer class="action-bar">
+                <button id="reload-settings" type="button" class="secondary-button">重新讀取 Chrome 設定</button>
+                <button id="export-settings-draft" type="button" class="secondary-button">匯出完整草稿／衝突資料</button>
+                <textarea id="settings-draft" aria-label="完整設定草稿" hidden readonly></textarea>
                 <p id="save-status" role="status" aria-live="polite" data-i18n="options.waiting">等待調整</p>
                 <div>
                     <button id="reset-button" class="secondary-button" type="button" data-i18n="options.reset">恢復預設</button>
@@ -186,6 +189,8 @@
 
     <script src="../shared/settings.js"></script>
     <script src="../shared/i18n.js"></script>
+    <script src="../shared/settings-client.js"></script>
+    <script src="options-host.js"></script>
     <script src="live-monitor-loader.js?v=2"></script>
 </body>
 </html>

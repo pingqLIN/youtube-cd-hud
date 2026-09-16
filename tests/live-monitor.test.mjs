@@ -3,11 +3,22 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = relativePath => fs.readFileSync(path.join(projectRoot, relativePath), 'utf8');
+
+function mockLayoutHost(composer, storage) {
+  return {
+    async read() { return { revision:'test-base',layout:storage[composer.STORAGE_KEY] }; },
+    async apply({baseRevision,payload}) {
+      assert.equal(baseRevision,'test-base');
+      storage[composer.STORAGE_KEY]=JSON.parse(JSON.stringify(payload.layout));
+      return {ok:true,status:'STORED',snapshot:{revision:'test-next',layout:storage[composer.STORAGE_KEY]}};
+    },
+  };
+}
 
 function loadResizeEngine(composer) {
   const context = { YtCdHudLiveMonitorComposer: composer };
@@ -404,7 +415,7 @@ test('built-in panels survive storage and runtime normalization with usable geom
   const presets = loadLayoutPresets(composer);
   const runtimeNormalize = loadRuntimeLayoutNormalizer();
   const storage = {};
-  const context = { console, YtCdHudLiveMonitorComposer: composer, chrome: { storage: { local: {
+  const context = { crypto:{randomUUID}, YtCdHudOptionsHost:mockLayoutHost(composer,storage), console, YtCdHudLiveMonitorComposer: composer, chrome: { storage: { local: {
     async get() { return JSON.parse(JSON.stringify(storage)); },
     async set(value) { Object.assign(storage, JSON.parse(JSON.stringify(value))); },
   } } } };
@@ -420,7 +431,7 @@ test('built-in panels survive storage and runtime normalization with usable geom
       const rect = composer.componentRect(component.geometry, layout.canvas);
       assert.ok(rect.left >= 0 && rect.top >= 0 && rect.right <= layout.canvas.width && rect.bottom <= layout.canvas.height);
     }
-    await store.save(layout);
+    await store.save(layout,'test-base');
     const prepared = composer.prepareForSave(layout);
     assert.deepEqual(JSON.parse(JSON.stringify(await store.load())), JSON.parse(JSON.stringify(prepared)));
     const runtime = runtimeNormalize(storage[composer.STORAGE_KEY]);
@@ -500,7 +511,7 @@ test('authored slate presets retain surfaces and typography through export, save
   const runtimeNormalize = loadRuntimeLayoutNormalizer();
   const plain = value => JSON.parse(JSON.stringify(value));
   const saved = {};
-  const context = { YtCdHudLiveMonitorComposer: composer, chrome: { storage: { local: {
+  const context = { crypto:{randomUUID}, YtCdHudOptionsHost:mockLayoutHost(composer,saved), YtCdHudLiveMonitorComposer: composer, chrome: { storage: { local: {
     async get() { return saved; }, async set(value) { Object.assign(saved, plain(value)); },
   } } } };
   vm.runInNewContext(read('extension/options/live-monitor-layout-store.js'), context);
@@ -517,7 +528,7 @@ test('authored slate presets retain surfaces and typography through export, save
     assert.equal(composer.getComponent(layout, 'time-readout').textStyle.color, '#c5ee65');
     layout.locked = true;
     const imported = composer.importCode(composer.exportCode(layout));
-    await context.YtCdHudLiveMonitorLayoutStore.save(imported);
+    await context.YtCdHudLiveMonitorLayoutStore.save(imported,'test-base');
     const runtime = runtimeNormalize(saved[composer.STORAGE_KEY]);
     for (const component of layout.components.filter(item => item.present)) {
       const actual = runtime.components.find(item => item.id === component.id);
@@ -1510,9 +1521,9 @@ test('saving raises menu owners, preserves locks and positions, and is stable at
       for(const key of ['x','y','width','height'])assert.equal(item.geometry[key],original.geometry[key]);
     }
     let saved;
-    const context={YtCdHudLiveMonitorComposer:composer,chrome:{storage:{local:{async set(value){saved=value[composer.STORAGE_KEY];}}}}};
+    const context={crypto:{randomUUID},YtCdHudOptionsHost:{async apply({baseRevision,payload}){assert.equal(baseRevision,'test-base');saved=payload.layout;return {status:'STORED',snapshot:{layout:saved}};}},YtCdHudLiveMonitorComposer:composer};
     vm.runInNewContext(read('extension/options/live-monitor-layout-store.js'),context);
-    await context.YtCdHudLiveMonitorLayoutStore.save(layout);
+    await context.YtCdHudLiveMonitorLayoutStore.save(layout,'test-base');
     assert.equal(JSON.stringify(saved),JSON.stringify(prepared));
     const runtime=loadRuntimeLayoutNormalizer()(saved);
     assert.equal(runtime.components.find(i=>i.id===menu.id).geometry.z,menu.geometry.z);

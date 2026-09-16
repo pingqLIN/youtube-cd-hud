@@ -20,8 +20,11 @@
     "https://www.mixesdb.com/*",
     "https://trackid.net/*"
   ],
+  "externally_connectable": {
+    "matches": ["http://127.0.0.1/*"]
+  },
   "background": {
-    "service_worker": "background/service-worker.js"
+    "service_worker": "tunnal/worker.js"
   },
   "action": {
     "default_title": "Toggle YouTube CD HUD; double-click for settings",
@@ -39,6 +42,7 @@
       "js": [
         "shared/i18n.js",
         "shared/settings.js",
+        "shared/settings-client.js",
         "shared/1001-packet.js",
         "content/gm-xmlhttp-request.js",
         "content/youtube-cd-hud.js"

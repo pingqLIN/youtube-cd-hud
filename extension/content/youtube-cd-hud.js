@@ -118,6 +118,10 @@
         ? SETTINGS_API.normalize(SETTINGS_API.DEFAULTS)
         : { ...RUNTIME_DEFAULTS };
     let runtimeLayout = HUD_LAYOUT_DEFAULTS;
+    let runtimeStorageRevision = null;
+    let runtimeLayoutDirty = false;
+    let runtimeLayoutDragRevision = null;
+    let layoutConflictNotice = null;
 
     function t(key, values) {
         return I18N_API.translate(`hud.${key}`, I18N_API.resolveLanguage(runtimeSettings.language), values);
@@ -903,8 +907,19 @@
     async function prepareExtensionSettings() {
         if (!SETTINGS_API || !globalThis.chrome || !chrome.storage || !chrome.storage.local) return;
         try {
-            const stored = await chrome.storage.local.get(SETTINGS_API.STORAGE_KEY);
-            applyRuntimeSettings(stored[SETTINGS_API.STORAGE_KEY] || SETTINGS_API.DEFAULTS, false);
+            let loaded = false;
+            if (globalThis.YtCdHudSettingsClient?.read && globalThis.chrome.runtime?.sendMessage) {
+                const snapshot = await globalThis.YtCdHudSettingsClient.read();
+                if (snapshot?.ok) {
+                    runtimeStorageRevision = snapshot.snapshot.revision;
+                    applyRuntimeSettings(snapshot.snapshot.settings || SETTINGS_API.DEFAULTS, false);
+                    loaded = true;
+                }
+            }
+            if (!loaded) {
+                const stored = await chrome.storage.local.get(SETTINGS_API.STORAGE_KEY);
+                applyRuntimeSettings(stored[SETTINGS_API.STORAGE_KEY] || SETTINGS_API.DEFAULTS, false);
+            }
         } catch (error) {
             console.warn('[CD HUD] Could not load extension settings; using defaults.', error);
             applyRuntimeSettings(SETTINGS_API.DEFAULTS, false);
@@ -912,24 +927,56 @@
 
         chrome.storage.onChanged.addListener((changes, areaName) => {
             if (areaName !== 'local' || !changes[SETTINGS_API.STORAGE_KEY]) return;
+            if (globalThis.YtCdHudSettingsClient?.read && !runtimeLayoutDirty) {
+                void globalThis.YtCdHudSettingsClient.read().then(response => {
+                    if (!response?.ok || runtimeLayoutDirty) return;
+                    runtimeStorageRevision = response.snapshot.revision;
+                    applyRuntimeSettings(response.snapshot.settings || SETTINGS_API.DEFAULTS);
+                    runtimeLayout = normalizeHudLayout(response.snapshot.layout);
+                    applyRuntimeAppearance();
+                });
+                return;
+            }
             applyRuntimeSettings(changes[SETTINGS_API.STORAGE_KEY].newValue || SETTINGS_API.DEFAULTS);
         });
     }
 
     async function prepareExtensionLayout() {
         try {
-            if (globalThis.chrome?.storage?.local) {
-                const stored = await chrome.storage.local.get([HUD_LAYOUT_STORAGE_KEY, HUD_LAYOUT_LEGACY_STORAGE_KEY]);
-                runtimeLayout = normalizeHudLayout(stored[HUD_LAYOUT_STORAGE_KEY] || stored[HUD_LAYOUT_LEGACY_STORAGE_KEY]);
+            let loaded = false;
+            if (globalThis.YtCdHudSettingsClient?.read && globalThis.chrome?.runtime?.sendMessage) {
+                const snapshot = await globalThis.YtCdHudSettingsClient.read();
+                if (snapshot?.ok) {
+                    runtimeStorageRevision = snapshot.snapshot.revision;
+                    runtimeLayout = normalizeHudLayout(snapshot.snapshot.layout);
+                    loaded = true;
+                }
+            }
+            if (!loaded) {
+                if (globalThis.chrome?.storage?.local) {
+                    const stored = await chrome.storage.local.get([HUD_LAYOUT_STORAGE_KEY, HUD_LAYOUT_LEGACY_STORAGE_KEY]);
+                    runtimeLayout = normalizeHudLayout(stored[HUD_LAYOUT_STORAGE_KEY] || stored[HUD_LAYOUT_LEGACY_STORAGE_KEY]);
+                } else if (typeof globalThis.GM_getValue === 'function') {
+                    runtimeLayout = normalizeHudLayout(await globalThis.GM_getValue(HUD_LAYOUT_STORAGE_KEY, null));
+                } else {
+                    runtimeLayout = normalizeHudLayout(null);
+                }
+            }
+            if (globalThis.chrome?.storage?.onChanged?.addListener && globalThis.chrome?.runtime?.id) {
                 chrome.storage.onChanged.addListener((changes, areaName) => {
-                    if (areaName !== 'local' || !changes[HUD_LAYOUT_STORAGE_KEY]) return;
-                    runtimeLayout = normalizeHudLayout(changes[HUD_LAYOUT_STORAGE_KEY].newValue);
-                    applyRuntimeAppearance();
+                    if (areaName !== 'local' || !changes[HUD_LAYOUT_STORAGE_KEY] || runtimeLayoutDirty) return;
+                    if (globalThis.YtCdHudSettingsClient?.read) {
+                        void globalThis.YtCdHudSettingsClient.read().then(response => {
+                            if (!response?.ok || runtimeLayoutDirty) return;
+                            runtimeStorageRevision = response.snapshot.revision;
+                            runtimeLayout = normalizeHudLayout(response.snapshot.layout);
+                            applyRuntimeAppearance();
+                        });
+                    } else {
+                        runtimeLayout = normalizeHudLayout(changes[HUD_LAYOUT_STORAGE_KEY].newValue);
+                        applyRuntimeAppearance();
+                    }
                 });
-            } else if (typeof globalThis.GM_getValue === 'function') {
-                runtimeLayout = normalizeHudLayout(await globalThis.GM_getValue(HUD_LAYOUT_STORAGE_KEY, null));
-            } else {
-                runtimeLayout = normalizeHudLayout(null);
             }
         } catch (error) {
             runtimeLayout = normalizeHudLayout(null);
@@ -1320,7 +1367,23 @@
         return true;
     }
 
-    function handleRuntimeMessage(message, _sender, sendResponse) {
+    function handleRuntimeMessage(message, sender, sendResponse) {
+        if (message?.type === 'YT_CD_HUD_SETTINGS_VERIFY') {
+            if (sender?.id !== globalThis.chrome?.runtime?.id || sender?.url && !/^chrome-extension:\/\//i.test(sender.url)) return false;
+            const expected = String(message.revision || '');
+            if (!/^[a-f0-9]{64}$/i.test(expected) || !document.getElementById('yt-cd-hud') && runtimeSettings.enabled) {
+                if (typeof sendResponse === 'function') sendResponse({ status: 'PENDING' });
+                return false;
+            }
+            void (async () => {
+                const snapshot = globalThis.YtCdHudSettingsClient?.read ? await globalThis.YtCdHudSettingsClient.read() : null;
+                const equal = snapshot?.ok && snapshot.snapshot.revision === expected
+                    && JSON.stringify(snapshot.snapshot.settings) === JSON.stringify(runtimeSettings)
+                    && JSON.stringify(normalizeHudLayout(snapshot.snapshot.layout)) === JSON.stringify(runtimeLayout);
+                if (typeof sendResponse === 'function') sendResponse(equal ? { status: 'APPLIED', revision: expected } : { status: 'PENDING' });
+            })();
+            return true;
+        }
         if (message?.type === 'YT_CD_HUD_TOGGLE_VISIBILITY') {
             const result = toggleHudVisibility();
             if (typeof sendResponse === 'function') sendResponse(result);
@@ -4301,14 +4364,69 @@
 
     async function persistRuntimeLayout() {
         try {
-            if (globalThis.chrome?.storage?.local) {
+            const extensionContext = Boolean(globalThis.chrome?.runtime?.id);
+            if (extensionContext && !(globalThis.YtCdHudSettingsClient?.apply && runtimeStorageRevision !== null)) {
+                throw new Error('SETTINGS_CLIENT_UNAVAILABLE');
+            }
+            if (globalThis.YtCdHudSettingsClient?.apply && globalThis.chrome?.runtime?.sendMessage && runtimeStorageRevision !== null) {
+                const operationId = `layout-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            const response = await globalThis.YtCdHudSettingsClient.apply({
+                    operationId,
+                    baseRevision: runtimeLayoutDragRevision || runtimeStorageRevision,
+                    payload: { layout: runtimeLayout },
+                });
+                if (!response?.ok) throw new Error(response?.error || 'SETTINGS_LAYOUT_WRITE_FAILED');
+                runtimeStorageRevision = response.snapshot.revision;
+                runtimeLayoutDirty = false;
+                runtimeLayoutDragRevision = null;
+            } else if (!extensionContext && globalThis.chrome?.storage?.local) {
                 await globalThis.chrome.storage.local.set({ [HUD_LAYOUT_STORAGE_KEY]: runtimeLayout });
             } else if (typeof globalThis.GM_setValue === 'function') {
                 await globalThis.GM_setValue(HUD_LAYOUT_STORAGE_KEY, runtimeLayout);
             }
         } catch (error) {
+            showLayoutConflictNotice(error);
             console.warn('[CD HUD] Could not persist the dragged Live Monitor unit.', error);
         }
+    }
+
+    function showLayoutConflictNotice(error) {
+        const hud = document.getElementById('yt-cd-hud');
+        if (!hud) return;
+        if (!layoutConflictNotice) {
+            layoutConflictNotice = document.createElement('div');
+            layoutConflictNotice.setAttribute('role', 'alert');
+            layoutConflictNotice.style.cssText = 'position:absolute;z-index:1000;left:8px;right:8px;bottom:8px;padding:8px;background:#4a2020;color:#ffe9e9;border:1px solid #f56565;font:12px system-ui,sans-serif;display:flex;gap:8px;align-items:center;justify-content:space-between;';
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = '放棄未保存拖移並讀取最新設定';
+            button.style.cssText = 'padding:4px 8px;background:#ffd6d6;color:#321010;border:0;border-radius:3px;cursor:pointer;';
+            button.addEventListener('click', async () => {
+                if (!globalThis.YtCdHudSettingsClient?.read) return;
+                button.disabled = true;
+                try {
+                    const snapshot = await globalThis.YtCdHudSettingsClient.read();
+                    if (!snapshot?.ok) throw new Error(snapshot?.error || 'SETTINGS_READ_FAILED');
+                    runtimeStorageRevision = snapshot.snapshot.revision;
+                    applyRuntimeSettings(snapshot.snapshot.settings || SETTINGS_API.DEFAULTS);
+                    runtimeLayout = normalizeHudLayout(snapshot.snapshot.layout);
+                    runtimeLayoutDirty = false;
+                    runtimeLayoutDragRevision = null;
+                    applyRuntimeAppearance();
+                    layoutConflictNotice.remove();
+                    layoutConflictNotice = null;
+                } catch (readError) {
+                    button.disabled = false;
+                    const label = layoutConflictNotice.firstChild;
+                    if (label) label.textContent = `設定同步失敗：${readError.message || readError}`;
+                }
+            });
+            const label = document.createElement('span');
+            layoutConflictNotice.append(label, button);
+            hud.appendChild(layoutConflictNotice);
+        }
+        const label = layoutConflictNotice.firstChild;
+        if (label) label.textContent = `未保存拖移無法同步：${error?.message || error || 'CONFLICT'}`;
     }
 
     function runtimeColorWithAlpha(color, opacity = 1) {
@@ -4356,7 +4474,7 @@
             const finished = gesture; gesture = null;
             element.classList.remove('ytcd-layout-unit-dragging');
             if (finished.moved) element._ytCdSuppressClick = true;
-            if (cancelled || !available()) { runtimeLayout = finished.originalLayout; applyRuntimeLayout(); return; }
+            if (cancelled || !available()) { runtimeLayout = finished.originalLayout; runtimeLayoutDirty = false; runtimeLayoutDragRevision = null; applyRuntimeLayout(); return; }
             if (finished.moved) await persistRuntimeLayout();
         };
         element.addEventListener('pointerdown', event => {
@@ -4371,6 +4489,8 @@
             event.preventDefault(); event.stopImmediatePropagation();
             gesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY,
                 originalLayout: JSON.parse(JSON.stringify(runtimeLayout)), moved: false };
+            runtimeLayoutDirty = true;
+            runtimeLayoutDragRevision = runtimeStorageRevision;
             node.setPointerCapture?.(event.pointerId);
         }, true);
         element.addEventListener('pointermove', event => {
