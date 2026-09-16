@@ -75,6 +75,27 @@ test('uses the disc center as the opaque panel boundary with a pointer-through o
   assert.match(source, /hud\.appendChild\(panelSurface\)/);
 });
 
+test('keeps v2 base edges undecorated unless a surface effect is enabled', () => {
+  const baseRules = [...source.matchAll(/#yt-cd-hud\.ytcd-layout-v2 \.hud-panel-surface\s*\{([^}]+)\}/g)]
+    .map(match => match[1]).join('\n');
+  assert.match(baseRules, /box-shadow:\s*none\s*;/);
+  assert.match(baseRules, /border:\s*var\(--ytcd-unit-border-width\) solid var\(--ytcd-secondary-color\)/);
+  assert.match(source, /#yt-cd-hud\.ytcd-layout-v2 \.hud-panel-surface::?after\s*\{[^}]*content:\s*none\s*;/);
+  assert.doesNotMatch(source, /#yt-cd-hud\.ytcd-layout-v2 \.hud-panel-surface[^{}]*\{[^}]*border-left-color:/);
+
+  // The opt-in combinations must still override the undecorated base.
+  const effectRule = suffix => source.match(new RegExp(
+    '#yt-cd-hud\\.ytcd-layout-v2 \\.hud-panel-surface' + suffix + '\\s*\\{([^}]+)\\}'
+  ))?.[1] || '';
+  const shadow = effectRule('\\.ytcd-effect-shadow');
+  const railAndShadow = effectRule('\\.ytcd-effect-accent-rail');
+  const railOnly = effectRule('\\.ytcd-effect-accent-rail:not\\(\\.ytcd-effect-shadow\\)');
+  assert.match(shadow, /box-shadow:\s*0 9px 30px/);
+  assert.doesNotMatch(shadow, /inset/);
+  assert.match(railAndShadow, /box-shadow:\s*0 9px 30px[^;]+, inset 1px 0 0 var\(--ytcd-secondary-color\)/);
+  assert.match(railOnly, /box-shadow:\s*inset 1px 0 0 var\(--ytcd-secondary-color\)\s*;/);
+});
+
 test('hides only the disc artwork without moving the HUD layout anchor', () => {
   const hiddenDiscRule = source.match(/#yt-cd-hud\.ytcd-hide-disc\s+\.cd-disc-wrapper\s*\{[\s\S]*?\n\s*\}/)?.[0] || '';
 

@@ -7,6 +7,7 @@
         { type: 'style', src: 'live-monitor-component-library.css?v=2' },
         { type: 'style', src: 'live-monitor-layout-presets.css?v=3' },
         { type: 'script', src: 'live-monitor-composer.js' },
+        { type: 'script', src: 'panel-presets.js' },
         { type: 'script', src: 'live-monitor-layout-store.js' },
         { type: 'script', src: 'live-monitor-resize-engine.js' },
         { type: 'script', src: 'live-monitor-canvas-editor.js' },

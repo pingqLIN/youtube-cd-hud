@@ -19,7 +19,7 @@
 .lm-editor-stage .preview-disc {
     width: var(--lm-width);
     height: var(--lm-height);
-    opacity: var(--lm-unit-opacity);
+    opacity: var(--lm-disc-opacity, 1);
     border-radius: 50%;
 }
 .lm-editor-stage .preview-info { font-family: var(--lm-font); }
@@ -29,7 +29,7 @@
 .lm-editor-stage [data-lm-component]:focus-visible { outline: 1px dashed var(--signal); outline-offset: 4px; }
 .lm-editor-stage .lm-component-selected { outline: 2px solid var(--signal); outline-offset: 4px; box-shadow: 0 0 0 5px rgba(197, 238, 101, .15); }
 .lm-editor-stage .lm-component-invalid { outline-color: var(--danger); box-shadow: 0 0 0 5px rgba(255, 118, 95, .18); }
-.lm-editor-stage .lm-component-locked:after { content: 'LOCKED'; position: absolute; right: 2px; top: -15px; color: var(--signal); font: 9px/1 var(--mono); letter-spacing: .1em; }
+.lm-editor-stage .lm-component-locked:after { content: 'LOCKED'; position: absolute; right: 2px; top: -15px; color: var(--danger); font: 9px/1 var(--mono); letter-spacing: .1em; }
 .lm-editor-stage .lm-component-hidden { display: none; }
 .lm-resize-handle { position: absolute; z-index: 4; width: 12px; height: 12px; padding: 0; border: 1px solid var(--signal); background: var(--paper); }
 .lm-resize-handle[data-lm-handle="nw"] { left: -7px; top: -7px; cursor: nwse-resize; }
@@ -39,3 +39,22 @@
 @media (prefers-reduced-motion: reduce) {
     .lm-editor-stage [data-lm-component] { transition: none; }
 }
+
+/* Handles are hit targets only; selected outlines carry the visual treatment. */
+.lm-editor-stage .lm-resize-handle { display: block; padding: 0; margin: 0; flex: none; min-width: 0; width: 12px; height: 12px; border: 0; background: transparent; box-shadow: none; }
+.lm-editor-stage .lm-resize-handle[hidden] { display: none !important; }
+.lm-editor-stage .lm-component-transparent { opacity: 0; }
+.lm-editor-stage .lm-component-selected { outline: 2px solid var(--signal); }
+.lm-editor-stage .preview-resize { display: none; }
+
+.lm-editor-stage .lm-component-transparent [data-lm-part] { opacity: 0; }
+
+.lm-editor-stage .lm-resize-handle { box-sizing: border-box; background: var(--signal); border: 1px solid var(--paper); opacity: .85; z-index: 8; }
+.lm-resize-handle[data-lm-handle="n"], .lm-resize-handle[data-lm-handle="s"] { left: 50%; margin-left: -6px; height: 6px; cursor: ns-resize; }
+.lm-resize-handle[data-lm-handle="n"] { top: -3px; }
+.lm-resize-handle[data-lm-handle="s"] { bottom: -3px; }
+.lm-resize-handle[data-lm-handle="w"], .lm-resize-handle[data-lm-handle="e"] { top: 50%; margin-top: -6px; width: 6px; cursor: ew-resize; }
+.lm-resize-handle[data-lm-handle="w"] { left: -3px; }
+.lm-resize-handle[data-lm-handle="e"] { right: -3px; }
+.lm-editor-stage.lm-drag-mode, .lm-editor-stage.lm-drag-mode [data-lm-component] { cursor: grabbing; }
+.lm-editor-stage .lm-component-hidden [data-lm-part] { display: none !important; }

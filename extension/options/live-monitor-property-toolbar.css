@@ -18,3 +18,7 @@
 .lm-split-toggle { padding: 6px 9px; border: 1px solid var(--line-soft); background: #090d0f; }
 .lm-property-field input[type="number"] { width: 74px; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .lm-property-toolbar * { transition: none; } }
+
+.lm-unit-details { flex: 1 0 100%; border-top: 1px solid var(--line); padding-top: 12px; }
+.lm-unit-details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+.lm-unit-detail-body { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 16px; }

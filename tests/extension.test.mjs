@@ -114,18 +114,16 @@ test('uses external scripts and exposes the complete control surface', () => {
     'enableTrackId',
     'requestTimeoutMs',
     'maxCandidates',
-    'titleFontSize',
-    'timeFontSize',
-    'fontFamily',
-    'discScale',
-    'surfaceOpacity',
-    'accentColor',
-    'showDisc',
-    'showTransport',
-    'customCss',
   ]) {
     assert.match(html, new RegExp(`name="${setting}"`));
   }
+});
+
+test('panel studio replaces CSS overrides with safe panel code and theme controls', () => {
+  const html = read('extension/options/options.html');
+  for (const id of ['panel-code', 'panel-code-import', 'panel-code-export', 'theme-font', 'theme-custom-font', 'theme-font-size']) assert.ok(html.includes(`id="${id}"`));
+  assert.doesNotMatch(html, /name="customCss"/);
+  assert.ok(html.indexOf('id="panel-code"') > html.indexOf('id="hud-preview"'));
 });
 
 test('bridges only allowlisted tracklist providers with provider-specific credentials', () => {
@@ -583,6 +581,7 @@ test('maps extension messaging success and runtime failures to GM callbacks', ()
   let sentMessage = null;
   let responseCallback = null;
   const context = {
+    URL,
     chrome: {
       runtime: {
         lastError: undefined,
@@ -776,7 +775,7 @@ test('keeps the settings preview aligned with the atomic bounded layout model', 
   assert.match(css, /\.preview-transport\s*\{[\s\S]*?grid-template-columns:\s*1fr\s+1fr/);
   assert.match(css, /\.hud-preview\.hide-disc\s+\.preview-disc\s*\{\s*visibility:\s*hidden/);
   assert.doesNotMatch(css, /\.hud-preview:before/);
-  assert.match(css, /font:\s*700\s+var\(--lm-font-size\)\/1\.35\s+var\(--lm-font\)/);
+  assert.match(css, /font:\s*var\(--lm-font-weight,\s*700\)\s+var\(--lm-font-size\)\/1\.35\s+var\(--lm-font\)/);
   assert.match(read('extension/options/options.js'), /settingsApi\.FONT_STACKS\[settings\.fontFamily\]/);
 });
 

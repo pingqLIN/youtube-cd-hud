@@ -58,7 +58,7 @@
             </div>
 
             <div class="control-grid">
-                <div class="settings-rail">
+                <details class="settings-rail"><summary>曲目資料來源與查詢設定</summary>
                     <section class="control-section" aria-labelledby="source-title">
                         <div class="section-heading">
                             <p class="section-index" data-i18n="options.sourceIndex">資料來源</p>
@@ -107,96 +107,30 @@
                             </label>
                         </div>
                     </section>
-
-
-
-
-                </div>
+                </details>
 
                 <aside class="preview-rail" aria-labelledby="preview-title">
                     <div class="preview-heading">
                         <p class="section-index" data-i18n="options.previewIndex">即時監看</p>
                         <h2 id="preview-title" data-i18n="options.previewTitle">即時預覽</h2>
                     </div>
-                    <div class="appearance-tools">
-<details class="appearance-details" aria-labelledby="visual-title">
-                        <summary class="section-heading">
-                            <p class="section-index" data-i18n="options.visualIndex">外觀</p>
-                            <h2 id="visual-title" data-i18n="options.visualTitle">HUD 外觀</h2>
-                        </summary>
-
-                        <div class="switch-list compact">
-                            <label class="switch-row">
-                                <span><b data-i18n="options.showDisc">顯示唱片</b><small data-i18n="options.showDiscHelp">保留封面唱片與拖曳播放</small></span>
-                                <input id="showDisc" name="showDisc" type="checkbox">
-                                <i aria-hidden="true"></i>
-                            </label>
-                            <label class="switch-row">
-                                <span><b data-i18n="options.showTransport">顯示跳曲控制</b><small data-i18n="options.showTransportHelp">顯示上一首與下一首按鈕列</small></span>
-                                <input id="showTransport" name="showTransport" type="checkbox">
-                                <i aria-hidden="true"></i>
-                            </label>
-                        </div>
-
-                        <div class="dial-grid visual-dials">
-                            <label class="field-block">
-                                <span data-i18n="options.titleFontSize">曲名字級</span>
-                                <output id="titleFontSize-output" for="titleFontSize">14px</output>
-                                <input id="titleFontSize" name="titleFontSize" type="range" min="9" max="28" step="1">
-                            </label>
-                            <label class="field-block">
-                                <span data-i18n="options.timeFontSize">時間字級</span>
-                                <output id="timeFontSize-output" for="timeFontSize">12px</output>
-                                <input id="timeFontSize" name="timeFontSize" type="range" min="10" max="29" step="1">
-                            </label>
-                            <label class="field-block">
-                                <span data-i18n="options.discScale">唱片倍率</span>
-                                <output id="discScale-output" for="discScale">100%</output>
-                                <input id="discScale" name="discScale" type="range" min="0.7" max="1.6" step="0.05">
-                            </label>
-                            <label class="field-block">
-                                <span data-i18n="options.surfaceOpacity">面板不透明度</span>
-                                <output id="surfaceOpacity-output" for="surfaceOpacity">85%</output>
-                                <input id="surfaceOpacity" name="surfaceOpacity" type="range" min="45" max="100" step="1">
-                            </label>
-                        </div>
-
-                        <label class="font-field">
-                            <span><b data-i18n="options.fontFamily">HUD 字體</b><small data-i18n="options.fontFamilyHelp">使用本機已安裝字體；未安裝時自動回退至 Cascadia Mono 或 Consolas</small></span>
-                            <select id="fontFamily" name="fontFamily">
-                                <option value="cascadia-mono" data-i18n="options.fontDefault">Cascadia Mono / Digital Grid（預設）</option>
-                                <option value="ocr-machine">OCR A / Machine Readout</option>
-                                <option value="jetbrains-mono">JetBrains Mono / Technical</option>
-                                <option value="ibm-plex-mono">IBM Plex Mono / Instrument</option>
-                                <option value="source-code-pro">Source Code Pro / Console</option>
-                                <option value="consolas">Consolas / Legacy Terminal</option>
-                            </select>
-                        </label>
-
-                        <label class="color-field">
-                            <span><b data-i18n="options.accentColor">訊號色</b><small data-i18n="options.accentColorHelp">焦點、作用中控制與刻度線</small></span>
-                            <input id="accentColor" name="accentColor" type="color">
-                        </label>
-                    </details>
-<details class="appearance-details" aria-labelledby="css-title">
-                        <summary class="section-heading">
-                            <p class="section-index" data-i18n="options.overrideIndex">覆寫</p>
-                            <h2 id="css-title" data-i18n="options.customCss">自訂 CSS</h2>
-                        </summary>
-                        <p class="field-note" data-i18n="options.customCssHelp">CSS 會直接套用到 YouTube 頁面。建議以 #yt-cd-hud 或 .yt-tracklist-panel 限定範圍。</p>
-                        <label class="css-editor">
-                            <span class="sr-only" data-i18n="options.customCss">自訂 CSS</span>
-                            <textarea id="customCss" name="customCss" spellcheck="false" placeholder="#yt-cd-hud {&#10;  border-width: 1px;&#10;}"></textarea>
-                        </label>
-                    </details>
-                    </div>
-                    <section class="component-library-shell" aria-labelledby="component-library-title">
-                        <div class="component-library-heading">
-                            <h3 id="component-library-title">元件庫 / COMPONENT LIST</h3>
-                            <p>只顯示尚未加入面板的最小功能單元</p>
-                        </div>
-                        <div id="live-monitor-library"></div>
+                    <section class="studio-section" aria-labelledby="composition-title">
+                        <div class="studio-heading"><h3 id="composition-title">面板排版</h3><p>元件邊緣拖移 · 把手調整尺寸 · 空白處拖曳平移視野</p></div>
+                    <section class="theme-section" aria-labelledby="theme-title">
+                        <h4 id="theme-title" class="sr-only">主題方向</h4>
+                        <div id="live-monitor-theme"></div>
+                        <details class="studio-detail"><summary>文字與顯示 · 詳細設定</summary>
+                            <div class="theme-type-grid">
+                                <label>字體<select id="theme-font"><option value="cascadia-mono">Cascadia Mono</option><option value="ocr-machine">OCR A</option><option value="jetbrains-mono">JetBrains Mono</option><option value="ibm-plex-mono">IBM Plex Mono</option><option value="source-code-pro">Source Code Pro</option><option value="consolas">Consolas</option></select></label>
+                                <label>本機字體名稱<input id="theme-custom-font" type="text" maxlength="80" placeholder="例如 Noto Sans TC"></label>
+                                <label>整體字級 <output id="theme-font-size-output">14 px</output><input id="theme-font-size" type="range" min="0" max="1000" step="1" value="125"><small>8–32 px 占左半；32–192 px 占右半</small></label>
+                            </div>
+                            <p class="field-note">字體使用本機已安裝的版本；找不到時回退至 Consolas。個別元件可在詳細設定另行調整。</p>
+                        </details>
                     </section>
+                    <details class="component-library-shell" aria-labelledby="component-library-title"><summary id="component-library-title">新增元件</summary>
+                        <div id="live-monitor-library"></div>
+                    </details>
                     <div id="live-monitor-layout-controls"></div>
                     <div class="preview-workbench">
                         <div class="preview-stage">
@@ -220,10 +154,17 @@
                                 <ol><li><time>00:00</time><span>Midnight Transit</span></li><li><time>04:18</time><span>Blue Hour</span></li><li><time>09:42</time><span>Last Platform</span></li></ol>
                             </section>
                             </div>
-                            <p id="live-monitor-canvas-status" class="preview-caption">YOUTUBE PLAYER / 1280×720 / REL</p>
+                            <p id="live-monitor-canvas-status" class="preview-caption">拖曳空白處平移視野 · 右下角調整工作區</p>
                         </div>
-                        <div id="live-monitor-properties" class="preview-properties"></div>
+                        <div id="live-monitor-properties" class="preview-properties"><p class="property-empty">點選畫布元件，或從上方選單選取，即可調整尺寸、文字與效果。</p></div>
                     </div>
+                    </section>
+                    <details class="studio-section panel-code-section"><summary>面板程式碼 · 匯入與匯出</summary>
+                        <p class="field-note">顯示目前自建面板或載入的儲存面板。貼上完整 JSON 後按「產生面板」，確認預覽再儲存。</p>
+                        <label class="css-editor"><span class="sr-only">面板 JSON 程式碼</span><textarea id="panel-code" spellcheck="false" maxlength="100000"></textarea></label>
+                        <div class="panel-code-actions"><button id="panel-code-export" type="button">顯示目前面板程式碼</button><button id="panel-code-import" type="button">從程式碼產生面板</button></div>
+                        <p id="panel-code-status" role="status" aria-live="polite"></p>
+                    </details>
                     <dl class="scope-list">
                         <div><dt data-i18n="options.storage">資料儲存</dt><dd data-i18n="options.storageValue">Chrome 本機</dd></div>
                         <div><dt data-i18n="options.permissions">頁面權限</dt><dd data-i18n="options.permissionValue">YouTube</dd></div>
@@ -236,6 +177,7 @@
                 <p id="save-status" role="status" aria-live="polite" data-i18n="options.waiting">等待調整</p>
                 <div>
                     <button id="reset-button" class="secondary-button" type="button" data-i18n="options.reset">恢復預設</button>
+                    <span id="live-monitor-panel-lock"></span>
                     <button class="primary-button" type="submit" data-i18n="options.save">儲存並套用</button>
                 </div>
             </footer>

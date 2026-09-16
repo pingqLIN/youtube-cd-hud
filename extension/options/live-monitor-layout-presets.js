@@ -4,13 +4,10 @@
     const composer = globalThis.YtCdHudLiveMonitorComposer;
     const STORAGE_KEY = 'ytCdHudLayoutSlotsV1';
     const SLOT_NAMES = Object.freeze(['A', 'B', 'C']);
-    const BUNDLED_PRESETS = Object.freeze([
-        Object.freeze({ id: 'compact-playback', labelKey: 'options.presetCompact', descriptionKey: 'options.presetCompactDescription' }),
-        Object.freeze({ id: 'tracklist-reader', labelKey: 'options.presetReader', descriptionKey: 'options.presetReaderDescription' }),
-    ]);
+    const BUNDLED_PRESETS = globalThis.YtCdHudPanelPack.presets;
     let memorySlots = {};
 
-    // Approved saved layouts. Keep their positions, layers, and styling intact.
+    // Legacy layout IDs remain import-compatible; current buttons use the panel pack.
     const BUNDLED_LAYOUTS = {
         "compact-playback": {
             "canvas": {
@@ -823,8 +820,8 @@
     };
 
     function createBundledLayout(id) {
-        if (!BUNDLED_PRESETS.some(preset => preset.id === id)) return null;
-        return composer.normalizeLayout(BUNDLED_LAYOUTS[id]);
+        if (BUNDLED_PRESETS.some(preset => preset.id === id)) return globalThis.YtCdHudPanelPack.create(id, composer);
+        return Object.hasOwn(BUNDLED_LAYOUTS, id) ? composer.normalizeLayout(BUNDLED_LAYOUTS[id]) : null;
     }
 
     function sessionStorage() {
@@ -874,16 +871,18 @@
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'lm-layout-bundled-choice';
+            button.title = preset.description;
             button.dataset.lmBundledPreset = preset.id;
             const label = document.createElement('strong');
-            label.dataset.i18n = preset.labelKey;
-            label.textContent = preset.id === 'compact-playback' ? 'Compact playback' : 'Tracklist reader';
+
+            label.textContent = preset.label;
             const description = document.createElement('span');
-            description.dataset.i18n = preset.descriptionKey;
-            description.textContent = preset.id === 'compact-playback' ? 'A small panel with playback essentials.' : 'Larger text with a persistent tracklist on the right.';
+
+            description.textContent = preset.description;
             button.append(label, description);
             button.addEventListener('click', () => {
                 editor.setLayout(createBundledLayout(preset.id));
+                (bundledChoices.querySelectorAll?.('button') || []).forEach(node => node.setAttribute('aria-pressed', String(node === button)));
                 onChange(editor.state.layout, 'bundled-preset-load');
                 status.textContent = globalThis.YtCdHudI18n?.translate('options.presetLoaded', document.documentElement.lang)
                     || 'Built-in panel loaded. Save and apply to use it on YouTube.';
@@ -895,19 +894,30 @@
         const foundation = document.createElement('div');
         foundation.className = 'lm-layout-foundation';
         const primaryLabel = document.createElement('label');
-        primaryLabel.innerHTML = '<span>PRIMARY</span>';
+        primaryLabel.innerHTML = '<span>主題色</span>';
         const primary = document.createElement('input');
         primary.type = 'color';
         primary.dataset.lmPalette = 'primaryColor';
         primaryLabel.appendChild(primary);
         const secondaryLabel = document.createElement('label');
-        secondaryLabel.innerHTML = '<span>SECONDARY</span>';
+        secondaryLabel.innerHTML = '<span>輔色</span>';
         const secondary = document.createElement('input');
         secondary.type = 'color';
         secondary.dataset.lmPalette = 'secondaryColor';
         secondaryLabel.appendChild(secondary);
+        function paletteOpacity(label, key) {
+            const input = document.createElement('input'); input.type = 'range'; input.min = '0'; input.max = '1'; input.step = '.01';
+            input.dataset.lmPalette = key;
+            input.setAttribute('aria-label', key === 'primaryOpacity' ? '主題色不透明度' : '輔色不透明度');
+            const output = document.createElement('output');
+            input.addEventListener('input', () => { editor.updatePalette({ [key]: Number(input.value) }); output.value = Math.round(Number(input.value) * 100) + '%'; });
+            label.append(input, output);
+            return { input, output };
+        }
+        const primaryOpacity = paletteOpacity(primaryLabel, 'primaryOpacity');
+        const secondaryOpacity = paletteOpacity(secondaryLabel, 'secondaryOpacity');
         const viewportLabel = document.createElement('label');
-        viewportLabel.innerHTML = '<span>VIEWPORT</span>';
+        viewportLabel.innerHTML = '<span>畫布尺寸 · PX</span>';
         const viewport = document.createElement('select');
         viewport.dataset.lmCanvasPreset = 'true';
         composer.VIEWPORT_PRESETS.forEach(preset => {
@@ -917,18 +927,19 @@
             viewport.appendChild(option);
         });
         viewportLabel.appendChild(viewport);
-        const sizingLabel = document.createElement('label');
-        sizingLabel.innerHTML = '<span>SIZE MODE</span>';
-        const sizing = document.createElement('select');
-        sizing.dataset.lmSizingMode = 'true';
-        [['absolute', 'ABS · PX'], ['relative', 'REL · %']].forEach(([value, label]) => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = label;
-            sizing.appendChild(option);
+        foundation.append(primaryLabel, secondaryLabel, viewportLabel);
+        const mounted = document.createElement('select');
+        mounted.setAttribute('aria-label', '選取面板元件');
+        mounted.addEventListener('change', () => {
+            editor.select(mounted.value);
+            editor.centerView(mounted.value);
+            document.querySelector('[data-lm-component="' + mounted.value + '"]')?.focus({ preventScroll: true });
         });
-        sizingLabel.appendChild(sizing);
-        foundation.append(primaryLabel, secondaryLabel, viewportLabel, sizingLabel);
+        const panelLock = document.createElement('button');
+        panelLock.type = 'button';
+        panelLock.className = 'secondary-button';
+        panelLock.title = '鎖定組件的相對位置；YouTube 上仍可拖移整塊面板。';
+        panelLock.addEventListener('click', () => editor.setLocked(!editor.state.layout.locked));
         const reset = document.createElement('button');
         reset.type = 'button';
         reset.className = 'lm-layout-reset';
@@ -1011,7 +1022,17 @@
             sync();
         });
         pack.append(scope, scale, applyScale, undoScale);
-        shell.append(bundled, foundation, pack, reset, align, slots, actions, status);
+        const center = document.createElement('button');
+        center.type = 'button'; center.textContent = '置中面板';
+        center.addEventListener('click', () => editor.centerView());
+        const extra = document.createElement('details'); extra.className = 'lm-layout-extra';
+        const summary = document.createElement('summary'); summary.textContent = '暫存與尺寸工具';
+        extra.append(summary, slots, actions, pack, reset);
+        shell.append(mounted, align, center, extra, status);
+        const lockHost = document.getElementById('live-monitor-panel-lock');
+        (lockHost || shell).appendChild(panelLock);
+        const theme = document.getElementById('live-monitor-theme');
+        (theme || shell).append(bundled, foundation);
         host.appendChild(shell);
         globalThis.YtCdHudI18n?.localizeDocument(shell, document.documentElement.lang);
         let selectedSlot = 'A';
@@ -1019,13 +1040,26 @@
 
         function sync() {
             const layout = editor.state.layout;
+            mounted.replaceChildren();
+            const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = '選取元件（包含透明元件）'; mounted.appendChild(placeholder);
+            layout.components.filter(item => item.present).forEach(item => {
+                const option = document.createElement('option'); option.value = item.id; option.textContent = composer.registry[item.id].label + (item.hidden ? ' · 不顯示' : '') + (item.locked ? ' · LOCK' : ''); mounted.appendChild(option);
+            });
+            mounted.value = editor.state.selected || '';
+            primaryOpacity.input.value = String(layout.palette.primaryOpacity ?? 1);
+            secondaryOpacity.input.value = String(layout.palette.secondaryOpacity ?? 1);
+            for (const control of [primaryOpacity, secondaryOpacity]) { control.input.disabled = layout.locked; control.output.value = Math.round(Number(control.input.value) * 100) + '%'; }
             primary.value = layout.palette.primaryColor;
             secondary.value = layout.palette.secondaryColor;
-            sizing.value = layout.canvas.sizingMode;
+            panelLock.textContent = layout.locked ? 'UNLOCK · 編輯面板' : 'LOCK · 完成排版';
+            panelLock.setAttribute('aria-pressed', String(layout.locked));
+            panelLock.dataset.lmLockState = String(layout.locked);
+            [primary, secondary, viewport, align, applyScale, scope, scale].forEach(node => { node.disabled = layout.locked; });
+            (document.querySelectorAll?.('#theme-font, #theme-custom-font, #theme-font-size') || []).forEach(node => { node.disabled = layout.locked; });
             viewport.value = composer.VIEWPORT_PRESETS.find(preset => preset.width === layout.canvas.width && preset.height === layout.canvas.height)?.id || 'hd';
             align.setAttribute('aria-pressed', layout.canvas.alignmentGrid.enabled ? 'true' : 'false');
             const caption = document.getElementById('live-monitor-canvas-status');
-            if (caption) caption.textContent = `YOUTUBE PLAYER / ${layout.canvas.width}×${layout.canvas.height} / ${layout.canvas.sizingMode === 'relative' ? 'REL' : 'ABS'}`;
+            if (caption) caption.textContent = '拖曳空白處平移視野 · 右下角調整工作區';
         }
 
         async function render() {
@@ -1057,17 +1091,17 @@
             if (preset) editor.updateViewport(preset.width, preset.height);
             sync();
         });
-        sizing.addEventListener('change', () => {
-            editor.updateSizingMode(sizing.value);
-            sync();
-        });
-
         save.addEventListener('click', async () => {
-            const current = await readSlots();
-            current[selectedSlot] = editor.getLayout();
-            await writeSlots(current);
-            status.textContent = 'Style ' + selectedSlot + ' stored for this browser session.';
-            await render();
+            try {
+                const current = await readSlots();
+                current[selectedSlot] = composer.prepareForSave(editor.getLayout());
+                if (!composer.connectedToBase(current[selectedSlot], composer.getComponent(current[selectedSlot], 'panel-base'))) throw new Error('所有元件都必須與底座接觸。');
+                current[selectedSlot].locked = true;
+                await writeSlots(current);
+                editor.setLayout(current[selectedSlot]);
+                status.textContent = 'Style ' + selectedSlot + ' stored for this browser session.';
+                await render();
+            } catch (error) { status.textContent = '儲存失敗：' + error.message; }
         });
         load.addEventListener('click', () => {
             const layout = storedSlots[selectedSlot];
