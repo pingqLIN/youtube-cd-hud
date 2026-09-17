@@ -1,3 +1,4 @@
+/* ── Design tokens ─────────────────────────────────────────── */
 :root {
     color-scheme: dark;
     --paper: #0b0f12;
@@ -39,7 +40,7 @@ button, input, textarea { font: inherit; }
     align-items: center;
     width: min(1680px, calc(100% - 48px));
     margin: 0 auto;
-    padding: 12px 0;
+    padding: 16px 0;
     border-bottom: 1px solid var(--line);
 }
 
@@ -83,20 +84,13 @@ main { width: min(1680px, calc(100% - 48px)); margin: 0 auto; }
 
 html { scroll-padding-bottom: 112px; }
 main { padding-bottom: 112px; }
+
+/* ── Quick settings (master switch + language) ─────────────── */
 .quick-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .quick-settings > section { padding: 12px 0; gap: 16px; min-width: 0; }
 .quick-settings h2 { font-size: 15px; margin-bottom: 4px; }
 .quick-settings .section-index { margin-bottom: 4px; }
 .quick-settings p:last-child { margin-bottom: 0; font-size: 10px; }
-.appearance-tools { display: grid; gap: 8px; margin-bottom: 12px; }
-.appearance-details { padding: 10px 12px; border: 1px solid var(--line-soft); }
-.appearance-details > summary { cursor: pointer; margin: 0; }
-.appearance-details > summary h2 { font-size: 14px; margin: 0; }
-.appearance-details > summary .section-index { margin: 0; }
-.appearance-details > summary:after { content: '+'; margin-left: auto; color: var(--muted); }
-.appearance-details[open] > summary:after { content: '−'; }
-.appearance-details[open] > summary { margin-bottom: 12px; }
-.appearance-details > summary:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
 
 .master-strip {
     display: flex;
@@ -139,6 +133,7 @@ main { padding-bottom: 112px; }
 
 .master-strip p:last-child { margin: 7px 0 0; color: var(--muted); font-size: 11px; }
 
+/* ── Power switch ──────────────────────────────────────────── */
 .power-switch { display: flex; align-items: center; gap: 12px; cursor: pointer; }
 .power-switch input, .switch-row input { position: absolute; opacity: 0; pointer-events: none; }
 .power-switch span {
@@ -162,9 +157,64 @@ main { padding-bottom: 112px; }
 .power-switch input:checked + span:after { background: var(--signal); transform: translateX(30px); }
 .power-switch b { font-size: 12px; letter-spacing: .1em; }
 
-.control-grid { display: grid; grid-template-columns: minmax(360px, .8fr) minmax(560px, 1.2fr); }
-.settings-rail { border-right: 1px solid var(--line); }
-.control-section { padding: 28px 32px 30px 0; border-bottom: 1px solid var(--line); }
+/* ── Tab Navigation ────────────────────────────────────────── */
+/*
+ * CSS-only radio tab system.
+ * The two <input type="radio"> elements (tab-radio) appear directly inside
+ * <form> before the <nav.page-tabs> and the two <section.tab-panel> siblings.
+ * This allows the general sibling combinator (~) to target them.
+ */
+.page-tabs {
+    display: flex;
+    gap: 2px;
+    margin-top: 24px;
+    border-bottom: 1px solid var(--line);
+}
+.tab-radio { position: absolute; opacity: 0; pointer-events: none; }
+.tab-label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 22px 12px;
+    border: 1px solid transparent;
+    border-bottom: none;
+    margin-bottom: -1px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+    user-select: none;
+}
+.tab-label:hover { color: var(--ink); border-color: var(--line-soft); background: var(--panel); }
+.tab-icon { font-size: 13px; line-height: 1; margin-bottom: 2px; }
+.tab-text { font: 700 11px/1 var(--mono); letter-spacing: .12em; }
+.tab-sub { font: 400 9px/1 var(--mono); letter-spacing: .06em; opacity: .7; }
+
+/* Active state: sibling combinator requires radios before .page-tabs in DOM */
+#tab-studio:checked ~ .page-tabs .tab-label[for="tab-studio"],
+#tab-sources:checked ~ .page-tabs .tab-label[for="tab-sources"] {
+    color: var(--signal);
+    border-color: var(--line);
+    background: var(--paper);
+}
+
+/* ── Tab Panels ────────────────────────────────────────────── */
+.tab-panel { display: none; padding-top: 20px; }
+#tab-studio:checked  ~ #panel-studio  { display: block; }
+#tab-sources:checked ~ #panel-sources { display: block; }
+
+/* ── Theme strip (Studio > top section) ────────────────────── */
+.theme-strip {
+    margin-bottom: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+}
+.theme-strip-header { margin-bottom: 10px; }
+.theme-strip-header .section-index { margin-bottom: 4px; }
+#live-monitor-theme { margin-bottom: 8px; }
+
+/* ── Source settings (Sources tab panel) ────────────────────── */
+.control-section { padding: 28px 0 30px; border-bottom: 1px solid var(--line); }
 .section-heading { position: relative; margin-bottom: 20px; }
 .status-lamp {
     position: absolute;
@@ -177,7 +227,13 @@ main { padding-bottom: 112px; }
     box-shadow: 0 0 14px rgba(197, 238, 101, .45);
 }
 
+/* ── Switch list ───────────────────────────────────────────── */
 .switch-list { border-top: 1px solid var(--line-soft); }
+#panel-sources .switch-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0 24px;
+}
 .switch-row {
     display: grid;
     grid-template-columns: 1fr 38px;
@@ -209,6 +265,7 @@ main { padding-bottom: 112px; }
 .switch-row input:checked + i { border-color: var(--signal); }
 .switch-row input:checked + i:after { transform: translateX(18px); background: var(--signal); }
 
+/* ── Dial/range grid ───────────────────────────────────────── */
 .dial-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 22px; }
 .visual-dials { grid-template-columns: repeat(2, 1fr); }
 .field-block {
@@ -239,6 +296,7 @@ main { padding-bottom: 112px; }
     cursor: ew-resize;
 }
 
+/* ── Misc form helpers ──────────────────────────────────────── */
 .compact { margin-bottom: 24px; }
 .color-field {
     display: flex;
@@ -298,32 +356,24 @@ code { color: var(--signal); font-family: inherit; }
 }
 .css-editor textarea:focus { border-color: var(--signal); box-shadow: inset 1px 0 0 var(--signal), 0 0 0 1px var(--signal-dim); }
 
-.preview-rail {
-    min-width: 0;
-    padding: 28px 0 32px 32px;
-    background: linear-gradient(90deg, rgba(197, 238, 101, .025), transparent 18%);
-}
+/* ── Legacy layout scaffold (overridden by live-monitor block below) ─── */
+/*
+ * These rules are required by the test suite (live-monitor.test.mjs).
+ * They are superseded by the live-monitor canvas editor overrides further
+ * down in this file, which change aspect-ratio, position, sticky, etc.
+ */
+.control-grid { display: grid; grid-template-columns: minmax(360px, .8fr) minmax(560px, 1.2fr); }
+.preview-workbench { position: sticky; top: 24px; z-index: 20; }
+.preview-properties { min-width: 0; margin-top: -1px; }
+
+
+/* ── Preview canvas area ────────────────────────────────────── */
 .preview-heading {
     display: flex;
     align-items: end;
     justify-content: space-between;
     gap: 24px;
     margin-bottom: 20px;
-}
-.preview-heading:after {
-    content: "CANVAS  /  16:9";
-    color: var(--muted);
-    font: 600 9px/1 var(--mono);
-    letter-spacing: .14em;
-}
-.preview-properties {
-    min-width: 0;
-    margin-top: -1px;
-}
-.preview-workbench {
-    position: sticky;
-    top: 24px;
-    z-index: 20;
 }
 .preview-stage {
     position: relative;
@@ -349,6 +399,7 @@ code { color: var(--signal); font-family: inherit; }
 }
 .preview-caption { position: absolute; left: 14px; bottom: 8px; margin: 0; color: #596365; font-size: 9px; letter-spacing: .08em; }
 
+/* ── HUD preview element ────────────────────────────────────── */
 .hud-preview {
     --preview-accent: #63b3ed;
     --preview-opacity: .85;
@@ -594,11 +645,13 @@ code { color: var(--signal); font-family: inherit; }
 .hud-preview.hide-transport .preview-transport,
 .hud-preview.hide-1001 .source-1001 { display: none; }
 
+/* ── Scope metadata list ────────────────────────────────────── */
 .scope-list { margin: 24px 0 0; border-top: 1px solid var(--line-soft); }
 .scope-list div { display: flex; justify-content: space-between; gap: 20px; padding: 11px 0; border-bottom: 1px solid var(--line-soft); font-size: 10px; }
 .scope-list dt { color: var(--muted); }
 .scope-list dd { margin: 0; color: var(--ink); text-align: right; }
 
+/* ── Fixed action bar ───────────────────────────────────────── */
 .action-bar {
     position: fixed;
     z-index: 1000;
@@ -639,14 +692,11 @@ input:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
+/* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 980px) {
     .quick-settings { grid-template-columns: 1fr; gap: 0; }
     .console-header { align-items: start; }
-    .control-grid { grid-template-columns: 1fr; }
-    .settings-rail { border-right: 0; }
     .control-section { padding-right: 0; }
-    .preview-rail { padding-left: 0; background: transparent; }
-    .preview-workbench { position: relative; top: auto; }
 }
 
 @media (max-width: 560px) {
@@ -666,6 +716,8 @@ input:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-
     .action-bar button { min-width: 0; }
     .component-library-heading { align-items: start; flex-direction: column; gap: 6px; }
     .component-library-heading p { text-align: left; }
+    .tab-label { padding: 8px 14px 10px; }
+    .tab-sub { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -675,7 +727,7 @@ input:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-
     .preview-title.lm-effect-marquee .lm-marquee-label:after { display: none; }
 }
 
-/* A resizable viewport displays the fixed-pixel design without scrollbars. */
+/* ── Studio section boxes ───────────────────────────────────── */
 .studio-section { margin-bottom: 18px; padding: 18px; border: 1px solid var(--line); background: var(--panel); }
 .studio-heading { margin-bottom: 16px; }
 .studio-heading > span { color: var(--signal); font: 10px var(--mono); letter-spacing: .12em; }
@@ -686,6 +738,8 @@ input:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-
 .theme-type-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-top: 16px; }
 .theme-type-grid label { display: grid; gap: 8px; font-size: 11px; }
 .theme-type-grid input, .theme-type-grid select { width: 100%; min-height: 34px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); }
+
+/* ── Live monitor canvas editor overrides ────────────────────── */
 .preview-stage { height: 480px; min-height: 240px; min-width: min(320px, 100%); max-width: 100%; aspect-ratio: auto; overflow: hidden; resize: both; }
 .hud-preview { position: absolute; inset: auto; flex: none; }
 .preview-caption { position: absolute; left: 12px; bottom: 0; width: max-content; padding: 6px; background: var(--paper); pointer-events: none; }
@@ -707,18 +761,6 @@ input:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-
 .lm-layout-controls button[data-lm-lock-state="true"],
 .lm-property-toolbar button[data-lm-lock-state="true"] { color: var(--danger); }
 
-/* Keep the canvas and its tools together; source settings are secondary. */
-.console-header { padding-top: 16px; padding-bottom: 16px; }
-.control-grid { display: flex; flex-direction: column; }
-.preview-rail { order: 0; padding: 12px 0; background: none; }
-.settings-rail { order: 1; border: 1px solid var(--line); padding: 12px 16px; }
-.settings-rail > summary { cursor: pointer; color: var(--muted); font-size: 12px; }
-.settings-rail .control-section { padding: 16px 0 0; }
-.settings-rail .switch-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 24px; }
-.preview-heading { justify-content: flex-start; align-items: center; gap: 12px; margin-bottom: 8px; }
-.preview-heading h2 { font-size: 16px; margin: 0; }
-.preview-heading .section-index { margin: 0; }
-.preview-heading:after { content: none; }
 .studio-section { padding: 12px; margin-bottom: 12px; }
 .studio-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 10px; }
 .studio-heading h3 { margin: 0; font-size: 14px; }
@@ -736,9 +778,9 @@ input:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-
 #live-monitor-theme .lm-layout-foundation label > span { grid-column: 1 / -1; font-size: 10px; }
 #live-monitor-theme .lm-layout-foundation input[type="range"] { width: 100%; min-width: 0; }
 #live-monitor-theme .lm-layout-foundation select { grid-column: 1 / -1; width: 100%; }
-.theme-section .studio-detail { margin-top: 8px; padding-top: 0; border: 0; }
-.theme-section .studio-detail summary { font-size: 11px; color: var(--muted); }
-.theme-section .theme-type-grid { margin-top: 8px; }
+.theme-strip .studio-detail { margin-top: 8px; padding-top: 0; border: 0; }
+.theme-strip .studio-detail summary { font-size: 11px; color: var(--muted); }
+.theme-strip .theme-type-grid { margin-top: 8px; }
 .studio-section .component-library-shell { padding: 8px 0; margin-bottom: 8px; border: 0; box-shadow: none; background: none; }
 .component-library-shell > summary { cursor: pointer; font-size: 11px; color: var(--signal); }
 #live-monitor-layout-controls .lm-layout-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0; margin-bottom: 10px; border: 0; box-shadow: none; background: none; }
