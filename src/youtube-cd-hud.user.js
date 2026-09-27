@@ -1188,14 +1188,19 @@
         const query = trim(String(trackTitle || ''));
         const provider = getCatalogSearchProvider(runtimeSettings.catalogSearch);
         const url = getCatalogTrackSearchUrl(query, provider.id);
-        element.href = url || '#';
-        element.target = url ? '_blank' : '_self';
-        element.rel = url ? 'noopener noreferrer' : '';
         if (!url) {
+            element.removeAttribute('href');
+            element.removeAttribute('target');
+            element.removeAttribute('rel');
+            element.setAttribute('aria-disabled', 'true');
             element.title = t('searchCatalogUnavailable');
             element.setAttribute('aria-label', t('searchCatalogUnavailable'));
             return;
         }
+        element.href = url;
+        element.target = '_blank';
+        element.rel = 'noopener noreferrer';
+        element.removeAttribute('aria-disabled');
         element.title = t('searchCatalog', { service: provider.label, track: query });
         element.setAttribute('aria-label', t('searchCatalogAria', { service: provider.label, track: query }));
     }
@@ -5804,6 +5809,7 @@
             isUnresolvedCatalogTitle,
             getCatalogTrackSearchUrl,
             getActiveCatalogTrackSearchUrl,
+            bindCatalogSearchLink,
             getCandidateActionState,
             getMixesDbExactSourceLookupUrl,
             getTracklistSourcePage,

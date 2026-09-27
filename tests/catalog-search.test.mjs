@@ -35,6 +35,7 @@ vm.runInContext(source, sandbox, { filename: sourcePath });
 const {
   getCatalogTrackSearchUrl,
   getActiveCatalogTrackSearchUrl,
+  bindCatalogSearchLink,
   isUnresolvedCatalogTitle,
   normalizeCatalogSearchProvider,
 } = sandbox.__YT_CD_HUD_TEST_EXPORTS__;
@@ -87,6 +88,59 @@ test('uses the Beatport catalog by default for the HUD title link', () => {
     getActiveCatalogTrackSearchUrl(title),
     'https://www.beatport.com/search?q=' + encoded,
   );
+});
+
+function createFakeAnchor(initialAttributes = {}) {
+  const attributes = new Map(Object.entries(initialAttributes));
+  const element = {
+    title: '',
+    setAttribute(name, value) {
+      attributes.set(name, String(value));
+    },
+    getAttribute(name) {
+      return attributes.get(name) ?? null;
+    },
+    hasAttribute(name) {
+      return attributes.has(name);
+    },
+    removeAttribute(name) {
+      attributes.delete(name);
+    },
+  };
+  for (const name of ['href', 'target', 'rel']) {
+    Object.defineProperty(element, name, {
+      get: () => attributes.get(name) ?? '',
+      set: value => attributes.set(name, String(value)),
+    });
+  }
+  return element;
+}
+
+test('removes navigation and exposes disabled semantics for unresolved titles', () => {
+  const anchor = createFakeAnchor({
+    href: 'https://www.beatport.com/search?q=previous',
+    target: '_blank',
+    rel: 'noopener noreferrer',
+  });
+
+  bindCatalogSearchLink(anchor, 'ID - ID');
+
+  assert.equal(anchor.hasAttribute('href'), false);
+  assert.equal(anchor.hasAttribute('target'), false);
+  assert.equal(anchor.hasAttribute('rel'), false);
+  assert.equal(anchor.getAttribute('aria-disabled'), 'true');
+  assert.equal(anchor.getAttribute('aria-label'), 'This track has no searchable catalog title');
+});
+
+test('restores link semantics when a resolved title replaces an unresolved title', () => {
+  const anchor = createFakeAnchor({ 'aria-disabled': 'true' });
+
+  bindCatalogSearchLink(anchor, title);
+
+  assert.equal(anchor.getAttribute('href'), 'https://www.beatport.com/search?q=' + encoded);
+  assert.equal(anchor.getAttribute('target'), '_blank');
+  assert.equal(anchor.getAttribute('rel'), 'noopener noreferrer');
+  assert.equal(anchor.hasAttribute('aria-disabled'), false);
 });
 
 const settingsSource = fs.readFileSync(path.join(projectRoot, 'extension', 'shared', 'settings.js'), 'utf8');
