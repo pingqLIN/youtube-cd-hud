@@ -15,25 +15,60 @@
     function bind() {
         const font = document.getElementById('settings-font-size');
         const output = document.getElementById('settings-font-size-output');
-        if (font) {
-            font.value = String(fontScale);
+        const btnDec = document.getElementById('settings-font-decrease');
+        const btnInc = document.getElementById('settings-font-increase');
+
+        function updateFont(value, persist = true) {
+            fontScale = Math.min(150, Math.max(80, Number(value) || 100));
+            applyFontScale();
+            if (font) font.value = String(fontScale);
             if (output) output.textContent = fontScale + '%';
-            font.addEventListener('input', () => {
-                fontScale = Math.min(150, Math.max(80, Number(font.value) || 100));
-                applyFontScale();
-                if (output) output.textContent = fontScale + '%';
-                try { localStorage.setItem('ytCdHudOptionsFontScale', String(fontScale)); } catch {}
-            });
+            if (btnDec) btnDec.disabled = fontScale <= 80;
+            if (btnInc) btnInc.disabled = fontScale >= 150;
+            if (persist) { try { localStorage.setItem('ytCdHudOptionsFontScale', String(fontScale)); } catch {} }
         }
 
-        const select = document.getElementById('interface-theme');
-        if (!select) return;
-        select.value = theme;
-        select.addEventListener('change', () => {
-            theme = select.value === 'light' ? 'light' : 'dark';
+        updateFont(fontScale, false);
+
+        if (btnDec) {
+            btnDec.addEventListener('click', () => updateFont(fontScale - 5));
+        }
+        if (btnInc) {
+            btnInc.addEventListener('click', () => updateFont(fontScale + 5));
+        }
+        if (font) {
+            font.addEventListener('input', () => updateFont(font.value));
+        }
+
+        const themeTarget = document.getElementById('interface-theme');
+        if (!themeTarget) return;
+
+        function updateThemeDisplay() {
+            themeTarget.value = theme;
+            themeTarget.setAttribute?.('data-theme', theme);
+            const isDark = theme === 'dark';
+            const icon = themeTarget.querySelector?.('.theme-icon') || themeTarget;
+            if (icon && (themeTarget.tagName === 'BUTTON' || icon !== themeTarget)) {
+                icon.textContent = isDark ? '☀' : '☾';
+            }
+            const label = isDark ? '切換至明亮主題' : '切換至黑暗主題';
+            themeTarget.setAttribute?.('title', label);
+            themeTarget.setAttribute?.('aria-label', label);
+        }
+
+        function setTheme(nextTheme) {
+            theme = nextTheme === undefined ? (theme === 'light' ? 'dark' : 'light') : (nextTheme === 'light' ? 'light' : 'dark');
             document.documentElement.dataset.theme = theme;
+            updateThemeDisplay();
             try { localStorage.setItem(key, theme); } catch { /* The choice still works for this page. */ }
-        });
+        }
+
+        updateThemeDisplay();
+
+        if (themeTarget.tagName === 'BUTTON') {
+            themeTarget.addEventListener('click', () => setTheme());
+        }
+        themeTarget.addEventListener('change', () => setTheme(themeTarget.value));
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once: true });
     else bind();

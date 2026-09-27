@@ -79,3 +79,48 @@ test('empty Chrome storage reads the authored default without writing or replaci
     assert.deepEqual(plain(existing.snapshot.layout), legacy);
     assert.equal(writes, 0);
 });
+
+test('YtCdHudPanelPack new preset ids satisfy purpose-axis constraints', () => {
+    const context = composerContext();
+    vm.runInNewContext(read('extension/options/panel-presets.js'), context);
+    const composer = context.YtCdHudLiveMonitorComposer;
+    const pack = context.YtCdHudPanelPack;
+
+    // All presets (including new ones): baseline contract
+    for (const preset of pack.presets) {
+        const layout = pack.create(preset.id, composer);
+        assert.equal(layout.placement, undefined, preset.id + ' placement');
+        assert.equal(layout.locked, false, preset.id + ' locked');
+        assert.equal(composer.connectedToBase(layout, composer.getComponent(layout, 'panel-base')), true,
+            preset.id + ' connectedToBase');
+        assert.equal(composer.getComponent(layout, 'track-title').textStyle.font, 'Segoe UI',
+            preset.id + ' track-title font');
+    }
+
+    // Purpose A — ambient-quiet: no tracklist-panel, no source-selector; base opacity ≤ 0.45
+    for (const id of ['ambient-quiet']) {
+        const layout = pack.create(id, composer);
+        assert.equal(composer.getComponent(layout, 'tracklist-panel').present, false, id + ' tracklist absent');
+        assert.equal(composer.getComponent(layout, 'source-selector').present,    false, id + ' source absent');
+        assert.ok(composer.getComponent(layout, 'panel-base').style.opacity <= 0.45,
+            id + ' base opacity ≤ 0.45');
+    }
+
+    // Purpose B — crate-ledger: tracklist-panel present, source-selector present
+    for (const id of ['crate-ledger']) {
+        const layout = pack.create(id, composer);
+        assert.equal(composer.getComponent(layout, 'tracklist-panel').present, true, id + ' tracklist present');
+        assert.equal(composer.getComponent(layout, 'source-selector').present,  true, id + ' source present');
+    }
+
+    // Purpose C — shop-poster: disc ≥ 160 px, title fontSize ≥ 28
+    for (const id of ['shop-poster']) {
+        const layout = pack.create(id, composer);
+        const disc  = composer.getComponent(layout, 'disc');
+        const title = composer.getComponent(layout, 'track-title');
+        assert.ok(disc.present, id + ' disc present');
+        assert.ok(disc.geometry.width  >= 160, id + ' disc width ≥ 160 (' + disc.geometry.width + ')');
+        assert.ok(disc.geometry.height >= 160, id + ' disc height ≥ 160 (' + disc.geometry.height + ')');
+        assert.ok(title.textStyle.fontSize >= 28, id + ' title fontSize ≥ 28 (' + title.textStyle.fontSize + ')');
+    }
+});

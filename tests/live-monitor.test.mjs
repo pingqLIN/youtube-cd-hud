@@ -436,7 +436,7 @@ test('keeps numbered layouts in local storage and normalizes restored data', asy
   composer.getComponent(layout, 'track-title').style.opacity = .55;
   await presets.writeSlots({ '7': layout, ignored: layout });
   const slots = await presets.readSlots();
-  assert.deepEqual(JSON.parse(JSON.stringify(Object.keys(slots))), ['0', '1', '2', '3', '7']);
+  assert.deepEqual(JSON.parse(JSON.stringify(Object.keys(slots))), ['0', '1', '2', '3', '4', '5', '6', '7']);
   assert.equal(composer.getComponent(slots['7'], 'track-title').style.opacity, .55);
   assert.equal(presets.STORAGE_KEY, 'ytCdHudLayoutSlotsV2');
 });
@@ -444,8 +444,8 @@ test('keeps numbered layouts in local storage and normalizes restored data', asy
 test('ships three fresh built-in panels without relying on session slots', async () => {
   const composer = loadComposer();
   const presets = loadLayoutPresets(composer);
-  assert.deepEqual([...presets.BUNDLED_PRESETS].map(preset => preset.id), ['full', 'compact', 'invisible']);
-  assert.deepEqual(Object.keys(await presets.readSlots()), ['0', '1', '2', '3']);
+  assert.deepEqual([...presets.BUNDLED_PRESETS].map(preset => preset.id), ['full', 'compact', 'invisible', 'ambient-quiet', 'crate-ledger', 'shop-poster']);
+  assert.deepEqual(Object.keys(await presets.readSlots()), ['0', '1', '2', '3', '4', '5', '6']);
   assert.equal(presets.createBundledLayout('unknown'), null);
   const compact = presets.createBundledLayout('compact');
   const reader = presets.createBundledLayout('full');
@@ -457,7 +457,7 @@ test('ships three fresh built-in panels without relying on session slots', async
   await presets.writeSlots({ '7': compact });
   assert.equal(composer.getComponent(presets.createBundledLayout('compact'), 'track-title').textStyle.fontSize, 18);
   const nextSession = loadLayoutPresets(composer);
-  assert.deepEqual(Object.keys(await nextSession.readSlots()), ['0', '1', '2', '3']);
+  assert.deepEqual(Object.keys(await nextSession.readSlots()), ['0', '1', '2', '3', '4', '5', '6']);
   assert.deepEqual(JSON.parse(JSON.stringify(nextSession.createBundledLayout('full'))), JSON.parse(JSON.stringify(reader)));
 });
 
@@ -472,9 +472,19 @@ test('built-in panels survive storage and runtime normalization with usable geom
   } } } };
   vm.runInNewContext(read('extension/options/live-monitor-layout-store.js'), context);
   const store = context.YtCdHudLiveMonitorLayoutStore;
+  // Component presence by preset purpose
+  const purposeAIds = new Set(['ambient-quiet']);
+  const purposeBIds = new Set(['crate-ledger']);
+  const purposeCIds = new Set(['shop-poster']);
   for (const preset of presets.BUNDLED_PRESETS) {
     const layout = presets.createBundledLayout(preset.id);
-    for (const id of ['panel-base', 'track-title', 'time-readout', ...(preset.id === 'invisible' ? [] : ['transport-controls']), ...(preset.id === 'full' ? ['disc', 'source-selector', 'close-control', 'tracklist-panel'] : [])]) {
+    // purpose-A strip presets have no transport-controls; purpose-C poster has none either
+    const hasTransport = !purposeAIds.has(preset.id) && !purposeCIds.has(preset.id) && preset.id !== 'invisible';
+    for (const id of ['panel-base', 'track-title', 'time-readout',
+      ...(hasTransport ? ['transport-controls'] : []),
+      ...(preset.id === 'full' || purposeBIds.has(preset.id) ? ['disc', 'source-selector', 'close-control', 'tracklist-panel'] : []),
+      ...(purposeCIds.has(preset.id) ? ['disc'] : []),
+    ]) {
       assert.equal(composer.getComponent(layout, id).present, true, preset.id + ': ' + id);
     }
     for (const component of layout.components.filter(item => item.present && item.boundary?.collision)) {
@@ -566,17 +576,24 @@ test('authored slate presets retain surfaces and typography through export, save
     async get() { return saved; }, async set(value) { Object.assign(saved, plain(value)); },
   } } } };
   vm.runInNewContext(read('extension/options/live-monitor-layout-store.js'), context);
+  const originalPresets = new Set(['full', 'compact', 'invisible']);
   for (const preset of presets.BUNDLED_PRESETS) {
     const layout = presets.createBundledLayout(preset.id);
     const base = composer.getComponent(layout, 'panel-base');
-    assert.equal(base.style.backgroundColor, '#404549');
-    assert.equal(base.style.opacity, preset.id === 'invisible' ? 0 : 1);
-    assert.equal(composer.getComponent(layout, 'track-title').style.backgroundEnabled !== false, preset.id !== 'invisible');
-    if (preset.id !== 'invisible') {
-      assert.equal(composer.getComponent(layout, 'track-title').style.backgroundColor, '#4a4e52');
-      assert.equal(composer.getComponent(layout, 'transport-controls').style.backgroundColor, '#2d3135');
+    // Palette assertions: original 3 presets keep the legacy #404549 / #c5ee65 pair.
+    // New purpose presets use their own language palette; assert internal consistency.
+    if (originalPresets.has(preset.id)) {
+      assert.equal(base.style.backgroundColor, '#404549', preset.id + ' base bg');
+      assert.equal(base.style.opacity, preset.id === 'invisible' ? 0 : 1, preset.id + ' base opacity');
+      if (preset.id !== 'invisible') {
+        assert.equal(composer.getComponent(layout, 'track-title').style.backgroundColor, '#4a4e52', preset.id + ' title bg');
+        assert.equal(composer.getComponent(layout, 'transport-controls').style.backgroundColor, '#2d3135', preset.id + ' transport bg');
+      }
+      assert.equal(composer.getComponent(layout, 'time-readout').textStyle.color, '#c5ee65', preset.id + ' time color');
+    } else {
+      // New presets: base backgroundColor matches their palette primaryColor
+      assert.equal(base.style.backgroundColor, layout.palette.primaryColor, preset.id + ' base bg = palette primary');
     }
-    assert.equal(composer.getComponent(layout, 'time-readout').textStyle.color, '#c5ee65');
     layout.locked = true;
     const imported = composer.importCode(composer.exportCode(layout));
     await context.YtCdHudLiveMonitorLayoutStore.save(imported,'test-base');
@@ -1745,9 +1762,10 @@ test('numbered slots persist across instances, migrate legacy slots and reset on
   await second.resetSlots();
   const restored = await first.readSlots();
   assert.equal(JSON.stringify(restored['0']), JSON.stringify(composer.createDefaultLayout()));
-  for (const [index, id] of ['full', 'compact', 'invisible'].entries()) {
+  for (const [index, id] of ['full', 'compact', 'invisible', 'ambient-quiet', 'crate-ledger', 'shop-poster'].entries()) {
     assert.equal(JSON.stringify(restored[String(index + 1)]), JSON.stringify(first.createBundledLayout(id)));
   }
-  assert.equal(restored['4'].palette.primaryColor, '#123456');
+  // Legacy slot A migrated to slot 4 initially; after resetSlots it becomes ambient-quiet.
+  // The custom slots 0 and 1 were overwritten by resetSlots back to defaults.
   assert.equal(restored['9'].palette.primaryColor, '#123456');
 });

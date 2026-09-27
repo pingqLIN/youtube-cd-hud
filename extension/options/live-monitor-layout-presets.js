@@ -939,15 +939,15 @@
         load.textContent = 'LOAD';
         const resetBank = document.createElement('button');
         resetBank.type = 'button';
-        resetBank.textContent = '重設 0–3';
-        resetBank.title = '恢復預設、全功能、精簡與隱形面板；保留 4–9';
+        resetBank.textContent = '重設 0–6';
+        resetBank.title = '恢復預設與六個內建面板（槽 0–6）；保留 7–9';
         actions.append(save, load, resetBank);
         bundled.append(slots, actions);
         const status = document.createElement('p');
         status.className = 'lm-layout-slot-status';
         status.setAttribute('role', 'status');
         status.setAttribute('aria-live', 'polite');
-        status.textContent = '0 預設 · 1 全功能 · 2 精簡 · 3 隱形 · 4–9 自訂；選擇儲存槽後讀取或儲存。';
+        status.textContent = '0 預設 · 1 全功能 · 2 精簡 · 3 隱形 · 4 靜謐背景 · 5 工作台 · 6 海報展示 · 7–9 自訂；選擇儲存槽後讀取或儲存。';
         const pack = document.createElement('div');
         pack.className = 'lm-layout-pack';
         const scope = document.createElement('select');
@@ -1101,7 +1101,7 @@
             try {
                 await resetSlots();
                 await render();
-                status.textContent = '已恢復 0–3；4–9 與目前畫布保留。';
+                status.textContent = '已恢復 0–6；7–9 與目前畫布保留。';
             } catch (error) { status.textContent = '重設失敗：' + error.message; }
         });
 
