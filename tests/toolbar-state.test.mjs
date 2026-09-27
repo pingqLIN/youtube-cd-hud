@@ -25,45 +25,30 @@ function setup(){
     vm.runInNewContext(fs.readFileSync(path.join(root,'extension/options/live-monitor-composer.js'),'utf8'),context);
     vm.runInNewContext(fs.readFileSync(path.join(root,'extension/options/live-monitor-property-toolbar.js'),'utf8'),context);
     const composer=context.YtCdHudLiveMonitorComposer;
-    const editor={state:{layout:composer.createDefaultLayout()},render(){toolbar.update(selected,composer.getComponent(editor.state.layout,selected));}};
+    const editor={state:{layout:composer.normalizeLayout(JSON.parse(fs.readFileSync(path.join(root,'tests/fixtures/legacy-panel-layout.json'),'utf8')))},render(){toolbar.update(selected,composer.getComponent(editor.state.layout,selected));}};
     const host=new Element('div');let selected='track-title';
     const toolbar=context.YtCdHudLiveMonitorPropertyToolbar.createToolbar({host,editor});
     const select=id=>{selected=id;toolbar.update(id,id?composer.getComponent(editor.state.layout,id):null);};
-    const details=()=>toolbar.element.querySelector('details');
+    const details=()=>toolbar.element.querySelector('.lm-unit-details');
     select(selected);return {toolbar,editor,select,details};
 }
 
-test('details start closed and remain open through edits, selection, deselection and lock changes',()=>{
-    const ui=setup();assert.equal(ui.details().open,false);
-    ui.details().open=true;ui.details().dispatch('toggle');
-    // Exercise an actual input -> commit -> editor.render -> toolbar.update path.
+test('appearance controls are always expanded through edits, selections and locks',()=>{
+    const ui=setup();
+    const assertExpanded=()=>{assert.equal(ui.details().tagName,'section');assert.equal(ui.toolbar.element.querySelector('summary'),null);assert.ok(ui.details().querySelector('.lm-unit-detail-body'));};
+    assertExpanded();
     const input=ui.toolbar.element.querySelectorAll('input').find(n=>n.dataset.lmTextProperty==='fontSize');
-    input.value='450';input.dispatch('input');assert.equal(ui.details().open,true);
-    ui.select('disc');assert.equal(ui.details().open,true);
-    ui.select(null);assert.equal(ui.toolbar.element.hidden,true);
-    ui.select('time-readout');assert.equal(ui.details().open,true);
-    ui.editor.state.layout.locked=true;ui.editor.render();assert.equal(ui.details().open,true);
+    input.value='450';input.dispatch('input');assertExpanded();
+    ui.select('disc');assertExpanded();ui.select(null);assert.equal(ui.toolbar.element.hidden,true);
+    ui.select('time-readout');assertExpanded();ui.editor.state.layout.locked=true;ui.editor.render();assertExpanded();
 });
 
-test('manual collapse persists and a new page starts closed',()=>{
-    const ui=setup();ui.details().open=true;ui.details().dispatch('toggle');ui.select('disc');
-    ui.details().open=false;ui.details().dispatch('toggle');ui.select('time-readout');
-    assert.equal(ui.details().open,false);assert.equal(setup().details().open,false);
-});
-
-test('synchronous rebuild captures open state before toggle dispatch and ignores stale nodes',()=>{
-    const ui=setup();const old=ui.details();old.open=true;
-    ui.select('disc');assert.equal(ui.details().open,true);
-    const current=ui.details();current.open=false;current.dispatch('toggle');
-    old.dispatch('toggle');ui.select(null);ui.select('track-title');assert.equal(ui.details().open,false);
-});
-
-test('weight input updates the selected unit and retains details state',()=>{
-    const ui=setup();ui.details().open=true;ui.details().dispatch('toggle');
+test('weight input updates the selected unit in the permanently visible details',()=>{
+    const ui=setup();
     const input=ui.toolbar.element.querySelectorAll('input').find(n=>n.dataset.lmTextProperty==='fontWeight');
     assert.equal(input.value,'700');input.value='400';input.dispatch('input');
     assert.equal(ui.editor.state.layout.components.find(n=>n.id==='track-title').textStyle.fontWeight,400);
-    assert.equal(ui.details().open,true);
+    assert.ok(ui.details().querySelector('.lm-unit-detail-body'));
     ui.select('time-readout');
     assert.equal(ui.toolbar.element.querySelectorAll('input').find(n=>n.dataset.lmTextProperty==='fontWeight').value,'500');
 });

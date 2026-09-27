@@ -36,6 +36,8 @@ test('declares a narrowly scoped Manifest V3 extension', () => {
     'https://trackid.net/*',
   ]);
   assert.equal(manifest.options_page, 'options/options.html');
+  assert.deepEqual(manifest.cross_origin_opener_policy, { value: 'same-origin' });
+  assert.deepEqual(manifest.cross_origin_embedder_policy, { value: 'require-corp' });
   assert.equal(manifest.background.service_worker, 'tunnal/worker.js');
   assert.deepEqual(manifest.externally_connectable, { matches: ['http://127.0.0.1/*'] });
   const imported = [];
@@ -779,7 +781,8 @@ test('keeps the settings preview aligned with the atomic bounded layout model', 
   assert.match(html, /class="preview-tracklist-toggle"\s+data-lm-component="tracklist-toggle"/);
   assert.match(html, /class="preview-transport"\s+data-lm-component="transport-controls"/);
   assert.match(html, /data-lm-component="close-control"/);
-  assert.match(html, /data-lm-component="text-size-control"/);
+  assert.doesNotMatch(html, /data-lm-component="text-size-control"/);
+  assert.match(html, /id="theme-font-size"/);
   assert.match(html, /class="preview-resize"/);
   assert.match(css, /\.preview-panel-base\s*\{/);
   assert.match(css, /\.preview-transport\s*\{[\s\S]*?grid-template-columns:\s*1fr\s+1fr/);

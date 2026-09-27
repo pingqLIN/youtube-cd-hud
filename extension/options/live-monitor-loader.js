@@ -15,6 +15,8 @@
         { type: 'script', src: 'live-monitor-component-library.js' },
         { type: 'script', src: 'live-monitor-layout-presets.js' },
         { type: 'script', src: 'live-monitor-bootstrap.js' },
+        { type: 'script', src: 'panel-agent.js' },
+        { type: 'script', src: 'options-agent.js' },
         { type: 'script', src: 'options.js' },
     ]);
     let loadPromise = null;

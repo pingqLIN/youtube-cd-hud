@@ -43,12 +43,16 @@ test('scale controls invoke the real editor, undo atomically, and preserve inter
   }
   const composer = loadComposer();
   const footer = new Element('span');
-  const document = { createElement: tag => new Element(tag), getElementById: id => id === 'live-monitor-panel-lock' ? footer : null, documentElement: { lang: 'en' } };
+  const hudFont = { disabled: false };
+  const generalControls = ['settings-font-size', 'interface-theme', 'enableYouTube', 'enableCache', 'clear-cache', 'reload-settings', 'save'].map(id => ({ id, disabled: false }));
+  const studio = { querySelectorAll: () => [hudFont] };
+  const document = { createElement: tag => new Element(tag), getElementById: id => id === 'live-monitor-panel-lock' ? footer : id === 'panel-studio' ? studio : null,
+    querySelectorAll() { throw Error('Panel lock must not query controls across the settings page'); }, documentElement: { lang: 'en' } };
   const context = { document, YtCdHudLiveMonitorComposer: composer, YtCdHudLiveMonitorResizeEngine: loadResizeEngine(composer) };
   vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'), context);
   const changes = [];
   const onChange = (_layout, reason) => changes.push(reason);
-  const editor = context.YtCdHudLiveMonitorCanvasEditor.createEditor({ preview: new Element('div'), layout: composer.createDefaultLayout(), onChange });
+  const editor = context.YtCdHudLiveMonitorCanvasEditor.createEditor({ preview: new Element('div'), layout: legacyLayout(composer), onChange });
   const original = JSON.stringify(editor.getLayout());
   const presets = loadLayoutPresets(composer, { document });
   const controls = presets.createControls({ host: new Element('div'), editor, onChange });
@@ -56,6 +60,14 @@ test('scale controls invoke the real editor, undo atomically, and preserve inter
   assert.equal(footer.children.length, 1);
   assert.match(footer.children[0].textContent, /LOCK/);
   assert.equal(controls.element.children.includes(footer.children[0]), false);
+  footer.children[0].listeners.click(); controls.sync();
+  assert.equal(editor.state.layout.locked, true);
+  assert.equal(hudFont.disabled, true);
+  assert.ok(generalControls.every(control => control.disabled === false));
+  footer.children[0].listeners.click(); controls.sync();
+  assert.equal(editor.state.layout.locked, false);
+  assert.equal(hudFont.disabled, false);
+
   const extra = controls.element.children.find(element => element.className === 'lm-layout-extra');
   const pack = extra.children.find(element => element.className === 'lm-layout-pack');
   const [scope, scale, apply, undo] = pack.children;
@@ -84,11 +96,45 @@ test('scale controls invoke the real editor, undo atomically, and preserve inter
   assert.equal(editor.state.layout.locked, true);
   assert.equal(footer.children[0].dataset.lmLockState, 'true');
   assert.match(footer.children[0].textContent, /UNLOCK/);
+
+  // Collision recovery goes through the same SCALE and UNDO controls.
+  const colliding = legacyLayout(composer);
+  colliding.canvas.alignmentGrid.enabled = false;
+  colliding.components.forEach(item => { if (item.id !== 'panel-base') item.present = ['track-title', 'time-readout'].includes(item.id); });
+  const title = composer.getComponent(colliding, 'track-title');
+  const time = composer.getComponent(colliding, 'time-readout');
+  title.geometry = { ...title.geometry, x: .4, y: .5, width: 200, height: 48 };
+  time.geometry = { ...time.geometry, x: .53, y: .5, width: 100, height: 48 };
+  time.locked = true;
+  editor.setLayout(colliding); editor.select('track-title');
+  const beforeCollision = JSON.stringify(editor.getLayout());
+  const neighbor = JSON.stringify(composer.getComponent(editor.getLayout(), 'time-readout'));
+  let accepted = false;
+  const prompts = [];
+  context.confirm = message => { prompts.push(message); return accepted; };
+  scope.value = 'selected'; scale.value = '120'; apply.listeners.click();
+  assert.equal(prompts.length, 1);
+  assert.match(prompts[0], /Z 軸/);
+  assert.equal(JSON.stringify(editor.getLayout()), beforeCollision, 'cancel never changes geometry or layers');
+  accepted = true; apply.listeners.click();
+  assert.equal(prompts.length, 2);
+  const layered = editor.getLayout();
+  const enlarged = composer.getComponent(layered, 'track-title');
+  assert.equal(enlarged.geometry.width, 240);
+  assert.equal(enlarged.layer.enabled, true);
+  assert.equal(composer.collisionFor(enlarged, layered.components, layered.canvas), null);
+  assert.equal(JSON.stringify(composer.getComponent(layered, 'time-readout')), neighbor, 'locked neighbor is untouched');
+  assert.equal(undo.disabled, false);
+  undo.listeners.click();
+  assert.equal(JSON.stringify(editor.getLayout()), beforeCollision, 'undo restores both scale and Z allocation');
+  scale.value = '1'; apply.listeners.click();
+  assert.equal(prompts.length, 2, 'size-limit failures do not offer Z allocation');
+  assert.equal(JSON.stringify(editor.getLayout()), beforeCollision);
 });
 
 test('cross-layer groups retain layer order and selected scaling detects collisions', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   layout.canvas.alignmentGrid.enabled = false;
   layout.components.forEach(item => { if (item.id !== 'panel-base') item.present = ['track-title', 'time-readout'].includes(item.id); });
   const title = composer.getComponent(layout, 'track-title');
@@ -113,9 +159,9 @@ test('cross-layer groups retain layer order and selected scaling detects collisi
 
 test('new and legacy layouts use fixed pixel controls', () => {
   const composer = loadComposer();
-  assert.equal(composer.createDefaultLayout().canvas.sizingMode, 'absolute');
-  assert.equal(composer.createDefaultLayout().canvas.width, 1280);
-  assert.equal(composer.createDefaultLayout().canvas.height, 720);
+  assert.equal(legacyLayout(composer).canvas.sizingMode, 'absolute');
+  assert.equal(legacyLayout(composer).canvas.width, 1280);
+  assert.equal(legacyLayout(composer).canvas.height, 720);
   assert.equal(loadRuntimeLayoutNormalizer()(null).canvas.sizingMode, 'absolute');
   const legacy = { version: 2, canvas: { width: 1920, height: 1080, alignmentGrid: { enabled: false } }, components: [{ id: 'track-title', geometry: { x: .5, y: .5, width: 400, height: 50 } }] };
   for (const normalize of [composer.normalizeLayout, loadRuntimeLayoutNormalizer()]) {
@@ -131,7 +177,7 @@ test('compact height floors agree between editor and runtime and still contain t
   const composer = loadComposer();
   const runtime = loadRuntimeLayoutNormalizer();
   for (const [id, height] of Object.entries({ 'panel-base': 24, disc: 24, 'track-title': 24, 'time-readout': 24, 'source-selector': 24, 'transport-controls': 24, 'close-control': 24, 'tracklist-toggle': 24, 'text-size-control': 24, 'tracklist-panel': 48 })) {
-    const source = composer.createDefaultLayout();
+    const source = legacyLayout(composer);
     source.canvas.alignmentGrid.enabled = false;
     source.components.forEach(item => { if (item.id !== 'panel-base') item.present = item.id === id; });
     const item = composer.getComponent(source, id);
@@ -149,7 +195,7 @@ test('compact height floors agree between editor and runtime and still contain t
 test('group scaling preserves relative centers, aspect ratios, layers and saved geometry', () => {
   const composer = loadComposer();
   const engine = loadResizeEngine(composer);
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   const before = JSON.stringify(layout);
   const result = engine.scaleGroup(layout, 1.1);
   assert.equal(result.updated, true, result.reason);
@@ -174,7 +220,7 @@ test('group scaling preserves relative centers, aspect ratios, layers and saved 
 test('group shrink supports selected units and rejects invalid scales atomically', () => {
   const composer = loadComposer();
   const engine = loadResizeEngine(composer);
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   const result = engine.scaleGroup(layout, .75, ['track-title']);
   assert.equal(result.updated, true, result.reason);
   assert.equal(composer.getComponent(result.layout, 'track-title').geometry.width, composer.getComponent(layout, 'track-title').geometry.width * .75);
@@ -190,7 +236,7 @@ test('group shrink supports selected units and rejects invalid scales atomically
 test('split transport positions scale with the group and round trip into runtime', () => {
   const composer = loadComposer();
   const engine = loadResizeEngine(composer);
-  const source = composer.createDefaultLayout();
+  const source = legacyLayout(composer);
   source.components.forEach(item => { if (item.id !== 'panel-base') item.present = item.id === 'transport-controls'; });
   const transport = composer.getComponent(source, 'transport-controls');
   transport.arrangement.split = true;
@@ -205,6 +251,11 @@ test('split transport positions scale with the group and round trip into runtime
   const runtime = loadRuntimeLayoutNormalizer()(result.layout).components.find(item => item.id === 'transport-controls');
   assert.deepEqual(JSON.parse(JSON.stringify(runtime.arrangement)), JSON.parse(JSON.stringify(actual.arrangement)));
 });
+
+// Geometry and interaction regressions use an explicit legacy fixture, independent of the product preset.
+function legacyLayout(composer) {
+  return composer.normalizeLayout(JSON.parse(read('tests/fixtures/legacy-panel-layout.json')));
+}
 
 function loadComposer() {
   const context = { console, Object, JSON, Number, Math, Set, Map };
@@ -244,7 +295,7 @@ function loadLayoutPresets(composer, overrides = {}) {
   const context = {
     console,
     YtCdHudLiveMonitorComposer: composer,
-    chrome: { storage: { session: {
+    chrome: { storage: { local: {
       async get(key) { return { [key]: state[key] }; },
       async set(value) { Object.assign(state, value); },
     } } },
@@ -287,7 +338,7 @@ test('migrates v1 layouts into the bounded v2 component schema', () => {
 
 test('stores every unit with structured geometry, layer, style, effects, and applicable boundaries', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   assert.equal(layout.canvas.collisionPolicy, 'no-overlap-closed');
   assert.deepEqual(JSON.parse(JSON.stringify(layout.canvas.alignmentGrid)), { enabled: true, unitWidth: 8, unitHeight: 8, visible: false });
   for (const component of layout.components) {
@@ -316,7 +367,7 @@ test('stores every unit with structured geometry, layer, style, effects, and app
 
 test('snaps moved and resized units to the hidden minimum alignment grid', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   const title = composer.getComponent(layout, 'track-title');
   const snapped = composer.canPlace(layout, 'track-title', { ...title.geometry, x: .5031, y: .4027, width: 333, height: 37, z: 0 });
   assert.equal(snapped.valid, true);
@@ -333,7 +384,7 @@ test('snaps moved and resized units to the hidden minimum alignment grid', () =>
 
 test('enforces closed-state non-overlap and canvas bounds', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   const visible = layout.components.filter(component => component.present && component.boundary?.collision);
   for (const component of visible) assert.equal(composer.collisionFor(component, layout.components, layout.canvas), null);
   const disc = composer.getComponent(layout, 'disc');
@@ -359,7 +410,7 @@ test('enforces closed-state non-overlap and canvas bounds', () => {
 
 test('resolves a released drag conflict with layers or removes the complete conflict group', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   const title = composer.getComponent(layout, 'track-title');
   const time = composer.getComponent(layout, 'time-readout');
   title.geometry = { ...title.geometry, x: time.geometry.x, y: time.geometry.y };
@@ -378,23 +429,23 @@ test('resolves a released drag conflict with layers or removes the complete conf
   assert.equal(composer.getComponent(removed.layout, 'time-readout').present, false);
 });
 
-test('keeps A/B/C layouts in browser-session storage and normalizes restored data', async () => {
+test('keeps numbered layouts in local storage and normalizes restored data', async () => {
   const composer = loadComposer();
   const presets = loadLayoutPresets(composer);
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   composer.getComponent(layout, 'track-title').style.opacity = .55;
-  await presets.writeSlots({ A: layout, ignored: layout });
+  await presets.writeSlots({ '7': layout, ignored: layout });
   const slots = await presets.readSlots();
-  assert.deepEqual(JSON.parse(JSON.stringify(Object.keys(slots))), ['A']);
-  assert.equal(composer.getComponent(slots.A, 'track-title').style.opacity, .55);
-  assert.equal(presets.STORAGE_KEY, 'ytCdHudLayoutSlotsV1');
+  assert.deepEqual(JSON.parse(JSON.stringify(Object.keys(slots))), ['0', '1', '2', '3', '7']);
+  assert.equal(composer.getComponent(slots['7'], 'track-title').style.opacity, .55);
+  assert.equal(presets.STORAGE_KEY, 'ytCdHudLayoutSlotsV2');
 });
 
 test('ships three fresh built-in panels without relying on session slots', async () => {
   const composer = loadComposer();
   const presets = loadLayoutPresets(composer);
   assert.deepEqual([...presets.BUNDLED_PRESETS].map(preset => preset.id), ['full', 'compact', 'invisible']);
-  assert.deepEqual(Object.keys(await presets.readSlots()), []);
+  assert.deepEqual(Object.keys(await presets.readSlots()), ['0', '1', '2', '3']);
   assert.equal(presets.createBundledLayout('unknown'), null);
   const compact = presets.createBundledLayout('compact');
   const reader = presets.createBundledLayout('full');
@@ -403,10 +454,10 @@ test('ships three fresh built-in panels without relying on session slots', async
   assert.ok(composer.getComponent(compact, 'panel-base').geometry.width < composer.getComponent(reader, 'panel-base').geometry.width);
   assert.ok(composer.getComponent(reader, 'track-title').textStyle.fontSize > composer.getComponent(compact, 'track-title').textStyle.fontSize);
   composer.getComponent(compact, 'track-title').textStyle.fontSize = 99;
-  await presets.writeSlots({ A: compact });
+  await presets.writeSlots({ '7': compact });
   assert.equal(composer.getComponent(presets.createBundledLayout('compact'), 'track-title').textStyle.fontSize, 18);
   const nextSession = loadLayoutPresets(composer);
-  assert.deepEqual(Object.keys(await nextSession.readSlots()), []);
+  assert.deepEqual(Object.keys(await nextSession.readSlots()), ['0', '1', '2', '3']);
   assert.deepEqual(JSON.parse(JSON.stringify(nextSession.createBundledLayout('full'))), JSON.parse(JSON.stringify(reader)));
 });
 
@@ -423,7 +474,7 @@ test('built-in panels survive storage and runtime normalization with usable geom
   const store = context.YtCdHudLiveMonitorLayoutStore;
   for (const preset of presets.BUNDLED_PRESETS) {
     const layout = presets.createBundledLayout(preset.id);
-    for (const id of ['panel-base', 'track-title', 'time-readout', ...(preset.id === 'invisible' ? [] : ['transport-controls']), ...(preset.id === 'full' ? ['disc', 'source-selector', 'tracklist-toggle', 'close-control', 'text-size-control', 'tracklist-panel'] : [])]) {
+    for (const id of ['panel-base', 'track-title', 'time-readout', ...(preset.id === 'invisible' ? [] : ['transport-controls']), ...(preset.id === 'full' ? ['disc', 'source-selector', 'close-control', 'tracklist-panel'] : [])]) {
       assert.equal(composer.getComponent(layout, id).present, true, preset.id + ': ' + id);
     }
     for (const component of layout.components.filter(item => item.present && item.boundary?.collision)) {
@@ -465,7 +516,7 @@ test('preserves every approved A/B layout value without recentering or restyling
 
 test('split controls retain 24px height through normalization and panel code', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   const unit = composer.getComponent(layout, 'transport-controls');
   unit.textStyle.fontSize = 12;
   unit.arrangement.split = true;
@@ -477,7 +528,7 @@ test('split controls retain 24px height through normalization and panel code', (
 
 test('lower height floors preserve previously saved large text heights', () => {
   const composer = loadComposer();
-  const source = composer.createDefaultLayout();
+  const source = legacyLayout(composer);
   source.canvas.alignmentGrid.enabled = true;
   const title = composer.getComponent(source, 'track-title');
   title.textStyle.fontSize = 192;
@@ -489,7 +540,7 @@ test('lower height floors preserve previously saved large text heights', () => {
 test('font weights survive panel code and runtime normalization with bounded input and legacy defaults', () => {
   const composer = loadComposer();
   const runtime = loadRuntimeLayoutNormalizer();
-  const source = composer.createDefaultLayout();
+  const source = legacyLayout(composer);
   for (const [value, expected] of [[100, 100], [450, 450], [900, 900], [0, 100], [1000, 900], ['invalid', 700]]) {
     composer.getComponent(source, 'track-title').textStyle.fontWeight = value;
     const normalized = composer.normalizeLayout(source);
@@ -499,7 +550,7 @@ test('font weights survive panel code and runtime normalization with bounded inp
     assert.equal(runtime(source).components.find(item => item.id === actual.id).textStyle.fontWeight, expected);
     assert.equal(composer.toCss(actual, restored)['--lm-font-weight'], String(expected));
   }
-  for (const unit of composer.createDefaultLayout().components.filter(item => item.textStyle)) {
+  for (const unit of legacyLayout(composer).components.filter(item => item.textStyle)) {
     assert.equal(unit.textStyle.fontWeight, undefined, 'legacy layouts keep implicit defaults');
     assert.equal(composer.toCss(unit)['--lm-font-weight'], String(composer.defaultFontWeight(unit.id)));
   }
@@ -572,7 +623,7 @@ test('ignores coordinate roundoff at touching edges while detecting real overlap
   assert.equal(composer.rectsOverlap(first, { left: 99.9, right: 200, top: 0, bottom: 48 }), true);
 });
 
-test('loading a built-in panel previews it and leaves storage untouched until explicit save', async () => {
+test('numbered slot controls load built-in panels without writing storage', async () => {
   class Element {
     constructor(tag) { this.tagName = tag.toUpperCase(); this.children = []; this.dataset = {}; this.listeners = {}; }
     append(...items) { this.children.push(...items); }
@@ -582,13 +633,13 @@ test('loading a built-in panel previews it and leaves storage untouched until ex
     addEventListener(name, listener) { this.listeners[name] = listener; }
   }
   const composer = loadComposer();
-  const storedLayout = composer.createDefaultLayout();
+  const storedLayout = legacyLayout(composer);
   composer.getComponent(storedLayout, 'track-title').textStyle.fontSize = 31;
   let writes = 0;
   const presets = loadLayoutPresets(composer, {
     document: { createElement: tag => new Element(tag), getElementById: () => null, documentElement: { lang: 'en' } },
-    chrome: { storage: { session: {
-      async get(key) { return { [key]: { A: storedLayout } }; },
+    chrome: { storage: { local: {
+      async get(key) { return { [key]: { '4': storedLayout } }; },
       async set() { writes += 1; },
     } } },
   });
@@ -601,16 +652,20 @@ test('loading a built-in panel previews it and leaves storage untouched until ex
   await controls.render();
   assert.equal(composer.getComponent(editor.state.layout, 'track-title').textStyle.fontSize, 31);
   const descendants = element => [element, ...element.children.flatMap(descendants)];
-  const buttons = descendants(controls.element).filter(element => element.dataset.lmBundledPreset);
-  assert.equal(buttons.length, 3);
-  for (const button of buttons) {
-    button.listeners.click();
+  const buttons = descendants(controls.element).filter(element => element.className === 'lm-layout-slot');
+  assert.equal(buttons.length, 10);
+  const loadButton = descendants(controls.element).find(element => element.textContent === '讀取');
+  for (const name of ['1', '2', '3']) {
+    buttons.find(button => button.textContent === name).listeners.click();
+    await controls.render();
+    loadButton.listeners.click();
     assert.equal(editor.state.layout.canvas.sizingMode, 'absolute');
     assert.ok(composer.connectedToBase(editor.state.layout, composer.getComponent(editor.state.layout, 'panel-base')));
   }
-  assert.deepEqual(changes, ['bundled-preset-load', 'bundled-preset-load', 'bundled-preset-load']);
+  assert.deepEqual(changes, ['slot-load', 'slot-load', 'slot-load']);
   assert.equal(writes, 0);
-  assert.equal(composer.getComponent((await controls.readSlots()).A, 'track-title').textStyle.fontSize, 31);
+  assert.equal(composer.getComponent((await controls.readSlots())['4'], 'track-title').textStyle.fontSize, 31);
+
 });
 
 test('defers drag collision handling until pointer release and presents the layer decision', () => {
@@ -624,7 +679,7 @@ test('defers drag collision handling until pointer release and presents the laye
 
 test('component library contains only units that are not on the panel', () => {
   const composer = loadComposer();
-  const initial = composer.createDefaultLayout();
+  const initial = legacyLayout(composer);
   assert.deepEqual([...composer.availableComponents(initial)].map(rule => rule.type), ['tracklist-panel']);
   const removed = composer.removeComponent(initial, 'disc');
   assert.equal(removed.removed, true);
@@ -640,9 +695,37 @@ test('component library contains only units that are not on the panel', () => {
   assert.equal(composer.availableComponents(withTracklist.layout).length, 0);
 });
 
+test('legacy typography buttons retire and persistent tracklists replace their toggle in editor and runtime', () => {
+  const composer = loadComposer();
+  const legacy = legacyLayout(composer);
+  composer.getComponent(legacy, 'text-size-control').present = true;
+  composer.getComponent(legacy, 'tracklist-panel').present = true;
+  composer.getComponent(legacy, 'tracklist-toggle').present = true;
+  const migrated = composer.normalizeLayout(legacy);
+  assert.equal(composer.getComponent(migrated, 'text-size-control').present, false);
+  assert.equal(composer.getComponent(migrated, 'tracklist-toggle').present, false);
+  assert.equal(composer.getComponent(migrated, 'tracklist-panel').present, true);
+  assert.equal(composer.availableComponents(migrated).some(rule => ['text-size-control', 'tracklist-toggle'].includes(rule.type)), false);
+  assert.equal(composer.addComponent(migrated, 'text-size-control').added, false);
+  assert.equal(composer.addComponent(migrated, 'tracklist-toggle').added, false);
+  const roundTrip = composer.importCode(composer.exportCode(migrated));
+  const runtime = loadRuntimeLayoutNormalizer()(legacy);
+  for (const id of ['text-size-control', 'tracklist-toggle']) {
+    assert.equal(composer.getComponent(roundTrip, id).present, false);
+    assert.equal(runtime.components.find(component => component.id === id).present, false);
+  }
+  const removed = composer.removeComponent(migrated, 'tracklist-panel');
+  assert.equal(removed.removed, true);
+  assert.equal(composer.availableComponents(removed.layout).some(rule => rule.type === 'tracklist-toggle'), true);
+  const hidden = composer.normalizeLayout({ ...legacy, components: legacy.components.map(component =>
+    component.id === 'tracklist-panel' ? { ...component, hidden: true } : component) });
+  assert.equal(composer.getComponent(hidden, 'tracklist-toggle').present, true,
+    'a hidden tracklist still needs an accessible toggle');
+});
+
 test('dynamic panel base encloses bounded units, ignores the disc, and stays below every layer', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   const base = composer.getComponent(layout, 'panel-base');
   const baseRect = composer.componentRect(base, layout.canvas);
   for (const component of layout.components.filter(item => item.present && item.boundary?.collision)) {
@@ -675,7 +758,7 @@ test('projects canonical nested component state into canvas CSS variables', () =
 
 test('splits track controls into independent positions while sharing size and appearance', () => {
   const composer = loadComposer();
-  const initial = composer.createDefaultLayout();
+  const initial = legacyLayout(composer);
   const joined = composer.getComponent(initial, 'transport-controls');
   assert.equal(joined.arrangement.split, false);
   assert.equal(composer.componentRects(joined, initial.canvas).length, 1);
@@ -705,7 +788,7 @@ test('options page exposes the component library and all atomic preview units', 
   assert.match(html, /data-lm-part="next"/);
   assert.deepEqual(ids, [
     'panel-base', 'disc', 'track-title', 'time-readout', 'source-selector',
-    'tracklist-toggle', 'transport-controls', 'close-control', 'text-size-control', 'tracklist-panel',
+    'tracklist-toggle', 'transport-controls', 'close-control', 'tracklist-panel',
   ]);
   assert.doesNotMatch(html, /data-lm-component="track-info"/);
   assert.doesNotMatch(html, /data-lm-component="source-badge"/);
@@ -747,7 +830,7 @@ test('keeps the live preview large, widescreen, and responsive', () => {
 test('exposes RESET and three explicit temporary style slots', () => {
   const presets = read('extension/options/live-monitor-layout-presets.js');
   assert.match(presets, /reset\.textContent\s*=\s*'RESET'/);
-  assert.match(presets, /Object\.freeze\(\['A', 'B', 'C'\]\)/);
+  assert.match(presets, /length: 10/);
   assert.match(presets, /chrome\?\.storage\?\.session/);
   assert.match(presets, /'SAVE'/);
   assert.match(presets, /'LOAD'/);
@@ -792,7 +875,7 @@ test('keeps v2 layout migration and every atomic unit on the real HUD path', () 
 test('content runtime normalizes the composer schema without losing unit parameters', () => {
   const composer = loadComposer();
   const normalizeRuntime = loadRuntimeLayoutNormalizer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   const runtime = normalizeRuntime(layout);
   assert.equal(runtime.version, 2);
   assert.equal(runtime.canvas.collisionPolicy, 'no-overlap-closed');
@@ -822,8 +905,8 @@ test('content runtime normalizes the composer schema without losing unit paramet
 test('projects the editor canvas onto the YouTube player without moving any unit', () => {
   const composer = loadComposer();
   const runtimeApi = loadRuntimeTestApi();
-  const editorLayout = composer.createDefaultLayout();
-  const runtimeDefaults = runtimeApi.normalizeHudLayout(null);
+  const editorLayout = legacyLayout(composer);
+  const runtimeDefaults = runtimeApi.normalizeHudLayout(editorLayout);
   const runtimeLayout = runtimeApi.normalizeHudLayout(editorLayout);
 
   assert.deepEqual(
@@ -971,7 +1054,7 @@ test('normalizes per-unit border, corner, blur, and expanded text-size controls 
   assert.match(runtimeCss, /\.hud-source-selector > :where\([^)]+\)\s*\{[\s\S]*?border-left:\s*var\(--ytcd-unit-border-width\)/);
   assert.match(runtimeCss, /\.hud-transport-controls \.hud-control-button\s*\{[\s\S]*?border-left:\s*var\(--ytcd-unit-border-width\)/);
 
-  const defaults = composer.createDefaultLayout();
+  const defaults = legacyLayout(composer);
   for (const component of defaults.components) {
     assert.equal(component.style.borderEnabled, true, `${component.id} border must default on`);
     assert.equal(component.style.backgroundBlurEnabled, false, `${component.id} blur must default off`);
@@ -1053,7 +1136,7 @@ test('keeps grid-aligned control minimums reachable and the dynamic base above i
     const component = composer.getComponent(layout, rule.type);
     assert.ok(component.geometry.height >= 264, `${rule.type} cannot contain the 192px maximum text line`);
   }
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   layout.components.forEach(component => {
     if (!['panel-base', 'close-control'].includes(component.id)) component.present = false;
   });
@@ -1065,7 +1148,7 @@ test('keeps grid-aligned control minimums reachable and the dynamic base above i
 
 test('applies global primary and secondary colors before allowing component overrides', () => {
   const composer = loadComposer();
-  const initial = composer.createDefaultLayout();
+  const initial = legacyLayout(composer);
   const themed = composer.applyPalette(initial, { primaryColor: '#102030', secondaryColor: '#aabbcc' });
   assert.deepEqual(JSON.parse(JSON.stringify(themed.palette)), { primaryColor: '#102030', secondaryColor: '#aabbcc' });
   for (const component of themed.components) {
@@ -1084,7 +1167,7 @@ test('applies global primary and secondary colors before allowing component over
 
 test('viewport changes preserve pixel sizes and distances between units', () => {
   const composer = loadComposer();
-  const initial = composer.createDefaultLayout();
+  const initial = legacyLayout(composer);
   const title = composer.getComponent(initial, 'track-title');
   for (const preset of composer.VIEWPORT_PRESETS) {
     const result = composer.updateViewport(initial, preset.width, preset.height);
@@ -1165,7 +1248,7 @@ test('keeps standalone HUD labels and v2 visibility rules aligned with the exten
 
 test('panel JSON round trips locks, geometry, local fonts and zero opacity without executing code', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   layout.locked = true;
   const title = composer.getComponent(layout, 'track-title');
   title.locked = true;
@@ -1191,7 +1274,7 @@ test('panel JSON round trips locks, geometry, local fonts and zero opacity witho
 
 test('permanent base retains manual size and rejects detached units or base removal', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   layout.canvas.alignmentGrid.enabled = false;
   const base = composer.getComponent(layout, 'panel-base');
   const original = { ...base.geometry };
@@ -1225,7 +1308,7 @@ test('keyboard nudges by one pixel, preserves edits through reload, and obeys un
   };
   const context = { document, YtCdHudLiveMonitorComposer: composer, YtCdHudLiveMonitorResizeEngine: loadResizeEngine(composer) };
   vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'), context);
-  const editor = context.YtCdHudLiveMonitorCanvasEditor.createEditor({ preview, layout: composer.createDefaultLayout() }).init();
+  const editor = context.YtCdHudLiveMonitorCanvasEditor.createEditor({ preview, layout: legacyLayout(composer) }).init();
   const press = (key, extra = {}) => listeners.keydown({ key, preventDefault() {}, ...extra });
   editor.select('track-title');
   const before = composer.getComponent(editor.state.layout, 'track-title').geometry.x;
@@ -1249,9 +1332,44 @@ test('keyboard nudges by one pixel, preserves edits through reload, and obeys un
   assert.equal(composer.getComponent(editor.getLayout(), 'track-title').present, false);
 });
 
+test('Ctrl+Z restores successive panel edits, leaves text editing native, and respects reload boundaries', () => {
+  const composer = loadComposer();
+  const listeners = {};
+  const document = { activeElement: { tagName: 'DIV' }, addEventListener(name, fn) { listeners[name] = fn; } };
+  const preview = { classList: { add() {}, toggle() {} }, dataset: {}, style: { setProperty() {} },
+    querySelectorAll() { return []; }, addEventListener() {}, contains() { return false; } };
+  const changes = [];
+  const context = { document, YtCdHudLiveMonitorComposer: composer, YtCdHudLiveMonitorResizeEngine: loadResizeEngine(composer) };
+  vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'), context);
+  const editor = context.YtCdHudLiveMonitorCanvasEditor.createEditor({ preview, layout: legacyLayout(composer), onChange: (_layout, reason) => changes.push(reason) }).init();
+  let prevented = 0;
+  const undoKey = extra => listeners.keydown({ key: 'z', ctrlKey: true, preventDefault() { prevented++; }, ...extra });
+  const initial = JSON.stringify(editor.getLayout());
+  editor.updatePalette({ primaryColor: '#123456' });
+  const colored = JSON.stringify(editor.getLayout());
+  editor.setLocked(true);
+  undoKey(); assert.equal(JSON.stringify(editor.getLayout()), colored, 'undo works while the panel is locked');
+  document.activeElement = { tagName: 'TEXTAREA' };
+  undoKey(); assert.equal(JSON.stringify(editor.getLayout()), colored); assert.equal(prevented, 1);
+  document.activeElement = { tagName: 'INPUT', type: 'range' };
+  undoKey(); assert.equal(JSON.stringify(editor.getLayout()), initial); assert.equal(prevented, 2);
+  assert.equal(changes.at(-1), 'undo', 'undo notifies the ordinary save/auto-sync path');
+  const replacement = composer.createDefaultLayout();
+  editor.setLayout(replacement);
+  undoKey({ ctrlKey: false, metaKey: true });
+  assert.equal(JSON.stringify(editor.getLayout()), initial, 'preset/import replacement is undoable');
+  composer.getComponent(editor.state.layout, 'track-title').textStyle.color = '#abcdef';
+  editor.recordHistory();
+  undoKey(); assert.equal(JSON.stringify(editor.getLayout()), initial, 'toolbar property commits are undoable');
+  editor.updatePalette({ primaryColor: '#123456' });
+  editor.setLayout(replacement, { resetHistory: true });
+  assert.equal(editor.undo(), false, 'reading Chrome settings begins a new editing history');
+  assert.equal(JSON.stringify(editor.getLayout()), JSON.stringify(composer.normalizeLayout(replacement)));
+});
+
 test('successful group scaling changes fixed pixel geometry in editor and runtime', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   const result = loadResizeEngine(composer).scaleGroup(layout, 1.1);
   assert.equal(result.updated, true, result.reason);
   const runtimeApi = loadRuntimeTestApi();
@@ -1271,7 +1389,7 @@ test('successful group scaling changes fixed pixel geometry in editor and runtim
 
 test('enabling alignment preserves the exact position of a locked unit', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   layout.canvas.alignmentGrid.enabled = false;
   const title = composer.getComponent(layout, 'track-title');
   title.geometry.x += 1 / layout.canvas.width;
@@ -1283,7 +1401,7 @@ test('enabling alignment preserves the exact position of a locked unit', () => {
 
 test('hidden is independent of every color alpha and persists across panel code and runtime', () => {
   const composer = loadComposer();
-  const layout = composer.applyPalette(composer.createDefaultLayout(), { primaryOpacity: .25, secondaryOpacity: .4 });
+  const layout = composer.applyPalette(legacyLayout(composer), { primaryOpacity: .25, secondaryOpacity: .4 });
   for (const item of layout.components) { item.hidden = true; item.style.opacity = 0; }
   const restored = composer.importCode(composer.exportCode(layout));
   const runtime = loadRuntimeLayoutNormalizer()(restored);
@@ -1322,7 +1440,7 @@ test('editor edges drag directly, Alt resizes, and editor locks still prevent ed
   const context = { document, YtCdHudLiveMonitorComposer: composer, YtCdHudLiveMonitorResizeEngine: loadResizeEngine(composer),
     setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); } };
   vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'), context);
-  const editor = context.YtCdHudLiveMonitorCanvasEditor.createEditor({ preview, layout: composer.createDefaultLayout() }).init();
+  const editor = context.YtCdHudLiveMonitorCanvasEditor.createEditor({ preview, layout: legacyLayout(composer) }).init();
   editor.state.layout.canvas.alignmentGrid.enabled = false;
   const disc = () => composer.getComponent(editor.state.layout, 'disc');
   const node = { dataset: { lmComponent: 'disc' }, focus() { document.activeElement = node; }, setPointerCapture() {},
@@ -1406,7 +1524,8 @@ test('formal HUD edge drags move every unit together despite editor locks and su
       assert.equal(JSON.stringify(api.getRuntimeLayout().components),JSON.stringify(after.components));
     }
   }
-  assert.ok(writes>=10);
+  assert.ok(writes >= initial.components.filter(item => item.present).length,
+    'every remaining visible component persists an assembly drag');
 });
 
 test('assembly translation preserves split controls and starts from the visible clamped position',()=>{
@@ -1431,7 +1550,7 @@ test('assembly translation preserves split controls and starts from the visible 
 
 test('disc opacity persists independently of its background and hidden state',()=>{
   const composer=loadComposer(),runtime=loadRuntimeLayoutNormalizer();
-  const source=composer.createDefaultLayout();const disc=composer.getComponent(source,'disc');
+  const source=legacyLayout(composer);const disc=composer.getComponent(source,'disc');
   disc.style.opacity=.75;
   for(const [value,expected] of [[0,0],[.35,.35],[1,1],[-1,0],[2,1],['invalid',1]]){
     disc.style.discOpacity=value;
@@ -1452,7 +1571,7 @@ test('studio viewport resizing retains actual pixel sizes and view origin withou
   const preview={parentElement:host,style:{setProperty(){}},dataset:{},classList:{add(){},toggle(){}},querySelectorAll(){return[];},addEventListener(){}};
   const context={YtCdHudLiveMonitorComposer:composer,document:{addEventListener(){}},ResizeObserver:class{constructor(callback){resized=callback;}observe(target){assert.equal(target,host);}}};
   vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'),context);
-  const editor=context.YtCdHudLiveMonitorCanvasEditor.createEditor({preview,layout:composer.createDefaultLayout()}).init();
+  const editor=context.YtCdHudLiveMonitorCanvasEditor.createEditor({preview,layout:legacyLayout(composer)}).init();
   const before=JSON.stringify(editor.getLayout());
   assert.equal(preview.style.transform,'none');
   const origin=[preview.style.left,preview.style.top];
@@ -1563,7 +1682,7 @@ test('panning the studio changes only the view and remains available while the p
   const preview={parentElement:host,style:{setProperty(){}},dataset:{},classList:{add(){},toggle(){}},querySelectorAll(){return[];},addEventListener(){}};
   const context={YtCdHudLiveMonitorComposer:composer,document:{addEventListener(){}}};
   vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'),context);
-  const editor=context.YtCdHudLiveMonitorCanvasEditor.createEditor({preview,layout:composer.createDefaultLayout()}).init();
+  const editor=context.YtCdHudLiveMonitorCanvasEditor.createEditor({preview,layout:legacyLayout(composer)}).init();
   editor.setLocked(true);
   const before=JSON.stringify(editor.getLayout()),x=parseFloat(preview.style.left),y=parseFloat(preview.style.top);
   const event=(clientX,clientY)=>({clientX,clientY,pointerId:1,button:0,target:{closest(){return null;}},preventDefault(){}});
@@ -1574,12 +1693,24 @@ test('panning the studio changes only the view and remains available while the p
   assert.equal(parseFloat(preview.style.left),x+40);assert.equal(parseFloat(preview.style.top),y+20);
   listeners.pointerdown(event(635,355));listeners.pointermove(event(630,340));
   assert.equal(parseFloat(preview.style.left),x+40,'native resize corner does not pan');
-  editor.centerView();assert.equal(parseFloat(preview.style.left),x);
+  const rect=context.YtCdHudLiveMonitorCanvasEditor.referencePlayerRect(editor.state.layout.canvas);
+  assert.equal(x,host.clientWidth/2-rect.left-rect.width/2);
+  assert.equal(y,host.clientHeight/2-rect.top-rect.height/2);
+  editor.centerView();
+  assert.equal(JSON.stringify(editor.getLayout()),before);
+  for (const [width,height] of [[1280,720],[1920,1080],[3840,2160]]) {
+    editor.updateViewport(width,height);
+    const player=context.YtCdHudLiveMonitorCanvasEditor.referencePlayerRect(editor.state.layout.canvas);
+    assert.equal(parseFloat(preview.style.left)+player.left+player.width/2,host.clientWidth/2);
+    assert.equal(parseFloat(preview.style.top)+player.top+player.height/2,host.clientHeight/2);
+    assert.equal(preview.style.width,width+'px');
+    assert.equal(preview.style.transform,'none');
+  }
 });
 
 test('dimension number inputs ceil fractional pixels and retain that size on save', () => {
   const composer = loadComposer();
-  const layout = composer.createDefaultLayout();
+  const layout = legacyLayout(composer);
   const disc = composer.getComponent(layout, 'disc');
   const placement = composer.sizeFromInput(layout, 'disc', null, 'width', '120.2');
   assert.equal(placement.valid, true);
@@ -1591,4 +1722,32 @@ test('dimension number inputs ceil fractional pixels and retain that size on sav
   for (const value of ['', 'NaN', '-3', '99999']) assert.equal(composer.sizeFromInput(layout, 'disc', null, 'width', value).valid, false);
   disc.locked = true;
   assert.equal(composer.sizeFromInput(layout, 'disc', null, 'width', '130.5').valid, false);
+});
+
+
+test('numbered slots persist across instances, migrate legacy slots and reset only 0–3', async () => {
+  const composer = loadComposer();
+  const legacy = composer.createDefaultLayout();
+  legacy.palette.primaryColor = '#123456';
+  const state = {};
+  const chrome = { storage: {
+    local: { async get(key) { return { [key]: state[key] }; }, async set(value) { Object.assign(state, structuredClone(value)); } },
+    session: { async get(key) { return { [key]: { A: legacy } }; } },
+  } };
+  const first = loadLayoutPresets(composer, { chrome });
+  const initial = await first.readSlots();
+  assert.equal(initial['4'].palette.primaryColor, '#123456');
+  assert.ok(state[first.STORAGE_KEY]);
+  const customized = { ...initial, '0': legacy, '1': legacy, '9': legacy };
+  await first.writeSlots(customized);
+  const second = loadLayoutPresets(composer, { chrome });
+  assert.equal((await second.readSlots())['9'].palette.primaryColor, '#123456');
+  await second.resetSlots();
+  const restored = await first.readSlots();
+  assert.equal(JSON.stringify(restored['0']), JSON.stringify(composer.createDefaultLayout()));
+  for (const [index, id] of ['full', 'compact', 'invisible'].entries()) {
+    assert.equal(JSON.stringify(restored[String(index + 1)]), JSON.stringify(first.createBundledLayout(id)));
+  }
+  assert.equal(restored['4'].palette.primaryColor, '#123456');
+  assert.equal(restored['9'].palette.primaryColor, '#123456');
 });

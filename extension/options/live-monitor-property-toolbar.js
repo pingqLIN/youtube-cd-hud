@@ -4,9 +4,6 @@
     const composer = globalThis.YtCdHudLiveMonitorComposer;
 
     function createToolbar({ host, editor, onChange = () => {} }) {
-        // Page-local UI state survives component rerenders, but is never saved with a layout.
-        let detailsOpen = false;
-        let currentDetails = null;
         const toolbar = document.createElement('section');
         toolbar.className = 'lm-property-toolbar';
         toolbar.hidden = true;
@@ -24,6 +21,7 @@
 
         function commit(reason = 'property') {
             composer.refreshBase(editor.state.layout);
+            editor.recordHistory?.();
             onChange(editor.state.layout, reason);
             editor.render();
         }
@@ -154,9 +152,6 @@
         }
 
         function update(_id, component, selectedPart = null) {
-            // A native toggle event may still be queued when an edit rebuilds the toolbar.
-            if (currentDetails) detailsOpen = currentDetails.open;
-            currentDetails = null;
             toolbar.replaceChildren();
             if (!component) {
                 toolbar.hidden = true;
@@ -477,14 +472,11 @@
             deleteButton.textContent = rule.removable ? '移回元件庫 / DEL' : '永久底座';
             deleteButton.disabled = !composer.canDelete(component.id, editor.state.layout);
             deleteButton.addEventListener('click', () => editor.remove(component.id));
-            const details = document.createElement('details');
+            const details = document.createElement('section');
             details.className = 'lm-unit-details';
-            details.open = detailsOpen;
-            currentDetails = details;
-            details.addEventListener('toggle', () => {
-                if (currentDetails === details) detailsOpen = details.open;
-            });
-            const summary = document.createElement('summary');
+            details.setAttribute('aria-label', '詳細設定 · 外觀、文字與效果');
+            const summary = document.createElement('h3');
+            summary.className = 'lm-unit-details-title';
             summary.textContent = '詳細設定 · 外觀、文字與效果';
             const body = document.createElement('div');
             body.className = 'lm-unit-detail-body';

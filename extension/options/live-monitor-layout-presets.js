@@ -2,8 +2,8 @@
     'use strict';
 
     const composer = globalThis.YtCdHudLiveMonitorComposer;
-    const STORAGE_KEY = 'ytCdHudLayoutSlotsV1';
-    const SLOT_NAMES = Object.freeze(['A', 'B', 'C']);
+    const STORAGE_KEY = 'ytCdHudLayoutSlotsV2';
+    const SLOT_NAMES = Object.freeze(Array.from({ length: 10 }, (_, index) => String(index)));
     const BUNDLED_PRESETS = globalThis.YtCdHudPanelPack.presets;
     let memorySlots = {};
 
@@ -824,73 +824,50 @@
         return Object.hasOwn(BUNDLED_LAYOUTS, id) ? composer.normalizeLayout(BUNDLED_LAYOUTS[id]) : null;
     }
 
-    function sessionStorage() {
-        return globalThis.chrome?.storage?.session || null;
+    function defaultSlots() {
+        return { '0': composer.createDefaultLayout(), ...Object.fromEntries(BUNDLED_PRESETS.map((preset, index) => [String(index + 1), createBundledLayout(preset.id)])) };
     }
 
     function normalizeSlots(value) {
         const source = value && typeof value === 'object' ? value : {};
-        return Object.fromEntries(SLOT_NAMES
-            .filter(name => source[name])
-            .map(name => [name, composer.normalizeLayout(source[name])]));
+        return Object.fromEntries(SLOT_NAMES.filter(name => source[name]).map(name => [name, composer.normalizeLayout(source[name])]));
     }
 
     async function readSlots() {
-        const storage = sessionStorage();
-        if (!storage) return normalizeSlots(memorySlots);
-        const result = await storage.get(STORAGE_KEY);
-        return normalizeSlots(result[STORAGE_KEY]);
+        const storage = globalThis.chrome?.storage?.local;
+        const result = storage ? await storage.get(STORAGE_KEY) : { [STORAGE_KEY]: memorySlots };
+        const saved = result[STORAGE_KEY];
+        if (saved && Object.keys(saved).length) return { ...defaultSlots(), ...normalizeSlots(saved) };
+        // Preserve old A/B/C slots as 4/5/6 without touching their session copy.
+        const legacy = await globalThis.chrome?.storage?.session?.get('ytCdHudLayoutSlotsV1');
+        const migrated = {};
+        ['A', 'B', 'C'].forEach((name, index) => {
+            if (legacy?.ytCdHudLayoutSlotsV1?.[name]) migrated[String(index + 4)] = legacy.ytCdHudLayoutSlotsV1[name];
+        });
+        const slots = { ...defaultSlots(), ...normalizeSlots(migrated) };
+        if (Object.keys(migrated).length) await writeSlots(slots);
+        return slots;
     }
 
     async function writeSlots(slots) {
         const normalized = normalizeSlots(slots);
-        memorySlots = normalized;
-        const storage = sessionStorage();
+        const storage = globalThis.chrome?.storage?.local;
         if (storage) await storage.set({ [STORAGE_KEY]: normalized });
+        memorySlots = normalized;
         return normalized;
+    }
+
+    async function resetSlots() {
+        return writeSlots({ ...await readSlots(), ...defaultSlots() });
     }
 
     function createControls({ host, editor, onChange = () => {} }) {
         if (!host) throw new Error('Live Monitor layout controls host is required.');
         const shell = document.createElement('section');
         shell.className = 'lm-layout-controls';
-        shell.setAttribute('aria-label', 'Layout reset and temporary style slots');
+        shell.setAttribute('aria-label', 'Panel layout controls');
         const bundled = document.createElement('div');
         bundled.className = 'lm-layout-bundled';
-        const bundledTitle = document.createElement('p');
-        bundledTitle.className = 'lm-layout-bundled-title';
-        bundledTitle.dataset.i18n = 'options.bundledPresets';
-        bundledTitle.textContent = 'Built-in panels';
-        const bundledChoices = document.createElement('div');
-        bundledChoices.className = 'lm-layout-bundled-choices';
-        const bundledHint = document.createElement('p');
-        bundledHint.className = 'lm-layout-bundled-hint';
-        bundledHint.dataset.i18n = 'options.presetHint';
-        bundledHint.textContent = 'Load a panel to preview it, then Save and apply. Built-in panels are always available.';
-        BUNDLED_PRESETS.forEach(preset => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'lm-layout-bundled-choice';
-            button.title = preset.description;
-            button.dataset.lmBundledPreset = preset.id;
-            const label = document.createElement('strong');
-
-            label.textContent = preset.label;
-            const description = document.createElement('span');
-
-            description.textContent = preset.description;
-            button.append(label, description);
-            button.addEventListener('click', () => {
-                editor.setLayout(createBundledLayout(preset.id));
-                (bundledChoices.querySelectorAll?.('button') || []).forEach(node => node.setAttribute('aria-pressed', String(node === button)));
-                onChange(editor.state.layout, 'bundled-preset-load');
-                status.textContent = globalThis.YtCdHudI18n?.translate('options.presetLoaded', document.documentElement.lang)
-                    || 'Built-in panel loaded. Save and apply to use it on YouTube.';
-                sync();
-            });
-            bundledChoices.appendChild(button);
-        });
-        bundled.append(bundledTitle, bundledChoices, bundledHint);
         const foundation = document.createElement('div');
         foundation.className = 'lm-layout-foundation';
         const primaryLabel = document.createElement('label');
@@ -938,7 +915,7 @@
         const panelLock = document.createElement('button');
         panelLock.type = 'button';
         panelLock.className = 'secondary-button';
-        panelLock.title = '鎖定組件的相對位置；YouTube 上仍可拖移整塊面板。';
+        panelLock.title = '只鎖定面板排版與外觀編輯；設定頁字級、主題、資料來源、快取及儲存功能仍可使用。';
         panelLock.addEventListener('click', () => editor.setLocked(!editor.state.layout.locked));
         const reset = document.createElement('button');
         reset.type = 'button';
@@ -960,12 +937,17 @@
         const load = document.createElement('button');
         load.type = 'button';
         load.textContent = 'LOAD';
-        actions.append(save, load);
+        const resetBank = document.createElement('button');
+        resetBank.type = 'button';
+        resetBank.textContent = '重設 0–3';
+        resetBank.title = '恢復預設、全功能、精簡與隱形面板；保留 4–9';
+        actions.append(save, load, resetBank);
+        bundled.append(slots, actions);
         const status = document.createElement('p');
         status.className = 'lm-layout-slot-status';
         status.setAttribute('role', 'status');
         status.setAttribute('aria-live', 'polite');
-        status.textContent = 'A / B / C are kept for this browser session.';
+        status.textContent = '0 預設 · 1 全功能 · 2 精簡 · 3 隱形 · 4–9 自訂；選擇儲存槽後讀取或儲存。';
         const pack = document.createElement('div');
         pack.className = 'lm-layout-pack';
         const scope = document.createElement('select');
@@ -1003,7 +985,9 @@
             beforeScale = previous;
             afterScale = JSON.stringify(editor.getLayout());
             undoScale.disabled = false;
-            status.textContent = '已按比例縮放；自動對齊已關閉以保留位置。Scaled proportionally; auto align is off to preserve positions.';
+            status.textContent = result.layersAssigned?.length
+                ? '已自動分配 Z 軸並完成縮放；UNDO 可一併還原尺寸、位置與層級。'
+                : '已按比例縮放；自動對齊已關閉以保留位置。Scaled proportionally; auto align is off to preserve positions.';
             scale.value = '100';
             sync();
         });
@@ -1026,8 +1010,8 @@
         center.type = 'button'; center.textContent = '置中面板';
         center.addEventListener('click', () => editor.centerView());
         const extra = document.createElement('details'); extra.className = 'lm-layout-extra';
-        const summary = document.createElement('summary'); summary.textContent = '暫存與尺寸工具';
-        extra.append(summary, slots, actions, pack, reset);
+        const summary = document.createElement('summary'); summary.textContent = '尺寸工具';
+        extra.append(summary, pack, reset);
         shell.append(mounted, align, center, extra, status);
         const lockHost = document.getElementById('live-monitor-panel-lock');
         (lockHost || shell).appendChild(panelLock);
@@ -1035,7 +1019,7 @@
         (theme || shell).append(bundled, foundation);
         host.appendChild(shell);
         globalThis.YtCdHudI18n?.localizeDocument(shell, document.documentElement.lang);
-        let selectedSlot = 'A';
+        let selectedSlot = '0';
         let storedSlots = {};
 
         function sync() {
@@ -1051,11 +1035,12 @@
             for (const control of [primaryOpacity, secondaryOpacity]) { control.input.disabled = layout.locked; control.output.value = Math.round(Number(control.input.value) * 100) + '%'; }
             primary.value = layout.palette.primaryColor;
             secondary.value = layout.palette.secondaryColor;
-            panelLock.textContent = layout.locked ? 'UNLOCK · 編輯面板' : 'LOCK · 完成排版';
+            panelLock.textContent = layout.locked ? 'UNLOCK · 解鎖排版' : 'LOCK · 鎖定排版';
             panelLock.setAttribute('aria-pressed', String(layout.locked));
             panelLock.dataset.lmLockState = String(layout.locked);
             [primary, secondary, viewport, align, applyScale, scope, scale].forEach(node => { node.disabled = layout.locked; });
-            (document.querySelectorAll?.('#theme-font, #theme-custom-font, #theme-font-size') || []).forEach(node => { node.disabled = layout.locked; });
+            const studio = document.getElementById('panel-studio');
+            (studio?.querySelectorAll?.('#theme-font, #theme-custom-font, #theme-font-size') || []).forEach(node => { node.disabled = layout.locked; });
             viewport.value = composer.VIEWPORT_PRESETS.find(preset => preset.width === layout.canvas.width && preset.height === layout.canvas.height)?.id || 'hd';
             align.setAttribute('aria-pressed', layout.canvas.alignmentGrid.enabled ? 'true' : 'false');
             const caption = document.getElementById('live-monitor-canvas-status');
@@ -1072,7 +1057,7 @@
                 slot.textContent = name;
                 slot.dataset.filled = storedSlots[name] ? 'true' : 'false';
                 slot.setAttribute('aria-pressed', selectedSlot === name ? 'true' : 'false');
-                slot.title = storedSlots[name] ? 'Stored style ' + name : 'Empty style ' + name;
+                slot.title = storedSlots[name] ? '儲存槽 ' + name : '空白儲存槽 ' + name;
                 slot.addEventListener('click', () => {
                     selectedSlot = name;
                     void render();
@@ -1080,7 +1065,8 @@
                 slots.appendChild(slot);
             });
             load.disabled = !storedSlots[selectedSlot];
-            save.textContent = storedSlots[selectedSlot] ? 'OVERWRITE' : 'SAVE';
+            save.textContent = storedSlots[selectedSlot] ? '覆寫儲存' : '儲存';
+            load.textContent = '讀取';
             sync();
         }
 
@@ -1092,14 +1078,13 @@
             sync();
         });
         save.addEventListener('click', async () => {
+            const targetSlot = selectedSlot;
+            const snapshot = composer.normalizeLayout(editor.getLayout());
             try {
                 const current = await readSlots();
-                current[selectedSlot] = composer.prepareForSave(editor.getLayout());
-                if (!composer.connectedToBase(current[selectedSlot], composer.getComponent(current[selectedSlot], 'panel-base'))) throw new Error('所有元件都必須與底座接觸。');
-                current[selectedSlot].locked = true;
+                current[targetSlot] = snapshot;
                 await writeSlots(current);
-                editor.setLayout(current[selectedSlot]);
-                status.textContent = 'Style ' + selectedSlot + ' stored for this browser session.';
+                status.textContent = '已儲存至 ' + targetSlot + ' 號槽。';
                 await render();
             } catch (error) { status.textContent = '儲存失敗：' + error.message; }
         });
@@ -1110,6 +1095,14 @@
             onChange(editor.state.layout, 'slot-load');
             status.textContent = 'Style ' + selectedSlot + ' loaded.';
             sync();
+        });
+
+        resetBank.addEventListener('click', async () => {
+            try {
+                await resetSlots();
+                await render();
+                status.textContent = '已恢復 0–3；4–9 與目前畫布保留。';
+            } catch (error) { status.textContent = '重設失敗：' + error.message; }
         });
 
         reset.addEventListener('click', () => {
@@ -1127,10 +1120,10 @@
         });
         void render().catch(error => {
             console.warn('[CD HUD] Could not load temporary layout slots.', error);
-            status.textContent = 'Temporary style slots are unavailable.';
+            status.textContent = '儲存槽無法讀取，請重新開啟設定頁。';
         });
         return Object.freeze({ element: shell, render, sync, readSlots });
     }
 
-    globalThis.YtCdHudLiveMonitorLayoutPresets = Object.freeze({ STORAGE_KEY, SLOT_NAMES, BUNDLED_PRESETS, createBundledLayout, readSlots, writeSlots, createControls });
+    globalThis.YtCdHudLiveMonitorLayoutPresets = Object.freeze({ STORAGE_KEY, SLOT_NAMES, BUNDLED_PRESETS, createBundledLayout, readSlots, writeSlots, resetSlots, createControls });
 })();

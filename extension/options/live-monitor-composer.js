@@ -1,6 +1,28 @@
 (function () {
     'use strict';
 
+    // Approved panel export; tests verify this against the original fixture.
+    const AUTHORED_DEFAULT_PANEL = {
+        version: 2,
+        palette: {"primaryColor":"#404549","secondaryColor":"#c5ee65"},
+        canvas: {"width":1280,"height":720,"sizingMode":"absolute","collisionPolicy":"no-overlap-closed","alignmentGrid":{"enabled":true,"unitWidth":4,"unitHeight":4,"visible":false}},
+        components: [
+            {"id":"panel-base","type":"panel-base","present":true,"geometry":{"x":0.7054821195058648,"y":0.28994931403575736,"width":401.92166193572143,"height":306.5261142982726,"z":-3},"locked":false,"layer":{"enabled":false},"boundary":{"state":"closed","shape":"rect","collision":false,"mode":"dynamic-envelope","padding":16},"style":{"backgroundColor":"#404549","borderColor":"#c5ee65","opacity":0.2,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":2,"backgroundBlurEnabled":false,"secondaryOpacity":0.53},"effects":{"shadow":false,"accentRail":false}},
+            {"id":"disc","type":"disc","present":true,"geometry":{"x":0.578125,"y":0.12777777777777777,"width":104,"height":104,"z":3},"locked":false,"layer":{"enabled":true},"style":{"backgroundColor":"#404549","borderColor":"#c5ee65","opacity":1,"texture":"classic","borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":3,"backgroundBlurEnabled":false,"discOpacity":1,"secondaryOpacity":0.65},"effects":{"glow":false}},
+            {"id":"track-title","type":"track-title","present":true,"geometry":{"x":0.721875,"y":0.11666666666666667,"width":300,"height":32,"z":4},"locked":false,"layer":{"enabled":true},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#4a4e52","borderColor":"#c5ee65","opacity":0.35,"borderEnabled":false,"cornerEnabled":true,"cornerRadiusLevel":10,"backgroundBlurEnabled":true,"secondaryOpacity":0.74},"textStyle":{"color":"#e8ece8","font":"jetbrains-mono","fontSize":14,"fontWeight":200,"textAlign":"justify","opacity":1},"effects":{"marquee":false}},
+            {"id":"time-readout","type":"time-readout","present":true,"geometry":{"x":0.578125,"y":0.12777777777777777,"width":100,"height":28,"z":3},"locked":false,"layer":{"enabled":true},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#404549","borderColor":"#c5ee65","opacity":0,"borderEnabled":false,"cornerEnabled":false,"cornerRadiusLevel":3,"backgroundBlurEnabled":false,"secondaryOpacity":0,"backgroundEnabled":false},"textStyle":{"color":"#c5ee65","font":"jetbrains-mono","fontSize":11,"fontWeight":400,"textAlign":"center","opacity":1},"effects":{}},
+            {"id":"source-selector","type":"source-selector","present":true,"geometry":{"x":0.7875,"y":0.17222222222222222,"width":180,"height":28,"z":5},"locked":false,"layer":{"enabled":true},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#2d3135","borderColor":"#c5ee65","opacity":1,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":10,"backgroundBlurEnabled":false,"secondaryOpacity":1},"textStyle":{"color":"#ffffff","font":"jetbrains-mono","fontSize":13,"fontWeight":900,"textAlign":"center","opacity":0.65},"effects":{"statusLamp":true}},
+            {"id":"tracklist-toggle","type":"tracklist-toggle","present":false,"geometry":{"x":0.559375,"y":0.48333333333333334,"width":76,"height":52,"z":1},"locked":false,"layer":{"enabled":true},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#2d3135","borderColor":"#c5ee65","opacity":1,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":3,"backgroundBlurEnabled":false,"secondaryOpacity":0.28},"textStyle":{"color":"#e8ece8","font":"jetbrains-mono","fontSize":11,"textAlign":"center","opacity":1},"effects":{}},
+            {"id":"transport-controls","type":"transport-controls","present":true,"geometry":{"x":0.659375,"y":0.17222222222222222,"width":136,"height":28,"z":2},"locked":false,"layer":{"enabled":true},"arrangement":{"split":false,"partSize":{"width":72,"height":48},"positions":{"previous":{"x":0.59375,"y":0.6111111111111112},"next":{"x":0.65625,"y":0.6111111111111112}}},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#0e2e4e","borderColor":"#c5ee65","opacity":1,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":9,"backgroundBlurEnabled":false,"secondaryOpacity":0.71},"textStyle":{"color":"#e8ece8","font":"cascadia-mono","fontSize":11,"fontWeight":900,"textAlign":"center","opacity":1},"effects":{}},
+            {"id":"close-control","type":"close-control","present":true,"geometry":{"x":0.853125,"y":0.1,"width":48,"height":32,"z":0},"locked":false,"layer":{"enabled":false},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#2d3135","borderColor":"#c5ee65","opacity":0,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":3,"backgroundBlurEnabled":false,"secondaryOpacity":0},"textStyle":{"color":"#e8ece8","font":"jetbrains-mono","fontSize":18,"textAlign":"center","opacity":1},"effects":{}},
+            {"id":"text-size-control","type":"text-size-control","present":false,"geometry":{"x":0.63125,"y":0.4777777777777778,"width":80,"height":48,"z":0},"locked":false,"layer":{"enabled":false},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#2d3135","borderColor":"#c5ee65","opacity":1,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":3,"backgroundBlurEnabled":false,"secondaryOpacity":0.28},"textStyle":{"color":"#e8ece8","font":"jetbrains-mono","fontSize":11,"textAlign":"center","opacity":1},"effects":{}},
+            {"id":"tracklist-panel","type":"tracklist-panel","present":true,"geometry":{"x":0.70625,"y":0.35,"width":392,"height":208,"z":-2},"locked":false,"layer":{"enabled":true},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#2d3135","borderColor":"#c5ee65","opacity":0.9,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":4,"backgroundBlurEnabled":false,"secondaryOpacity":0.66},"textStyle":{"color":"#e8ece8","font":"jetbrains-mono","fontSize":11,"textAlign":"left","opacity":1},"effects":{"shadow":false,"accentRail":false}},
+        ],
+        manualBase: true,
+        locked: true,
+        placement: {"x":0.15547610309024051,"y":0.21787420549377456},
+    };
+
     const VERSION = 2;
     const STORAGE_KEY = 'ytCdHudLayoutV2';
     const LEGACY_STORAGE_KEY = 'ytCdHudLayoutV1';
@@ -145,7 +167,8 @@
             supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .72, y: .515, width: 64, height: 48, z: 0 },
             style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor }, textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 14, textAlign: 'center' },
-            flags: { supportsZAxis: true },
+            // Keep the legacy schema readable; typography now belongs to Settings.
+            flags: { supportsZAxis: true, catalog: false, defaultPresent: false, retired: true },
         }),
         'tracklist-panel': definition('tracklist-panel', 'Tracklist panel', {
             minSize: { width: 220, height: 48 }, maxSize: { width: 720, height: 640 },
@@ -616,6 +639,7 @@
     }
 
     function normalizeLayout(value) {
+        if (value == null) value = AUTHORED_DEFAULT_PANEL;
         const source = value && typeof value === 'object' ? value : {};
         const sizingMode = SIZING_MODES.includes(source.canvas?.sizingMode)
             ? source.canvas.sizingMode
@@ -623,9 +647,12 @@
         const canvas = normalizeCanvas({ ...source.canvas, sizingMode });
         const palette = normalizePalette(source.palette);
         const sourceComponents = Array.isArray(source.components) ? source.components : [];
+        const persistentTracklist = sourceForId(sourceComponents, 'tracklist-panel');
+        const hasTracklistPanel = persistentTracklist?.present === true && persistentTracklist.hidden !== true;
         const components = [];
         for (const id of Object.keys(registry)) {
             const component = normalizeComponent(sourceForId(sourceComponents, id), id, canvas);
+            if (registry[id].retired || (id === 'tracklist-toggle' && hasTracklistPanel)) component.present = false;
             component.style.borderColor = palette.secondaryColor;
             if (!source.manualBase && id !== 'panel-base' && component.present) component.geometry = findFreeGeometry(component, components, canvas) || component.geometry;
             components.push(component);
@@ -660,7 +687,7 @@
     }
 
     function createDefaultLayout() {
-        return applyPalette(normalizeLayout({ version: VERSION, palette: PALETTE_DEFAULTS, canvas: CANVAS, components: Object.keys(registry).map(id => ({ id })) }), PALETTE_DEFAULTS, true);
+        return normalizeLayout(null);
     }
 
     function getComponent(layout, componentId) {
@@ -674,18 +701,24 @@
 
     function availableComponents(layout) {
         const normalized = normalizeLayout(layout);
-        return Object.values(registry).filter(rule => rule.catalog && !getComponent(normalized, rule.type)?.present);
+        const panel = getComponent(normalized, 'tracklist-panel');
+        return Object.values(registry).filter(rule => rule.catalog && !getComponent(normalized, rule.type)?.present
+            && !(rule.type === 'tracklist-toggle' && panel?.present && !panel.hidden));
     }
 
     function addComponent(layout, componentId) {
         const normalized = normalizeLayout(layout);
         const component = getComponent(normalized, componentId);
         const rule = registry[componentId];
-        if (normalized.locked || !component || !rule?.catalog || component.present) return { layout: normalized, added: false };
+        if (normalized.locked || !component || !rule?.catalog || component.present
+            || !availableComponents(normalized).some(item => item.type === componentId)) return { layout: normalized, added: false };
         component.present = true;
+        const toggleWasPresent = getComponent(normalized, 'tracklist-toggle').present;
+        if (componentId === 'tracklist-panel' && !component.hidden) getComponent(normalized, 'tracklist-toggle').present = false;
         component.geometry = findFreeGeometry(component, normalized.components, normalized.canvas);
         if (!component.geometry) {
             component.present = false;
+            getComponent(normalized, 'tracklist-toggle').present = toggleWasPresent;
             return { layout: updateDynamicBase(normalized), added: false };
         }
         if (!connectedToBase(normalized, component)) {

@@ -19,9 +19,96 @@
     let statusState = '';
     let currentSettings = settingsApi.DEFAULTS;
     let currentLayout = composer.createDefaultLayout();
+    const autoSync = document.getElementById('auto-sync-workspace');
+    const autoSyncKey = 'ytCdHudAutoSyncWorkspace';
+    let syncTimer = null;
+    let synchronizedLayout = '';
+    let loading = true;
+    let agentConflict = false;
+    try { autoSync.checked = globalThis.localStorage?.getItem(autoSyncKey) !== 'false'; }
+    catch { autoSync.checked = true; }
+
+    function workspacePayload() {
+        const layout = composer.prepareForSave(bootstrap.getLayout());
+        layout.locked = true;
+        return layout;
+    }
+
+    function scheduleWorkspaceSync() {
+        if (loading || !autoSync.checked) return;
+        if (syncTimer !== null) clearTimeout(syncTimer);
+        syncTimer = setTimeout(() => {
+            syncTimer = null;
+            void syncWorkspace().catch(error => {
+                status.textContent = '自動同步未完成：' + error.message;
+                status.className = 'error';
+            });
+        }, 450);
+    }
+
+    async function syncWorkspace() {
+        if (!autoSync.checked || loading || !baseRevision || pendingOperation || agentConflict) return;
+        if (saving) { scheduleWorkspaceSync(); return; }
+        const layout = workspacePayload();
+        const fingerprint = JSON.stringify(layout);
+        if (fingerprint === synchronizedLayout) return;
+        if (!composer.connectedToBase(layout, composer.getComponent(layout, 'panel-base'))) {
+            status.textContent = '自動同步暫停：所有元件都必須與底座接觸。';
+            status.className = 'error';
+            return;
+        }
+        saving = true;
+        try {
+            let result;
+            for (let attempt = 0; attempt < 2; attempt++) {
+                const latest = await optionsHost.read();
+                if (!autoSync.checked || pendingOperation) return;
+                try {
+                    pendingOperation = crypto.randomUUID();
+                    result = await optionsHost.apply({ operationId: pendingOperation, baseRevision: latest.revision, payload: { layout } });
+                    break;
+                } catch (error) {
+                    if (['CONFLICT', 'CANCELLED', 'SCHEMA_INVALID', 'BASE_REVISION_REQUIRED', 'LAYOUT_DISCONNECTED'].includes(error.message)) pendingOperation = null;
+                    if (error.message !== 'CONFLICT' || attempt) throw error;
+                }
+            }
+            if (result?.status !== 'STORED') throw new Error('INCOMPLETE');
+            pendingOperation = null;
+            baseRevision = result.snapshot.revision;
+            synchronizedLayout = fingerprint;
+            status.textContent = '工作區面板已自動同步；資料來源與快取設定仍需儲存並套用。';
+            status.className = 'saved';
+        } catch (error) {
+            status.textContent = '自動同步未完成：' + error.message;
+            status.className = 'error';
+        } finally {
+            saving = false;
+            if (JSON.stringify(workspacePayload()) !== fingerprint) scheduleWorkspaceSync();
+        }
+    }
+
+    autoSync.addEventListener('change', () => {
+        try { globalThis.localStorage?.setItem(autoSyncKey, String(autoSync.checked)); } catch { /* Keep the current preference for this page. */ }
+        if (!autoSync.checked && syncTimer !== null) { clearTimeout(syncTimer); syncTimer = null; }
+        if (autoSync.checked) { synchronizedLayout = ''; scheduleWorkspaceSync(); }
+    });
 
     function rememberDraft() {
         optionsHost.rememberDraft?.({ settings:getFormSettings(), layout:bootstrap.getLayout(), revision:baseRevision });
+        updateTypographyControl();
+        scheduleWorkspaceSync();
+    }
+
+    function updateTypographyControl() {
+        const sizes = bootstrap.getLayout().components
+            .filter(component => component.present !== false && !component.hidden && component.textStyle)
+            .map(component => component.textStyle.fontSize);
+        const size = sizes[0] || 14;
+        const mixed = sizes.some(value => value !== size);
+        const slider = document.getElementById('theme-font-size');
+        slider.value = composer.fontSizeToSlider(size);
+        slider.setAttribute?.('aria-valuetext', mixed ? '混合字級；調整後統一文字大小' : size + ' px');
+        document.getElementById('theme-font-size-output').value = mixed ? '混合字級' : size + ' px';
     }
 
     const outputFormatters = {
@@ -83,19 +170,27 @@
     }
 
     async function load(fresh = false) {
+        loading = true;
+        baseRevision = null;
         try {
             const snapshot = fresh && optionsHost.reload ? await optionsHost.reload() : await optionsHost.read();
             baseRevision = snapshot.revision;
+            agentConflict = false;
             populate(snapshot.settings);
             currentLayout = composer.normalizeLayout(snapshot.layout);
             bootstrap.init({ preview, layout: currentLayout, onChange: () => { setStatus('options.unsaved'); rememberDraft(); } });
+            synchronizedLayout = JSON.stringify(workspacePayload());
+            updateTypographyControl();
             setStatus('options.loaded');
         } catch (error) {
             console.error('[CD HUD] Could not load options state.', error);
             populate(settingsApi.DEFAULTS);
             currentLayout = composer.createDefaultLayout();
             bootstrap.init({ preview, layout: currentLayout, onChange: () => setStatus('options.unsaved') });
+            updateTypographyControl();
             setStatus('options.loadFailed', 'error');
+        } finally {
+            loading = false;
         }
     }
 
@@ -131,7 +226,9 @@
             pendingOperation = null;
             baseRevision = stored.snapshot.revision;
             currentLayout = composer.normalizeLayout(stored.snapshot.layout);
-            bootstrap.setLayout(currentLayout);
+            bootstrap.setLayout(currentLayout, { record: false });
+            synchronizedLayout = JSON.stringify(workspacePayload());
+            agentConflict = false;
             populate(stored.snapshot.settings);
             rememberDraft();
             status.textContent = stored.runtime?.status === 'APPLIED'
@@ -152,6 +249,11 @@
     });
 
     document.getElementById('reload-settings').addEventListener('click', async () => {
+        if (autoSync.checked) {
+            synchronizedLayout = '';
+            await syncWorkspace();
+            return;
+        }
         if (saving || !window.confirm('重新讀取會取代目前草稿。請先匯出需要保留的草稿，是否繼續？')) return;
         pendingOperation = null;
         remoteSnapshot = null;
@@ -188,9 +290,9 @@
     });
     function applyTypography(font, fontSize) {
         const layout = bootstrap.getLayout();
-        if (layout.locked) { codeStatus.textContent = '請先 UNLOCK 面板。'; return; }
+        if (layout.locked && !fontSize) { codeStatus.textContent = '請先 UNLOCK 面板。'; return; }
         layout.components.forEach(component => {
-            if (!component.textStyle || component.locked) return;
+            if (!component.textStyle || (component.locked && !fontSize)) return;
             if (font) component.textStyle.font = font;
             if (fontSize) component.textStyle.fontSize = fontSize;
             composer.ensureTextFits(component, layout.canvas);
@@ -213,5 +315,61 @@
         event.target.setAttribute('aria-valuetext', size + ' px');
         applyTypography(null, size);
     });
-    void load();
+    document.getElementById('clear-cache').addEventListener('click', async () => {
+        const button = document.getElementById('clear-cache');
+        const cacheStatus = document.getElementById('cache-status');
+        button.disabled = true;
+        try {
+            if (!optionsHost.clearCache) throw new Error('CACHE_CLEAR_UNAVAILABLE');
+            await optionsHost.clearCache();
+            cacheStatus.textContent = '已清理本機曲目快取並讀回確認。';
+        } catch (error) {
+            cacheStatus.textContent = '清理未完成：' + error.message;
+        } finally { button.disabled = false; }
+    });
+    async function commitAgentLayout(layout, expected) {
+        if (saving || loading || pendingOperation) throw new Error('BUSY');
+        if (!baseRevision || baseRevision !== expected.storageRevision) throw new Error('CONFLICT');
+        const unchanged = () => JSON.stringify(bootstrap.getLayout()) === JSON.stringify(expected.before);
+        if (!unchanged() || bootstrap.getLayout().locked) throw new Error('CONFLICT');
+        saving = true;
+        if (syncTimer !== null) { clearTimeout(syncTimer); syncTimer = null; }
+        try {
+            const latest = await optionsHost.read();
+            if (latest.revision !== expected.storageRevision || !unchanged()) throw new Error('CONFLICT');
+            pendingOperation = crypto.randomUUID();
+            const stored = await optionsHost.apply({ operationId: pendingOperation, baseRevision: expected.storageRevision, payload: { layout } });
+            if (stored.status !== 'STORED') throw new Error('INCOMPLETE');
+            pendingOperation = null;
+            baseRevision = stored.snapshot.revision;
+            // A person may edit while Chrome is storing. Preserve that work instead of replacing it.
+            if (!unchanged()) {
+                agentConflict = true;
+                if (syncTimer !== null) { clearTimeout(syncTimer); syncTimer = null; }
+                status.textContent = 'Agent 配置已儲存，但工作區有新編輯；保留工作區並暫停同步。請確認後儲存，或關閉自動同步再重新讀取。';
+                return { status: 'STORED', workspaceApplied: false, runtime: stored.runtime || { status: 'UNKNOWN' }, error: 'WORKSPACE_CHANGED' };
+            }
+            currentLayout = composer.normalizeLayout(stored.snapshot.layout);
+            currentLayout.locked = expected.before.locked;
+            bootstrap.setLayout(currentLayout);
+            synchronizedLayout = JSON.stringify(workspacePayload());
+            agentConflict = false;
+            updateTypographyControl();
+            optionsHost.rememberDraft?.({ settings: getFormSettings(), layout: bootstrap.getLayout(), revision: baseRevision });
+            status.textContent = stored.runtime?.status === 'APPLIED' ? 'Agent 配置已儲存；YouTube 已確認套用。' : 'Agent 配置已儲存；YouTube 套用狀態待確認。';
+            return { status: 'STORED', workspaceApplied: true, runtime: stored.runtime || { status: 'UNKNOWN' } };
+        } catch (error) {
+            if (['CONFLICT', 'CANCELLED', 'SCHEMA_INVALID', 'BASE_REVISION_REQUIRED', 'LAYOUT_DISCONNECTED'].includes(error.message)) pendingOperation = null;
+            throw error;
+        } finally { saving = false; }
+    }
+    void (async () => {
+        await load();
+        globalThis.YtCdHudOptionsAgent?.init({
+            composer, getLayout: bootstrap.getLayout, getRevision: () => baseRevision,
+            getSelected: () => bootstrap.instance?.editor.state.selected || null,
+            isEditing: () => Boolean(saving || loading || pendingOperation || bootstrap.instance?.editor.state.dragging || bootstrap.instance?.editor.state.resizing),
+            commit: commitAgentLayout, slots: globalThis.YtCdHudLiveMonitorLayoutPresets,
+        });
+    })().catch(error => console.error('[CD HUD] Agent UI initialization failed.', error));
 })();

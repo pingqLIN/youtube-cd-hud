@@ -112,30 +112,24 @@ test('uses the default priority YT, 1001, TrackId, then MixesDB', () => {
   assert.equal(choosePreferredTracklistSource({ mixesdb: true }), 'mixesdb');
 });
 
-test('demotes explicitly system-recognized YouTube text behind every provider', () => {
-  const recognizedSelection = chooseYouTubeTimestampPlaylist(
-    '',
-    [],
-    ['00:00 Recognized intro\n04:20 Recognized second track'],
-  );
+test('ignores system transcript cues even when no author playlist is available', () => {
+  const selection = chooseYouTubeTimestampPlaylist('', [], ['00:00 Recognized intro\n04:20 Recognized second track']);
+  assert.equal(selection.origin, '');
+  assert.equal(selection.tracks.length, 0);
+});
 
-  assert.equal(recognizedSelection.origin, 'recognized');
-  assert.equal(
-    choosePreferredTracklistSource({ youtube: true, mixesdb: true }, recognizedSelection.origin),
-    'mixesdb',
-  );
-  assert.equal(
-    choosePreferredTracklistSource({ youtube: true, trackid: true }, recognizedSelection.origin),
-    'trackid',
-  );
-  assert.equal(
-    choosePreferredTracklistSource({ youtube: true, '1001': true }, recognizedSelection.origin),
-    '1001',
-  );
-  assert.equal(
-    choosePreferredTracklistSource({ youtube: true }, recognizedSelection.origin),
-    'youtube',
-  );
+test('reads author description text without surrounding system transcript or chapter labels', () => {
+  const read = sandbox.__YT_CD_HUD_TEST_EXPORTS__.getYouTubeDescriptionText;
+  sandbox.document = { querySelector(selector) {
+    if (selector.endsWith('#attributed-description-text')) return { textContent: '00:00 Artist A\n04:00 Artist B' };
+    return { textContent: '00:00 這部影片中\n01:00 自動生成字幕' };
+  } };
+  assert.equal(read(), '00:00 Artist A\n04:00 Artist B');
+  sandbox.document = { querySelector(selector) {
+    return selector === '#description' ? { textContent: '00:00 這部影片中\n01:00 自動生成字幕' } : null;
+  } };
+  assert.equal(read(), '');
+  delete sandbox.document;
 });
 
 test('explicit prefer-1001 setting remains an override over normal YouTube data', () => {

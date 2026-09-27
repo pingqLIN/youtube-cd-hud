@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+﻿import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
@@ -25,7 +25,9 @@ function createHarness(initial = {}, options = {}) {
           return Object.fromEntries(wanted.map(key => [key, state[key]]).filter(([, value]) => value !== undefined));
         },
         async set(values) {
-          const next = structuredClone(values);
+          const reorder = value => Array.isArray(value) ? value.map(reorder) : value && typeof value === 'object'
+            ? Object.fromEntries(Object.keys(value).sort().map(key => [key, reorder(value[key])])) : value;
+          const next = options.reorderStorageKeys ? reorder(structuredClone(values)) : structuredClone(values);
           if (options.corruptSettings && next.ytCdHudSettings) next.ytCdHudSettings.enabled = 'corrupted';
           Object.assign(state, next);
         },
@@ -34,6 +36,7 @@ function createHarness(initial = {}, options = {}) {
     },
   };
   vm.runInNewContext(read('extension/shared/settings.js'), context);
+  vm.runInNewContext(read('extension/options/live-monitor-composer.js'), context);
   vm.runInNewContext(read('extension/shared/settings-coordinator.js'), context);
   return { context, state, listeners };
 }
@@ -159,4 +162,30 @@ test('runtime acknowledgement can reread coordinator state after apply queue rel
   assert.equal(result.status, 'STORED');
   assert.equal(result.runtime.status, 'APPLIED');
   assert.equal(result.runtime.acknowledgedTabs, 1);
+});
+
+test('coordinator accepts a full snapshot no-op apply and reads it back canonically', async () => {
+  const { context } = createHarness();
+  const before = await context.YtCdHudSettingsCoordinator.execute({ action: 'read' });
+  const result = await context.YtCdHudSettingsCoordinator.execute({
+    action: 'apply', operationId: 'noop-full-1', baseRevision: before.snapshot.revision,
+    payload: { settings: before.snapshot.settings, layout: before.snapshot.layout },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.status, 'STORED');
+  const after = await context.YtCdHudSettingsCoordinator.execute({ action: 'read' });
+  assert.equal(after.snapshot.revision, result.snapshot.revision);
+});
+
+
+
+test('full snapshot apply survives storage object-key reordering', async () => {
+  const { context } = createHarness({}, { reorderStorageKeys: true });
+  const before = await context.YtCdHudSettingsCoordinator.execute({ action: 'read' });
+  const result = await context.YtCdHudSettingsCoordinator.execute({
+    action: 'apply', operationId: 'reorder-noop-1', baseRevision: before.snapshot.revision,
+    payload: { settings: before.snapshot.settings, layout: before.snapshot.layout },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.status, 'STORED');
 });

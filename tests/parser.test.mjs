@@ -12,6 +12,7 @@ const source = fs.readFileSync(sourcePath, 'utf8');
 let documentParseHtmlCalls = 0;
 
 const sandbox = {
+  navigator: { languages: ['en'], language: 'en' },
   URL,
   URLSearchParams,
   Document: class Document {
@@ -369,7 +370,9 @@ test('uses the active 1001 track instead of a YouTube system chapter label', () 
     'Ross Quinn & Punctual - Omen',
   );
   assert.equal(chooseHudTitle('1001', '', '影片相關資訊'), '1001 Tracklist');
-  assert.equal(chooseHudTitle('youtube', 'Fallback track', 'Official chapter'), 'Official chapter');
+  assert.equal(chooseHudTitle('youtube', 'Fallback track', '這部影片中'), 'Fallback track');
+  assert.equal(chooseHudTitle('youtube', '', '這部影片中'), chooseHudTitle('youtube', '', ''));
+  assert.equal(chooseHudTitle('mixesdb', 'Actual track', 'Transcript'), 'Actual track');
 });
 
 test('calculates a complete HUD floor from the disc, text, controls, and padding', () => {

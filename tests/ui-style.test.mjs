@@ -145,12 +145,11 @@ test('shows the tracklist explicitly and uses the redesigned compound controls',
   assert.match(source, /function isPersistentTracklistPanel\(\)/);
   assert.match(source, /element\.parentNode !== hud\) hud\.appendChild\(element\)/);
   assert.match(source, /className\s*=\s*'hud-side-controls'/);
-  assert.match(source, /createControlButton\(\s*'T±'/);
+  assert.doesNotMatch(source, /createControlButton\(\s*'T±'/);
   assert.doesNotMatch(source, /createControlButton\('T[−+]'/);
-  assert.match(source, /sideControls\.appendChild\(textSizeBtn\)/);
+  assert.doesNotMatch(source, /sideControls\.appendChild\(textSizeBtn\)/);
   assert.doesNotMatch(source, /sideControls\.appendChild\(text(?:Decrease|Increase)Btn\)/);
-  assert.match(source, /textSizeBtn\.addEventListener\('contextmenu'/);
-  assert.match(source, /aria-keyshortcuts/);
+  assert.doesNotMatch(source, /textSizeBtn\.addEventListener/);
   assert.match(source, /className\s*=\s*'hud-1001-menu'/);
   assert.match(source, /createControlButton\(t\('use1001'\)/);
   assert.match(source, /createControlButton\(t\('useMixesDb'\)/);
