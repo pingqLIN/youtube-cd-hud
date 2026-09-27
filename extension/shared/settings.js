@@ -32,6 +32,7 @@
         showTransport: true,
         customCss: '',
         language: 'auto',
+        catalogSearch: 'beatport',
     });
 
     function clampNumber(value, fallback, minimum, maximum, integer = false) {
@@ -51,6 +52,13 @@
         return Object.hasOwn(FONT_STACKS, key) ? key : DEFAULTS.fontFamily;
     }
 
+
+    const CATALOG_SEARCH_PROVIDERS = Object.freeze(['beatport', 'soundcloud', 'tidal', 'spotify', 'appleMusic']);
+
+    function normalizeCatalogSearch(value) {
+        const key = String(value || '').trim();
+        return CATALOG_SEARCH_PROVIDERS.includes(key) ? key : DEFAULTS.catalogSearch;
+    }
     function normalizeLanguage(value) {
         const normalized = String(value || '').trim().toLowerCase().replace(/_/g, '-');
         if (normalized === 'auto') return 'auto';
@@ -97,6 +105,7 @@
             showTransport: value.showTransport !== false,
             customCss: String(value.customCss || '').slice(0, 20000),
             language: normalizeLanguage(value.language),
+            catalogSearch: normalizeCatalogSearch(value.catalogSearch),
         };
     }
 
