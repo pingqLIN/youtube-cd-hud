@@ -32,7 +32,7 @@
         const messages = {
             'zh-TW': {
                 albumMode: '專輯模式', fullTrackSet: '完整曲目集', tracklist: '曲目清單', noTracklist: '找不到曲目清單', source: '曲目來源',
-                searchGoogle: '使用 Google 搜尋：{track}', searchGoogleAria: '使用 Google 搜尋曲目：{track}', discScrub: '按住唱片：順時針快轉，逆時針循環短取樣；放開後繼續播放',
+                searchGoogle: '使用 Google 搜尋：{track}', searchGoogleAria: '使用 Google 搜尋曲目：{track}', searchCatalog: '在 {service} 搜尋：{track}', searchCatalogAria: '在 {service} 搜尋曲目：{track}', searchCatalogUnavailable: '此曲目沒有可搜尋的目錄名稱', discScrub: '按住唱片：順時針快轉，逆時針循環短取樣；放開後繼續播放',
                 idle: '尚未搜尋', searching: '搜尋中…', success: '已取得曲目', error: '搜尋失敗', expandSources: '{status}；展開曲目資料來源控制',
                 youtubeComments: 'YouTube 留言時間戳曲目', youtubeDescription: 'YouTube 說明欄時間戳曲目', youtubeRecognized: 'YouTube 系統辨識或字幕時間戳曲目（低優先）', youtubeTimestamp: 'YouTube 時間戳曲目',
                 useSource: '使用 {source}', unavailableYouTube: '目前沒有可用的 YouTube 說明欄或留言時間戳曲目', unavailableSource: '目前沒有可用的 {source}', viewSource: '在 {source} 查看原頁面', openVerify: '開啟 1001Tracklists 檢查或完成瀏覽器驗證', candidateNext: '切換至 {source} 候選 {next}，共 {count} 個候選', openSource: '開啟 {source} 曲目來源頁面', unavailablePage: '{source} 尚無可用來源頁面',
@@ -40,10 +40,10 @@
                 use1001Label: '使用 1001', useMixesDbLabel: '使用 MIXESDB', useTrackIdLabel: '使用 TRACKID', retry1001Label: '重新搜尋', open1001Label: '開啟 1001 ↗', searchMixesDbLabel: '搜尋 MIXESDB', searchTrackIdLabel: '搜尋 TRACKID', openMixesDbLabel: '開啟 MIXESDB ↗', openTrackIdLabel: '開啟 TRACKID ↗', previousLabel: '◀ 上一首', nextLabel: '下一首 ▶',
             },
             en: {
-                albumMode: 'Album mode', fullTrackSet: 'Full track set', tracklist: 'TRACKLIST', noTracklist: 'No tracklist found', source: 'Tracklist source', searchGoogle: 'Search Google: {track}', searchGoogleAria: 'Search Google for track: {track}', discScrub: 'Hold the disc: clockwise fast-forwards; counter-clockwise loops a short sample; release to resume playback.', idle: 'Not searched', searching: 'Searching…', success: 'Tracks loaded', error: 'Search failed', expandSources: '{status}; expand tracklist source controls', youtubeComments: 'YouTube comment timestamp tracks', youtubeDescription: 'YouTube description timestamp tracks', youtubeRecognized: 'YouTube recognized or caption timestamp tracks (lower priority)', youtubeTimestamp: 'YouTube timestamp tracks', useSource: 'Use {source}', unavailableYouTube: 'No YouTube description or comment timestamp tracks are available', unavailableSource: 'No {source} tracks are available', viewSource: 'View source page on {source}', openVerify: 'Open 1001Tracklists to check or complete browser verification', candidateNext: 'Switch to {source} candidate {next} of {count}', openSource: 'Open {source} tracklist source page', unavailablePage: 'No source page is available for {source}', closeTracklist: 'Close tracklist', useYouTube: 'Use YouTube description or comment timestamp tracks', use1001: 'Use 1001Tracklists tracks', useMixesDb: 'Use MixesDB tracks', useTrackId: 'Use TrackId.net tracks', retry1001: 'Search 1001Tracklists again', open1001: 'Open 1001Tracklists page', searchMixesDb: 'Search MixesDB', searchTrackId: 'Search existing TrackId.net tracks', openMixesDb: 'Open MixesDB page', openTrackId: 'Open TrackId.net page', toggleTracklist: 'Show or hide tracklist', previousTrack: 'Go to previous track', nextTrack: 'Go to next track', closeHud: 'Close HUD (returns after reload)', textSize: 'Left-click or Enter increases text size; right-click decreases it; arrow keys adjust it.', resize: 'Drag or use left and right arrow keys to resize the HUD; Home restores automatic width.', use1001Label: 'USE 1001', useMixesDbLabel: 'USE MIXESDB', useTrackIdLabel: 'USE TRACKID', retry1001Label: 'RETRY SEARCH', open1001Label: 'OPEN 1001 ↗', searchMixesDbLabel: 'SEARCH MIXESDB', searchTrackIdLabel: 'SEARCH TRACKID', openMixesDbLabel: 'OPEN MIXESDB ↗', openTrackIdLabel: 'OPEN TRACKID ↗', previousLabel: '◀ PREV', nextLabel: 'NEXT ▶',
+                albumMode: 'Album mode', fullTrackSet: 'Full track set', tracklist: 'TRACKLIST', noTracklist: 'No tracklist found', source: 'Tracklist source', searchGoogle: 'Search Google: {track}', searchGoogleAria: 'Search Google for track: {track}', searchCatalog: 'Search {service}: {track}', searchCatalogAria: 'Search {service} for track: {track}', searchCatalogUnavailable: 'This track has no searchable catalog title', discScrub: 'Hold the disc: clockwise fast-forwards; counter-clockwise loops a short sample; release to resume playback.', idle: 'Not searched', searching: 'Searching…', success: 'Tracks loaded', error: 'Search failed', expandSources: '{status}; expand tracklist source controls', youtubeComments: 'YouTube comment timestamp tracks', youtubeDescription: 'YouTube description timestamp tracks', youtubeRecognized: 'YouTube recognized or caption timestamp tracks (lower priority)', youtubeTimestamp: 'YouTube timestamp tracks', useSource: 'Use {source}', unavailableYouTube: 'No YouTube description or comment timestamp tracks are available', unavailableSource: 'No {source} tracks are available', viewSource: 'View source page on {source}', openVerify: 'Open 1001Tracklists to check or complete browser verification', candidateNext: 'Switch to {source} candidate {next} of {count}', openSource: 'Open {source} tracklist source page', unavailablePage: 'No source page is available for {source}', closeTracklist: 'Close tracklist', useYouTube: 'Use YouTube description or comment timestamp tracks', use1001: 'Use 1001Tracklists tracks', useMixesDb: 'Use MixesDB tracks', useTrackId: 'Use TrackId.net tracks', retry1001: 'Search 1001Tracklists again', open1001: 'Open 1001Tracklists page', searchMixesDb: 'Search MixesDB', searchTrackId: 'Search existing TrackId.net tracks', openMixesDb: 'Open MixesDB page', openTrackId: 'Open TrackId.net page', toggleTracklist: 'Show or hide tracklist', previousTrack: 'Go to previous track', nextTrack: 'Go to next track', closeHud: 'Close HUD (returns after reload)', textSize: 'Left-click or Enter increases text size; right-click decreases it; arrow keys adjust it.', resize: 'Drag or use left and right arrow keys to resize the HUD; Home restores automatic width.', use1001Label: 'USE 1001', useMixesDbLabel: 'USE MIXESDB', useTrackIdLabel: 'USE TRACKID', retry1001Label: 'RETRY SEARCH', open1001Label: 'OPEN 1001 ↗', searchMixesDbLabel: 'SEARCH MIXESDB', searchTrackIdLabel: 'SEARCH TRACKID', openMixesDbLabel: 'OPEN MIXESDB ↗', openTrackIdLabel: 'OPEN TRACKID ↗', previousLabel: '◀ PREV', nextLabel: 'NEXT ▶',
             },
             ja: {
-                albumMode: 'アルバムモード', fullTrackSet: '全曲セット', tracklist: 'トラックリスト', noTracklist: 'トラックリストが見つかりません', source: 'トラックリストの情報源', searchGoogle: 'Google で検索：{track}', searchGoogleAria: 'Google で曲を検索：{track}', discScrub: 'ディスクを長押し：時計回りで早送り、反時計回りで短いサンプルをループ。離すと再生を再開します。', idle: '未検索', searching: '検索中…', success: '曲を取得しました', error: '検索失敗', expandSources: '{status}。トラックリストの情報源を展開', youtubeComments: 'YouTube コメントのタイムスタンプ曲目', youtubeDescription: 'YouTube 説明欄のタイムスタンプ曲目', youtubeRecognized: 'YouTube 認識または字幕のタイムスタンプ曲目（低優先）', youtubeTimestamp: 'YouTube タイムスタンプ曲目', useSource: '{source} を使用', unavailableYouTube: '使用可能な YouTube 説明欄またはコメントのタイムスタンプ曲目がありません', unavailableSource: '使用可能な {source} 曲目がありません', viewSource: '{source} で元のページを表示', openVerify: '1001Tracklists を開いてブラウザー認証を確認または完了します', candidateNext: '{source} の候補 {next}/{count} に切り替え', openSource: '{source} のトラックリストページを開く', unavailablePage: '{source} のページはまだ利用できません', closeTracklist: 'トラックリストを閉じる', useYouTube: 'YouTube の説明欄またはコメントのタイムスタンプ曲目を使用', use1001: '1001Tracklists の曲目を使用', useMixesDb: 'MixesDB の曲目を使用', useTrackId: 'TrackId.net の曲目を使用', retry1001: '1001Tracklists を再検索', open1001: '1001Tracklists ページを開く', searchMixesDb: 'MixesDB を検索', searchTrackId: '既存の TrackId.net 曲目を検索', openMixesDb: 'MixesDB ページを開く', openTrackId: 'TrackId.net ページを開く', toggleTracklist: 'トラックリストを表示または非表示', previousTrack: '前の曲へ', nextTrack: '次の曲へ', closeHud: 'HUD を閉じる（再読み込みで戻ります）', textSize: '左クリックまたは Enter で文字を大きく、右クリックで小さく、方向キーで調整します。', resize: 'ドラッグまたは左右キーで HUD の幅を調整します。Home で自動幅に戻ります。', use1001Label: '1001 を使用', useMixesDbLabel: 'MIXESDB を使用', useTrackIdLabel: 'TRACKID を使用', retry1001Label: '再検索', open1001Label: '1001 を開く ↗', searchMixesDbLabel: 'MIXESDB を検索', searchTrackIdLabel: 'TRACKID を検索', openMixesDbLabel: 'MIXESDB を開く ↗', openTrackIdLabel: 'TRACKID を開く ↗', previousLabel: '◀ 前へ', nextLabel: '次へ ▶',
+                albumMode: 'アルバムモード', fullTrackSet: '全曲セット', tracklist: 'トラックリスト', noTracklist: 'トラックリストが見つかりません', source: 'トラックリストの情報源', searchGoogle: 'Google で検索：{track}', searchGoogleAria: 'Google で曲を検索：{track}', searchCatalog: '{service} で検索：{track}', searchCatalogAria: '{service} で曲を検索：{track}', searchCatalogUnavailable: 'この曲には検索できるカタログ名がありません', discScrub: 'ディスクを長押し：時計回りで早送り、反時計回りで短いサンプルをループ。離すと再生を再開します。', idle: '未検索', searching: '検索中…', success: '曲を取得しました', error: '検索失敗', expandSources: '{status}。トラックリストの情報源を展開', youtubeComments: 'YouTube コメントのタイムスタンプ曲目', youtubeDescription: 'YouTube 説明欄のタイムスタンプ曲目', youtubeRecognized: 'YouTube 認識または字幕のタイムスタンプ曲目（低優先）', youtubeTimestamp: 'YouTube タイムスタンプ曲目', useSource: '{source} を使用', unavailableYouTube: '使用可能な YouTube 説明欄またはコメントのタイムスタンプ曲目がありません', unavailableSource: '使用可能な {source} 曲目がありません', viewSource: '{source} で元のページを表示', openVerify: '1001Tracklists を開いてブラウザー認証を確認または完了します', candidateNext: '{source} の候補 {next}/{count} に切り替え', openSource: '{source} のトラックリストページを開く', unavailablePage: '{source} のページはまだ利用できません', closeTracklist: 'トラックリストを閉じる', useYouTube: 'YouTube の説明欄またはコメントのタイムスタンプ曲目を使用', use1001: '1001Tracklists の曲目を使用', useMixesDb: 'MixesDB の曲目を使用', useTrackId: 'TrackId.net の曲目を使用', retry1001: '1001Tracklists を再検索', open1001: '1001Tracklists ページを開く', searchMixesDb: 'MixesDB を検索', searchTrackId: '既存の TrackId.net 曲目を検索', openMixesDb: 'MixesDB ページを開く', openTrackId: 'TrackId.net ページを開く', toggleTracklist: 'トラックリストを表示または非表示', previousTrack: '前の曲へ', nextTrack: '次の曲へ', closeHud: 'HUD を閉じる（再読み込みで戻ります）', textSize: '左クリックまたは Enter で文字を大きく、右クリックで小さく、方向キーで調整します。', resize: 'ドラッグまたは左右キーで HUD の幅を調整します。Home で自動幅に戻ります。', use1001Label: '1001 を使用', useMixesDbLabel: 'MIXESDB を使用', useTrackIdLabel: 'TRACKID を使用', retry1001Label: '再検索', open1001Label: '1001 を開く ↗', searchMixesDbLabel: 'MIXESDB を検索', searchTrackIdLabel: 'TRACKID を検索', openMixesDbLabel: 'MIXESDB を開く ↗', openTrackIdLabel: 'TRACKID を開く ↗', previousLabel: '◀ 前へ', nextLabel: '次へ ▶',
             },
         };
         const resolveLanguage = preference => {
@@ -140,6 +140,7 @@
         showTransport: true,
         customCss: '',
         language: 'auto',
+        catalogSearch: 'beatport',
     });
     const DISC_SCRUB_SECONDS_PER_REVOLUTION = 24;
     const DISC_SAMPLE_SECONDS = 0.08;
@@ -1125,6 +1126,78 @@
         return query
             ? `https://www.google.com/search?q=${encodeURIComponent(query)}`
             : 'https://www.google.com/';
+    }
+
+    const CATALOG_SEARCH_PROVIDERS = Object.freeze({
+        beatport: Object.freeze({
+            id: 'beatport',
+            label: 'Beatport',
+            buildUrl: query => 'https://www.beatport.com/search?q=' + encodeURIComponent(query),
+        }),
+        soundcloud: Object.freeze({
+            id: 'soundcloud',
+            label: 'SoundCloud',
+            buildUrl: query => 'https://soundcloud.com/search/sounds?q=' + encodeURIComponent(query),
+        }),
+        tidal: Object.freeze({
+            id: 'tidal',
+            label: 'TIDAL',
+            buildUrl: query => 'https://tidal.com/search?q=' + encodeURIComponent(query),
+        }),
+        spotify: Object.freeze({
+            id: 'spotify',
+            label: 'Spotify',
+            buildUrl: query => 'https://open.spotify.com/search/' + encodeURIComponent(query),
+        }),
+        appleMusic: Object.freeze({
+            id: 'appleMusic',
+            label: 'Apple Music',
+            buildUrl: query => 'https://music.apple.com/search?term=' + encodeURIComponent(query),
+        }),
+    });
+
+    function normalizeCatalogSearchProvider(value) {
+        const key = trim(String(value || ''));
+        return Object.hasOwn(CATALOG_SEARCH_PROVIDERS, key) ? key : 'beatport';
+    }
+
+    function isUnresolvedCatalogTitle(trackTitle) {
+        const query = trim(String(trackTitle || ''));
+        if (!query) return true;
+        const normalized = query.toLowerCase().replace(/[–—]/g, '-').replace(/\s+/g, ' ');
+        return /^(id)(\s*-\s*id)?$/.test(normalized)
+            || /^(unknown|unreleased|tba|n\/a)$/.test(normalized);
+    }
+
+    function getCatalogSearchProvider(provider) {
+        return CATALOG_SEARCH_PROVIDERS[normalizeCatalogSearchProvider(provider)];
+    }
+
+    function getCatalogTrackSearchUrl(trackTitle, provider) {
+        const query = trim(String(trackTitle || ''));
+        if (!query || isUnresolvedCatalogTitle(query)) return '';
+        return getCatalogSearchProvider(provider).buildUrl(query);
+    }
+
+    function getActiveCatalogTrackSearchUrl(trackTitle) {
+        return getCatalogTrackSearchUrl(trackTitle, runtimeSettings.catalogSearch);
+    }
+
+    function bindCatalogSearchLink(element, trackTitle) {
+        if (!element) return;
+        const query = trim(String(trackTitle || ''));
+        const provider = getCatalogSearchProvider(runtimeSettings.catalogSearch);
+        const url = getCatalogTrackSearchUrl(query, provider.id);
+        element.href = url || '#';
+        element.target = url ? '_blank' : '_self';
+        element.rel = url ? 'noopener noreferrer' : '';
+        if (!url) {
+            element.title = t('searchCatalogUnavailable');
+            element.setAttribute('aria-label', t('searchCatalogUnavailable'));
+            return;
+        }
+        element.title = t('searchCatalog', { service: provider.label, track: query });
+        element.setAttribute('aria-label', t('searchCatalogAria', { service: provider.label, track: query }));
     }
 
     function getTracklistSourcePage(source, videoId, sourceUrls = {}) {
@@ -4079,9 +4152,7 @@
             getCurrentTrack(video.currentTime)
         );
         setHudTitleText(chapterEl, displayedTrack);
-        chapterEl.href = getGoogleTrackSearchUrl(displayedTrack);
-        chapterEl.title = t('searchGoogle', { track: displayedTrack });
-        chapterEl.setAttribute('aria-label', t('searchGoogleAria', { track: displayedTrack }));
+        bindCatalogSearchLink(chapterEl, displayedTrack);
         updateTracklistHighlight(video.currentTime);
         syncHudContentBounds();
     }
@@ -5067,7 +5138,7 @@
             button.setAttribute('aria-label', title);
         };
         const chapter = hud?.querySelector('.hud-chapter');
-        if (chapter) chapter.title = t('searchGoogle', { track: chapter.dataset.ytcdMarqueeTitle || chapter.textContent });
+        if (chapter) bindCatalogSearchLink(chapter, chapter.dataset.ytcdMarqueeTitle || chapter.textContent);
         const sourceSelector = hud?.querySelector('.hud-source-selector');
         if (sourceSelector) sourceSelector.setAttribute('aria-label', t('source'));
         setButtonCopy('.hud-source-youtube', 'YT', t('useYouTube'));
@@ -5379,10 +5450,9 @@
             chapter.className = 'hud-chapter';
             chapter.id = 'hud-chapter';
             setHudTitleText(chapter, t('albumMode'));
-            chapter.href = getGoogleTrackSearchUrl(chapter.dataset.ytcdMarqueeTitle);
             chapter.target = '_blank';
             chapter.rel = 'noopener noreferrer';
-            chapter.title = t('searchGoogle', { track: chapter.dataset.ytcdMarqueeTitle });
+            bindCatalogSearchLink(chapter, chapter.dataset.ytcdMarqueeTitle);
             const time = document.createElement('div');
             time.className = 'hud-time';
             time.id = 'hud-time';
@@ -5730,6 +5800,10 @@
             getBalancedDiscSize,
             getContentBalancedDiscSize,
             getGoogleTrackSearchUrl,
+            normalizeCatalogSearchProvider,
+            isUnresolvedCatalogTitle,
+            getCatalogTrackSearchUrl,
+            getActiveCatalogTrackSearchUrl,
             getCandidateActionState,
             getMixesDbExactSourceLookupUrl,
             getTracklistSourcePage,

@@ -235,6 +235,17 @@
                             </details>
                         </div>
                     </div>
+                    <label class="field-block catalog-search-field">
+                        <span data-i18n="options.catalogSearch">曲目目錄查找</span>
+                        <select id="catalogSearch" name="catalogSearch" aria-describedby="catalogSearch-help">
+                            <option value="beatport" data-i18n="options.catalogBeatport">Beatport</option>
+                            <option value="soundcloud" data-i18n="options.catalogSoundCloud">SoundCloud</option>
+                            <option value="tidal" data-i18n="options.catalogTidal">TIDAL</option>
+                            <option value="spotify" data-i18n="options.catalogSpotify">Spotify</option>
+                            <option value="appleMusic" data-i18n="options.catalogAppleMusic">Apple Music</option>
+                        </select>
+                        <small id="catalogSearch-help" class="field-note" data-i18n="options.catalogSearchHelp">點擊 HUD 曲名時，開啟該 DJ 軟體可載入的音樂服務搜尋頁。只查找，不寫入播放清單。</small>
+                    </label>
                     <div class="source-cache-tools">
                         <label class="compact-check"><input id="enableCache" name="enableCache" type="checkbox"><span data-i18n="options.enableCache">開啟快取</span></label>
                         <button id="clear-cache" type="button" class="secondary-button" data-i18n="options.clearCache">手動清理快取</button>

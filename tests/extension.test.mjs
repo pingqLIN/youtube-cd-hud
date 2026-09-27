@@ -126,6 +126,7 @@ test('uses external scripts and exposes the complete control surface', () => {
     'enableTrackId',
     'requestTimeoutMs',
     'maxCandidates',
+    'catalogSearch',
   ]) {
     assert.match(html, new RegExp(`name="${setting}"`));
   }

@@ -193,6 +193,6 @@ test('shows the tracklist explicitly and uses the redesigned compound controls',
   assert.match(source, /createElement\('a'\)[\s\S]*?className\s*=\s*'hud-chapter'/);
   assert.match(source, /chapter\.target\s*=\s*'_blank'/);
   assert.match(source, /chapter\.rel\s*=\s*'noopener noreferrer'/);
-  assert.match(source, /chapterEl\.href\s*=\s*getGoogleTrackSearchUrl\(displayedTrack\)/);
+  assert.match(source, /bindCatalogSearchLink\(chapterEl, displayedTrack\)/);
   assert.match(source, /target\.closest\('\.hud-control-button,[^']*\.hud-chapter/);
 });
