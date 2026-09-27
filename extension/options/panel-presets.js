@@ -12,8 +12,7 @@
             'panel-base': [0, 0, 640, 320], disc: [16, 16, 128, 128],
             'track-title': [160, 16, 392, 48], 'close-control': [560, 16, 64, 48],
             'time-readout': [160, 72, 192, 40], 'source-selector': [360, 72, 264, 40],
-            'transport-controls': [160, 120, 160, 48], 'tracklist-toggle': [328, 120, 112, 48],
-            'text-size-control': [448, 120, 80, 48], 'tracklist-panel': [16, 184, 608, 120],
+            'transport-controls': [160, 120, 160, 48], 'tracklist-panel': [16, 184, 608, 120],
         },
         compact: {
             'panel-base': [0, 0, 448, 112], 'track-title': [16, 8, 416, 40],
@@ -35,7 +34,8 @@
             || typeof composer.normalizeLayout !== 'function') {
             throw new TypeError('A compatible YouTube CD HUD v2 composer is required.');
         }
-        const layout = JSON.parse(JSON.stringify(composer.createDefaultLayout()));
+        // Built-in presets start from the schema, not the independently authored install default.
+        const layout = composer.normalizeLayout({ version: 2, components: Object.keys(composer.registry).map(id => ({ id })) });
         if (layout.components.length !== IDS.length || IDS.some(key => !layout.components.some(c => c.id === key))) {
             throw new TypeError('The composer component registry differs from this preset pack.');
         }

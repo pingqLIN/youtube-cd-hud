@@ -11,7 +11,7 @@
 
     function init({ preview, layout, onChange = () => {} }) {
         if (instance) {
-            instance.editor.setLayout(layout);
+            instance.editor.setLayout(layout, { resetHistory: true });
             return instance;
         }
         const editor = editorApi.createEditor({
@@ -35,7 +35,7 @@
     }
 
     function getLayout() { return instance?.editor.getLayout() || composer.createDefaultLayout(); }
-    function setLayout(layout) { instance?.editor.setLayout(layout); }
+    function setLayout(layout, options) { instance?.editor.setLayout(layout, options); }
 
     globalThis.YtCdHudLiveMonitorBootstrap = Object.freeze({ init, getLayout, setLayout, get instance() { return instance; } });
 })();

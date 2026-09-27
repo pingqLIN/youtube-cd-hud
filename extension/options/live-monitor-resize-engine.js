@@ -20,7 +20,7 @@
 
     // Transform a complete set atomically; never relocate individual members to
     // repair a failed scale, as that would silently break the composition.
-    function scaleGroup(layout, factor, componentIds = null) {
+    function scaleGroup(layout, factor, componentIds = null, { resolveCollisions = false } = {}) {
         const composer = globalThis.YtCdHudLiveMonitorComposer;
         const original = composer.normalizeLayout(layout);
         const fail = reason => ({ updated: false, layout: original, reason });
@@ -68,7 +68,24 @@
                 if (base.geometry.width < limits.minWidth || base.geometry.height < limits.minHeight || base.geometry.width > limits.maxWidth || base.geometry.height > limits.maxHeight) return fail('底座尺寸超過上下限。');
             }
         }
-        if (members.some(item => composer.collisionFor(item, next.components, next.canvas))) return fail('The group would collide with another component.');
+        const layersAssigned = [];
+        if (members.some(item => composer.collisionFor(item, next.components, next.canvas))) {
+            if (!resolveCollisions) return { ...fail('The group would collide with another component.'), code: 'GROUP_COLLISION' };
+            // Only change scaled, unlocked members. Unselected and locked neighbors
+            // retain their layer and geometry, and the whole result stays atomic.
+            for (const item of members) {
+                if (!composer.collisionFor(item, next.components, next.canvas)) continue;
+                if (!composer.registry[item.id].supportsZAxis) return fail('此元件無法自動分配 Z 軸；原配置已保留。');
+                const occupied = new Set(composer.physicalOverlapsFor(item, next.components, next.canvas, false).map(composer.effectiveZ));
+                const above = Math.max(...occupied) + 1;
+                const available = above <= 99 ? above : Array.from({ length: 199 }, (_, index) => 99 - index).find(z => !occupied.has(z));
+                if (available === undefined) return fail('沒有可用的 Z 軸層級；原配置已保留。');
+                item.layer.enabled = true;
+                item.geometry.z = available;
+                layersAssigned.push(item.id);
+            }
+            if (members.some(item => composer.collisionFor(item, next.components, next.canvas))) return fail('Z 軸分配後仍有碰撞；原配置已保留。');
+        }
         if (!composer.connectedToBase(next, composer.getComponent(next, 'panel-base'))) return fail('縮放後元件會離開底座。');
         const normalized = composer.normalizeLayout(next);
         const same = (a, b) => ['x', 'y', 'width', 'height'].every(key => Math.abs(a[key] - b[key]) < 1e-7);
@@ -80,7 +97,7 @@
                 return fail('The split controls would exceed their size limits.');
             }
         }
-        return { updated: true, layout: normalized, componentIds: members.map(item => item.id) };
+        return { updated: true, layout: normalized, componentIds: members.map(item => item.id), layersAssigned };
     }
 
     globalThis.YtCdHudLiveMonitorResizeEngine = Object.freeze({ geometryForSize, geometryFromHandle, scaleGroup });

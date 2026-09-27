@@ -1,0 +1,416 @@
+{
+  "version": 2,
+  "palette": {
+    "primaryColor": "#1a202c",
+    "secondaryColor": "#63b3ed"
+  },
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "sizingMode": "absolute",
+    "collisionPolicy": "no-overlap-closed",
+    "alignmentGrid": {
+      "enabled": true,
+      "unitWidth": 8,
+      "unitHeight": 8,
+      "visible": false
+    }
+  },
+  "components": [
+    {
+      "id": "panel-base",
+      "type": "panel-base",
+      "present": true,
+      "geometry": {
+        "x": 0.4109375,
+        "y": 0.5222222222222223,
+        "width": 872,
+        "height": 212.00000000000006,
+        "z": -1
+      },
+      "locked": false,
+      "layer": {
+        "enabled": false
+      },
+      "boundary": {
+        "state": "closed",
+        "shape": "rect",
+        "collision": false,
+        "mode": "dynamic-envelope",
+        "padding": 18
+      },
+      "style": {
+        "backgroundColor": "#1a202c",
+        "borderColor": "#63b3ed",
+        "opacity": 0.85,
+        "borderEnabled": true,
+        "cornerEnabled": false,
+        "cornerRadiusLevel": 1,
+        "backgroundBlurEnabled": false
+      },
+      "effects": {
+        "shadow": true,
+        "accentRail": true
+      }
+    },
+    {
+      "id": "disc",
+      "type": "disc",
+      "present": true,
+      "geometry": {
+        "x": 0.125,
+        "y": 0.5,
+        "width": 104,
+        "height": 104,
+        "z": 1
+      },
+      "locked": false,
+      "layer": {
+        "enabled": true
+      },
+      "style": {
+        "backgroundColor": "#1a202c",
+        "borderColor": "#63b3ed",
+        "opacity": 1,
+        "texture": "classic",
+        "borderEnabled": true,
+        "cornerEnabled": true,
+        "cornerRadiusLevel": 10,
+        "backgroundBlurEnabled": false
+      },
+      "effects": {
+        "glow": true
+      }
+    },
+    {
+      "id": "track-title",
+      "type": "track-title",
+      "present": true,
+      "geometry": {
+        "x": 0.3375,
+        "y": 0.43333333333333335,
+        "width": 432,
+        "height": 48,
+        "z": 0
+      },
+      "locked": false,
+      "layer": {
+        "enabled": false
+      },
+      "boundary": {
+        "state": "closed",
+        "shape": "rect",
+        "collision": true
+      },
+      "style": {
+        "backgroundColor": "#1a202c",
+        "borderColor": "#63b3ed",
+        "opacity": 1,
+        "borderEnabled": true,
+        "cornerEnabled": false,
+        "cornerRadiusLevel": 1,
+        "backgroundBlurEnabled": false
+      },
+      "textStyle": {
+        "color": "#63b3ed",
+        "font": "cascadia-mono",
+        "fontSize": 14,
+        "textAlign": "left",
+        "opacity": 1
+      },
+      "effects": {
+        "marquee": true
+      }
+    },
+    {
+      "id": "time-readout",
+      "type": "time-readout",
+      "present": true,
+      "geometry": {
+        "x": 0.23125,
+        "y": 0.5111111111111111,
+        "width": 120,
+        "height": 48,
+        "z": 0
+      },
+      "locked": false,
+      "layer": {
+        "enabled": false
+      },
+      "boundary": {
+        "state": "closed",
+        "shape": "rect",
+        "collision": true
+      },
+      "style": {
+        "backgroundColor": "#1a202c",
+        "borderColor": "#63b3ed",
+        "opacity": 1,
+        "borderEnabled": true,
+        "cornerEnabled": false,
+        "cornerRadiusLevel": 1,
+        "backgroundBlurEnabled": false
+      },
+      "textStyle": {
+        "color": "#63b3ed",
+        "font": "cascadia-mono",
+        "fontSize": 12,
+        "textAlign": "left",
+        "opacity": 1
+      },
+      "effects": {}
+    },
+    {
+      "id": "source-selector",
+      "type": "source-selector",
+      "present": true,
+      "geometry": {
+        "x": 0.3875,
+        "y": 0.6111111111111112,
+        "width": 280,
+        "height": 48,
+        "z": 0
+      },
+      "locked": false,
+      "layer": {
+        "enabled": false
+      },
+      "boundary": {
+        "state": "closed",
+        "shape": "rect",
+        "collision": true
+      },
+      "style": {
+        "backgroundColor": "#1a202c",
+        "borderColor": "#63b3ed",
+        "opacity": 1,
+        "borderEnabled": true,
+        "cornerEnabled": false,
+        "cornerRadiusLevel": 1,
+        "backgroundBlurEnabled": false
+      },
+      "textStyle": {
+        "color": "#63b3ed",
+        "font": "cascadia-mono",
+        "fontSize": 9,
+        "textAlign": "center",
+        "opacity": 1
+      },
+      "effects": {
+        "statusLamp": true
+      }
+    },
+    {
+      "id": "tracklist-toggle",
+      "type": "tracklist-toggle",
+      "present": true,
+      "geometry": {
+        "x": 0.525,
+        "y": 0.6111111111111112,
+        "width": 48,
+        "height": 48,
+        "z": 0
+      },
+      "locked": false,
+      "layer": {
+        "enabled": false
+      },
+      "boundary": {
+        "state": "closed",
+        "shape": "rect",
+        "collision": true
+      },
+      "style": {
+        "backgroundColor": "#1a202c",
+        "borderColor": "#63b3ed",
+        "opacity": 1,
+        "borderEnabled": true,
+        "cornerEnabled": false,
+        "cornerRadiusLevel": 1,
+        "backgroundBlurEnabled": false
+      },
+      "textStyle": {
+        "color": "#63b3ed",
+        "font": "cascadia-mono",
+        "fontSize": 11,
+        "textAlign": "center",
+        "opacity": 1
+      },
+      "effects": {}
+    },
+    {
+      "id": "transport-controls",
+      "type": "transport-controls",
+      "present": true,
+      "geometry": {
+        "x": 0.625,
+        "y": 0.6111111111111112,
+        "width": 128,
+        "height": 48,
+        "z": 0
+      },
+      "locked": false,
+      "layer": {
+        "enabled": false
+      },
+      "arrangement": {
+        "split": false,
+        "partSize": {
+          "width": 72,
+          "height": 48
+        },
+        "positions": {
+          "previous": {
+            "x": 0.59375,
+            "y": 0.6111111111111112
+          },
+          "next": {
+            "x": 0.65625,
+            "y": 0.6111111111111112
+          }
+        }
+      },
+      "boundary": {
+        "state": "closed",
+        "shape": "rect",
+        "collision": true
+      },
+      "style": {
+        "backgroundColor": "#1a202c",
+        "borderColor": "#63b3ed",
+        "opacity": 1,
+        "borderEnabled": true,
+        "cornerEnabled": false,
+        "cornerRadiusLevel": 1,
+        "backgroundBlurEnabled": false
+      },
+      "textStyle": {
+        "color": "#63b3ed",
+        "font": "cascadia-mono",
+        "fontSize": 9,
+        "textAlign": "center",
+        "opacity": 1
+      },
+      "effects": {}
+    },
+    {
+      "id": "close-control",
+      "type": "close-control",
+      "present": true,
+      "geometry": {
+        "x": 0.71875,
+        "y": 0.43333333333333335,
+        "width": 48,
+        "height": 48,
+        "z": 0
+      },
+      "locked": false,
+      "layer": {
+        "enabled": false
+      },
+      "boundary": {
+        "state": "closed",
+        "shape": "rect",
+        "collision": true
+      },
+      "style": {
+        "backgroundColor": "#1a202c",
+        "borderColor": "#63b3ed",
+        "opacity": 1,
+        "borderEnabled": true,
+        "cornerEnabled": false,
+        "cornerRadiusLevel": 1,
+        "backgroundBlurEnabled": false
+      },
+      "textStyle": {
+        "color": "#63b3ed",
+        "font": "cascadia-mono",
+        "fontSize": 16,
+        "textAlign": "center",
+        "opacity": 1
+      },
+      "effects": {}
+    },
+    {
+      "id": "text-size-control",
+      "type": "text-size-control",
+      "present": false,
+      "geometry": {
+        "x": 0.71875,
+        "y": 0.5111111111111111,
+        "width": 64,
+        "height": 48,
+        "z": 0
+      },
+      "locked": false,
+      "layer": {
+        "enabled": false
+      },
+      "boundary": {
+        "state": "closed",
+        "shape": "rect",
+        "collision": true
+      },
+      "style": {
+        "backgroundColor": "#1a202c",
+        "borderColor": "#63b3ed",
+        "opacity": 1,
+        "borderEnabled": true,
+        "cornerEnabled": false,
+        "cornerRadiusLevel": 1,
+        "backgroundBlurEnabled": false
+      },
+      "textStyle": {
+        "color": "#63b3ed",
+        "font": "cascadia-mono",
+        "fontSize": 14,
+        "textAlign": "center",
+        "opacity": 1
+      },
+      "effects": {}
+    },
+    {
+      "id": "tracklist-panel",
+      "type": "tracklist-panel",
+      "present": false,
+      "geometry": {
+        "x": 0.8375,
+        "y": 0.2222222222222222,
+        "width": 280,
+        "height": 256,
+        "z": 0
+      },
+      "locked": false,
+      "layer": {
+        "enabled": false
+      },
+      "boundary": {
+        "state": "closed",
+        "shape": "rect",
+        "collision": true
+      },
+      "style": {
+        "backgroundColor": "#1a202c",
+        "borderColor": "#63b3ed",
+        "opacity": 0.88,
+        "borderEnabled": true,
+        "cornerEnabled": false,
+        "cornerRadiusLevel": 1,
+        "backgroundBlurEnabled": false
+      },
+      "textStyle": {
+        "color": "#63b3ed",
+        "font": "cascadia-mono",
+        "fontSize": 11,
+        "textAlign": "left",
+        "opacity": 1
+      },
+      "effects": {
+        "shadow": true,
+        "accentRail": true
+      }
+    }
+  ],
+  "manualBase": true,
+  "locked": false
+}

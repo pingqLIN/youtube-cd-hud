@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title data-i18n="options.title">YouTube CD HUD 控制台</title>
     <link rel="stylesheet" href="options.css">
+    <script src="options-appearance.js"></script>
 </head>
 <body>
     <div class="signal-line" aria-hidden="true"></div>
@@ -19,122 +20,138 @@
             <span>MODE</span>
             <strong>LOCAL</strong>
         </div>
-        <a class="project-link" href="https://github.com/pingqLIN/youtube-cd-hud" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+        <div class="persistent-tools">
+            <label class="persistent-font" for="settings-font-size">
+                <span>設定頁字級</span><output id="settings-font-size-output">100%</output>
+                <input id="settings-font-size" type="range" min="80" max="150" step="5" value="100">
+            </label>
+            <label class="persistent-theme" for="interface-theme">
+                <span data-i18n="options.interfaceTheme">介面主題</span>
+                <select id="interface-theme">
+                    <option value="dark" data-i18n="options.themeDark">黑暗</option>
+                    <option value="light" data-i18n="options.themeLight">明亮</option>
+                </select>
+            </label>
+            <a class="project-link" href="https://github.com/pingqLIN/youtube-cd-hud" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+        </div>
     </header>
 
     <main>
         <form id="settings-form" autocomplete="off">
+
+            <!-- ── 快速設定列（總開關 + 語言）────────────────────── -->
             <div class="quick-settings">
-            <section class="master-strip" aria-labelledby="master-title">
-                <div>
-                    <p class="section-index" data-i18n="options.masterIndex">總開關</p>
-                    <h2 id="master-title" data-i18n="options.masterTitle">擴充總開關</h2>
-                    <p data-i18n="options.masterDescription">所有設定只保存在這個 Chrome 使用者資料中。</p>
-                </div>
-                <label class="power-switch">
-                    <input id="enabled" name="enabled" type="checkbox">
-                    <span aria-hidden="true"></span>
-                    <b data-i18n="options.enabled">HUD 開啟</b>
-                </label>
-            </section>
+                <section class="master-strip" aria-labelledby="master-title">
+                    <div>
+                        <p class="section-index" data-i18n="options.masterIndex">總開關</p>
+                        <h2 id="master-title" data-i18n="options.masterTitle">擴充總開關</h2>
+                        <p data-i18n="options.masterDescription">所有設定只保存在這個 Chrome 使用者資料中。</p>
+                    </div>
+                    <label class="power-switch">
+                        <input id="enabled" name="enabled" type="checkbox">
+                        <span aria-hidden="true"></span>
+                        <b data-i18n="options.enabled">HUD 開啟</b>
+                    </label>
+                </section>
 
-            <section class="language-strip" aria-labelledby="language-title">
-                <div>
-                    <p class="section-index" data-i18n="options.languageIndex">語言</p>
-                    <h2 id="language-title" data-i18n="options.languageTitle">介面語言</h2>
-                    <p data-i18n="options.languageDescription">自動會依系統語言切換；未支援的系統語言會使用繁體中文。</p>
-                </div>
-                <label class="language-select">
-                    <span class="sr-only" data-i18n="options.languageTitle">介面語言</span>
-                    <select id="language" name="language">
-                        <option value="auto" data-i18n="options.languageAuto">自動（系統語言）</option>
-                        <option value="zh-TW">繁體中文</option>
-                        <option value="en">English</option>
-                        <option value="ja">日本語</option>
-                    </select>
-                </label>
-            </section>
-
+                <section class="language-strip" aria-labelledby="language-title">
+                    <div>
+                        <p class="section-index" data-i18n="options.languageIndex">語言</p>
+                        <h2 id="language-title" data-i18n="options.languageTitle">介面語言</h2>
+                        <p data-i18n="options.languageDescription">自動會依系統語言切換；未支援的系統語言會使用繁體中文。</p>
+                    </div>
+                    <label class="language-select">
+                        <span class="sr-only" data-i18n="options.languageTitle">介面語言</span>
+                        <select id="language" name="language">
+                            <option value="auto" data-i18n="options.languageAuto">自動（系統語言）</option>
+                            <option value="zh-TW">繁體中文</option>
+                            <option value="en">English</option>
+                            <option value="ja">日本語</option>
+                        </select>
+                    </label>
+                </section>
             </div>
 
-            <div class="control-grid">
-                <details class="settings-rail"><summary>曲目資料來源與查詢設定</summary>
-                    <section class="control-section" aria-labelledby="source-title">
-                        <div class="section-heading">
-                            <p class="section-index" data-i18n="options.sourceIndex">資料來源</p>
-                            <h2 id="source-title" data-i18n="options.sourceTitle">曲目資料來源</h2>
-                            <span class="status-lamp" aria-hidden="true"></span>
-                        </div>
+            <!-- ── Tab 導覽列 ──────────────────────────────────────── -->
+            <!-- Radio controls must be direct form children (sibling of .tab-panel)
+                 for the CSS-only ~ combinator to reach #panel-studio / #panel-sources. -->
+            <input class="tab-radio" type="radio" name="page-tab" id="tab-sources" value="sources" checked hidden>
+            <input class="tab-radio" type="radio" name="page-tab" id="tab-studio" value="studio" hidden>
 
-                        <div class="switch-list">
-                            <label class="switch-row">
-                                <span><b data-i18n="options.enable1001">啟用 1001</b><small data-i18n="options.enable1001Help">顯示來源控制並允許遠端查詢</small></span>
-                                <input id="enable1001" name="enable1001" type="checkbox">
-                                <i aria-hidden="true"></i>
-                            </label>
-                            <label class="switch-row">
-                                <span><b data-i18n="options.autoSearch1001">自動搜尋</b><small data-i18n="options.autoSearch1001Help">影片切換後自動比對 1001Tracklists</small></span>
-                                <input id="autoSearch1001" name="autoSearch1001" type="checkbox">
-                                <i aria-hidden="true"></i>
-                            </label>
-                            <label class="switch-row">
-                                <span><b data-i18n="options.prefer1001">優先採用 1001</b><small data-i18n="options.prefer1001Help">搜尋成功後自動切換曲目來源</small></span>
-                                <input id="prefer1001" name="prefer1001" type="checkbox">
-                                <i aria-hidden="true"></i>
-                            </label>
-                            <label class="switch-row">
-                                <span><b data-i18n="options.enableMixesDb">啟用 MixesDB</b><small data-i18n="options.enableMixesDbHelp">允許手動搜尋 MediaWiki 曲目資料</small></span>
-                                <input id="enableMixesDb" name="enableMixesDb" type="checkbox">
-                                <i aria-hidden="true"></i>
-                            </label>
-                            <label class="switch-row">
-                                <span><b data-i18n="options.enableTrackId">啟用 TrackId.net</b><small data-i18n="options.enableTrackIdHelp">允許手動搜尋既有公開曲目清單或單曲資料</small></span>
-                                <input id="enableTrackId" name="enableTrackId" type="checkbox">
-                                <i aria-hidden="true"></i>
-                            </label>
-                        </div>
+            <nav class="page-tabs" role="tablist" aria-label="設定分頁">
+                <label class="tab-label" for="tab-sources" role="tab" aria-controls="panel-sources">
+                    <span class="tab-icon" aria-hidden="true">⬡</span>
+                    <span class="tab-text">SOURCES</span>
+                    <span class="tab-sub">資料來源</span>
+                </label>
+                <label class="tab-label" for="tab-studio" role="tab" aria-controls="panel-studio">
+                    <span class="tab-icon" aria-hidden="true">▣</span>
+                    <span class="tab-text">STUDIO</span>
+                    <span class="tab-sub">面板排版</span>
+                </label>
+            </nav>
 
-                        <div class="dial-grid">
-                            <label class="field-block">
-                                <span data-i18n="options.timeout">逾時秒數</span>
-                                <output id="requestTimeoutMs-output" for="requestTimeoutMs">15s</output>
-                                <input id="requestTimeoutMs" name="requestTimeoutMs" type="range" min="5000" max="30000" step="1000">
-                            </label>
-                            <label class="field-block">
-                                <span data-i18n="options.maxCandidates">候選頁上限</span>
-                                <output id="maxCandidates-output" for="maxCandidates">5</output>
-                                <input id="maxCandidates" name="maxCandidates" type="range" min="1" max="10" step="1">
-                            </label>
+            <!-- ══════════════════════════════════════════════════════
+                 TAB PANEL A — STUDIO（面板排版工作區）
+            ══════════════════════════════════════════════════════════ -->
+            <section id="panel-studio" class="tab-panel" role="tabpanel" aria-labelledby="tab-studio">
+
+                <!-- 主題快選列（直接顯示，不摺疊） -->
+                <section class="theme-strip" aria-labelledby="theme-strip-title">
+                    <div class="theme-strip-header">
+                        <p class="section-index">主題</p>
+                        <h2 id="theme-strip-title" class="sr-only">主題方向</h2>
+                    </div>
+                    <div id="live-monitor-theme"></div>
+            <label class="persistent-font" for="theme-font-size">
+                <span data-i18n="options.textSize">面板整體字級</span>
+                <output id="theme-font-size-output" for="theme-font-size">14 px</output>
+                <input id="theme-font-size" type="range" min="0" max="1000" step="1" value="125" aria-describedby="persistent-font-help">
+                <small id="persistent-font-help" class="sr-only" data-i18n="options.textSizeHelp">套用至所有文字元件，並保留面板鎖定狀態。</small>
+            </label>
+                    <details class="studio-detail">
+                        <summary>文字與顯示 · 詳細設定</summary>
+                        <div class="theme-type-grid">
+                            <label>字體<select id="theme-font"><option value="cascadia-mono">Cascadia Mono</option><option value="ocr-machine">OCR A</option><option value="jetbrains-mono">JetBrains Mono</option><option value="ibm-plex-mono">IBM Plex Mono</option><option value="source-code-pro">Source Code Pro</option><option value="consolas">Consolas</option></select></label>
+                            <label>本機字體名稱<input id="theme-custom-font" type="text" maxlength="80" placeholder="例如 Noto Sans TC"></label>
                         </div>
-                    </section>
+                        <p class="field-note">字體使用本機已安裝的版本；找不到時回退至 Consolas。個別元件可在詳細設定另行調整。</p>
+                    </details>
+                </section>
+
+                <details id="panel-agent" class="studio-section agent-panel">
+                    <summary>Agent 設計助手 · WebMCP</summary>
+                    <label class="compact-check"><input id="agent-enable" type="checkbox">啟用本頁 WebMCP 工具</label>
+                    <p id="agent-connection" role="status">尚未啟用；需使用支援 WebMCP 的瀏覽器與 Agent。</p>
+                    <button id="agent-native-check" type="button">Chrome 原生連線自檢（唯讀）</button>
+                    <label for="agent-request">設計要求（由已連線的 Agent 讀取）</label>
+                    <textarea id="agent-request" maxlength="2000" placeholder="例如：將曲名調為 24px，保留曲目清單。"></textarea>
+                    <div class="agent-actions"><button id="agent-request-save" type="button">更新設計要求</button><button type="button" disabled title="尚未接入語音服務，不會錄音">語音 · 尚未接入</button></div>
+                    <p id="agent-summary" role="status">尚無 Agent 草稿。</p>
+                    <div id="agent-preview" aria-label="Agent 草稿配置預覽"></div>
+                    <div class="agent-actions"><button id="agent-confirm" type="button" disabled>確認套用</button><button id="agent-cancel" type="button">取消草稿</button><button id="agent-undo" type="button">復原上次 Agent 修改</button></div>
+                    <pre id="agent-result" role="status" aria-live="polite"></pre>
                 </details>
 
-                <aside class="preview-rail" aria-labelledby="preview-title">
-                    <div class="preview-heading">
-                        <p class="section-index" data-i18n="options.previewIndex">即時監看</p>
-                        <h2 id="preview-title" data-i18n="options.previewTitle">即時預覽</h2>
-                    </div>
-                    <section class="studio-section" aria-labelledby="composition-title">
-                        <div class="studio-heading"><h3 id="composition-title">面板排版</h3><p>元件邊緣拖移 · 把手調整尺寸 · 空白處拖曳平移視野</p></div>
-                    <section class="theme-section" aria-labelledby="theme-title">
-                        <h4 id="theme-title" class="sr-only">主題方向</h4>
-                        <div id="live-monitor-theme"></div>
-                        <details class="studio-detail"><summary>文字與顯示 · 詳細設定</summary>
-                            <div class="theme-type-grid">
-                                <label>字體<select id="theme-font"><option value="cascadia-mono">Cascadia Mono</option><option value="ocr-machine">OCR A</option><option value="jetbrains-mono">JetBrains Mono</option><option value="ibm-plex-mono">IBM Plex Mono</option><option value="source-code-pro">Source Code Pro</option><option value="consolas">Consolas</option></select></label>
-                                <label>本機字體名稱<input id="theme-custom-font" type="text" maxlength="80" placeholder="例如 Noto Sans TC"></label>
-                                <label>整體字級 <output id="theme-font-size-output">14 px</output><input id="theme-font-size" type="range" min="0" max="1000" step="1" value="125"><small>8–32 px 占左半；32–192 px 占右半</small></label>
+                <!-- 元件庫（新增元件） -->
+                <details class="component-library-shell" aria-labelledby="component-library-title">
+                    <summary id="component-library-title">新增元件</summary>
+                    <div id="live-monitor-library"></div>
+                </details>
+
+                <!-- 版面控制列 -->
+                <div id="live-monitor-layout-controls"></div>
+
+                <!-- 工作台：預覽畫布 + 屬性欄 -->
+                <div class="preview-workbench">
+                    <div class="preview-stage">
+                        <div id="hud-preview" class="hud-preview" aria-label="HUD component canvas">
+                            <div class="youtube-reference" aria-hidden="true">
+                                <header class="yt-ref-header"><b>☰　<span>▶</span> YouTube</b><div>搜尋影片　　　　　　　　　⌕</div><span>＋　♧　●</span></header>
+                                <div class="yt-ref-player"><span class="yt-ref-watermark">影片預覽</span><div class="yt-ref-controls">▶　❯　◖　12:48 / 58:31 <span>字幕　⚙　▣　□</span></div></div>
+                                <section class="yt-ref-info"><h2>Midnight Transit — Live DJ Set</h2><div>●　Music Channel　　訂閱 <span>讚　分享　下載　⋯</span></div><p>觀看次數　 •　影片說明與曲目資訊</p><h3>留言</h3><p>●　新增留言…</p></section>
+                                <aside class="yt-ref-recommendations"><b>全部　音樂　相關影片</b><div>▶<span>Recommended mix<br>Music Channel</span></div><div>▶<span>Live session<br>Music Channel</span></div><div>▶<span>Night drive selection<br>Music Channel</span></div><div>▶<span>Latest playlist<br>Music Channel</span></div></aside>
                             </div>
-                            <p class="field-note">字體使用本機已安裝的版本；找不到時回退至 Consolas。個別元件可在詳細設定另行調整。</p>
-                        </details>
-                    </section>
-                    <details class="component-library-shell" aria-labelledby="component-library-title"><summary id="component-library-title">新增元件</summary>
-                        <div id="live-monitor-library"></div>
-                    </details>
-                    <div id="live-monitor-layout-controls"></div>
-                    <div class="preview-workbench">
-                        <div class="preview-stage">
-                            <div id="hud-preview" class="hud-preview" aria-label="HUD component canvas">
                             <div class="preview-grid" aria-hidden="true"></div>
                             <div class="preview-panel-base" data-lm-component="panel-base" tabindex="0" role="button" aria-label="Select dynamic panel base">
                                 <i class="preview-resize" aria-hidden="true"></i>
@@ -148,33 +165,89 @@
                             <button class="preview-tracklist-toggle" data-lm-component="tracklist-toggle" type="button" aria-label="Select tracklist toggle">≡</button>
                             <div class="preview-transport" data-lm-component="transport-controls" tabindex="0" role="group" aria-label="Select track controls"><b data-lm-part="previous" tabindex="0" role="button" aria-label="Select previous track position">◀ PREV</b><b data-lm-part="next" tabindex="0" role="button" aria-label="Select next track position">NEXT ▶</b></div>
                             <button class="preview-tool preview-close" data-lm-component="close-control" type="button" aria-label="Select close control">×</button>
-                            <button class="preview-tool preview-text-size" data-lm-component="text-size-control" type="button" aria-label="Select text size control">T±</button>
                             <section class="preview-tracklist-panel" data-lm-component="tracklist-panel" tabindex="0" role="button" aria-label="Select persistent tracklist panel">
                                 <header><strong>TRACKLIST</strong><span>YOUTUBE</span></header>
                                 <ol><li><time>00:00</time><span>Midnight Transit</span></li><li><time>04:18</time><span>Blue Hour</span></li><li><time>09:42</time><span>Last Platform</span></li></ol>
                             </section>
-                            </div>
-                            <p id="live-monitor-canvas-status" class="preview-caption">拖曳空白處平移視野 · 右下角調整工作區</p>
                         </div>
-                        <div id="live-monitor-properties" class="preview-properties"><p class="property-empty">點選畫布元件，或從上方選單選取，即可調整尺寸、文字與效果。</p></div>
+                        <p id="live-monitor-canvas-status" class="preview-caption">拖曳空白處平移視野 · 右下角調整工作區</p>
                     </div>
-                    </section>
-                    <details class="studio-section panel-code-section"><summary>面板程式碼 · 匯入與匯出</summary>
-                        <p class="field-note">顯示目前自建面板或載入的儲存面板。貼上完整 JSON 後按「產生面板」，確認預覽再儲存。</p>
-                        <label class="css-editor"><span class="sr-only">面板 JSON 程式碼</span><textarea id="panel-code" spellcheck="false" maxlength="100000"></textarea></label>
-                        <div class="panel-code-actions"><button id="panel-code-export" type="button">顯示目前面板程式碼</button><button id="panel-code-import" type="button">從程式碼產生面板</button></div>
-                        <p id="panel-code-status" role="status" aria-live="polite"></p>
-                    </details>
-                    <dl class="scope-list">
-                        <div><dt data-i18n="options.storage">資料儲存</dt><dd data-i18n="options.storageValue">Chrome 本機</dd></div>
-                        <div><dt data-i18n="options.permissions">頁面權限</dt><dd data-i18n="options.permissionValue">YouTube</dd></div>
-                        <div><dt data-i18n="options.remoteRequests">遠端查詢</dt><dd>1001Tracklists / MixesDB / TrackId.net</dd></div>
-                    </dl>
-                </aside>
-            </div>
+                    <div id="live-monitor-properties" class="preview-properties"><p class="property-empty">點選畫布元件，或從上方選單選取，即可調整尺寸、文字與效果。</p></div>
+                </div>
 
+                <!-- 面板程式碼：匯入與匯出 -->
+                <details class="studio-section panel-code-section">
+                    <summary>面板程式碼 · 匯入與匯出</summary>
+                    <p class="field-note">顯示目前自建面板或載入的儲存面板。貼上完整 JSON 後按「產生面板」，確認預覽再儲存。</p>
+                    <label class="css-editor"><span class="sr-only">面板 JSON 程式碼</span><textarea id="panel-code" spellcheck="false" maxlength="100000"></textarea></label>
+                    <div class="panel-code-actions"><button id="panel-code-export" type="button">顯示目前面板程式碼</button><button id="panel-code-import" type="button">從程式碼產生面板</button></div>
+                    <p id="panel-code-status" role="status" aria-live="polite"></p>
+                </details>
+
+                <!-- 資料標籤（儲存/權限/遠端查詢） -->
+                <dl class="scope-list">
+                    <div><dt data-i18n="options.storage">資料儲存</dt><dd data-i18n="options.storageValue">Chrome 本機</dd></div>
+                    <div><dt data-i18n="options.permissions">頁面權限</dt><dd data-i18n="options.permissionValue">YouTube</dd></div>
+                    <div><dt data-i18n="options.remoteRequests">遠端查詢</dt><dd>1001Tracklists / MixesDB / TrackId.net</dd></div>
+                </dl>
+
+            </section>
+
+            <!-- ══════════════════════════════════════════════════════
+                 TAB PANEL B — SOURCES（曲目資料來源與查詢設定）
+            ══════════════════════════════════════════════════════════ -->
+            <section id="panel-sources" class="tab-panel" role="tabpanel" aria-labelledby="tab-sources">
+
+                <section class="control-section" aria-labelledby="source-title">
+                    <div class="section-heading">
+                        <p class="section-index" data-i18n="options.sourceIndex">資料來源</p>
+                        <h2 id="source-title" data-i18n="options.sourceTitle">曲目資料來源</h2>
+                        <span class="status-lamp" aria-hidden="true"></span>
+                    </div>
+
+                    <div class="source-settings-grid">
+                        <fieldset class="source-provider-group">
+                            <legend data-i18n="options.sourcesSelect">啟用來源（可複選）</legend>
+                            <div class="source-choices"><label class="compact-check"><input id="enableYouTube" name="enableYouTube" type="checkbox" aria-describedby="enableYouTube-help"><span data-i18n="options.enableYouTube">啟用 YouTube</span></label><small id="enableYouTube-help" class="sr-only" data-i18n="options.enableYouTubeHelp">讀取作者說明欄與留言中的時間戳曲目</small>
+<label class="compact-check"><input id="enable1001" name="enable1001" type="checkbox" aria-describedby="enable1001-help"><span data-i18n="options.enable1001">啟用 1001</span></label><small id="enable1001-help" class="sr-only" data-i18n="options.enable1001Help">顯示來源控制並允許遠端查詢</small>
+<label class="compact-check"><input id="enableMixesDb" name="enableMixesDb" type="checkbox" aria-describedby="enableMixesDb-help"><span data-i18n="options.enableMixesDb">啟用 MixesDB</span></label><small id="enableMixesDb-help" class="sr-only" data-i18n="options.enableMixesDbHelp">允許手動搜尋 MediaWiki 曲目資料</small>
+<label class="compact-check"><input id="enableTrackId" name="enableTrackId" type="checkbox" aria-describedby="enableTrackId-help"><span data-i18n="options.enableTrackId">啟用 TrackId.net</span></label><small id="enableTrackId-help" class="sr-only" data-i18n="options.enableTrackIdHelp">允許手動搜尋既有公開曲目清單或單曲資料</small></div>
+                        </fieldset>
+                        <div class="source-search-group">
+                            <label class="compact-check"><input id="autoSearch1001" name="autoSearch1001" type="checkbox"><span data-i18n="options.autoSearch1001">自動搜尋</span></label>
+                            <p class="field-note" data-i18n="options.autoSearch1001Help">影片切換後自動比對 1001Tracklists</p>
+                            <details class="source-search-details">
+                                <summary data-i18n="options.searchSettings">搜尋設定</summary>
+                                <label class="compact-check"><input id="prefer1001" name="prefer1001" type="checkbox" aria-describedby="prefer1001-help"><span data-i18n="options.prefer1001">優先採用 1001</span></label><small id="prefer1001-help" class="sr-only" data-i18n="options.prefer1001Help">搜尋成功後自動切換曲目來源</small>
+                    <div class="dial-grid">
+                        <label class="field-block">
+                            <span data-i18n="options.timeout">逾時秒數</span>
+                            <output id="requestTimeoutMs-output" for="requestTimeoutMs">15s</output>
+                            <input id="requestTimeoutMs" name="requestTimeoutMs" type="range" min="5000" max="30000" step="1000">
+                        </label>
+                        <label class="field-block">
+                            <span data-i18n="options.maxCandidates">候選頁上限</span>
+                            <output id="maxCandidates-output" for="maxCandidates">5</output>
+                            <input id="maxCandidates" name="maxCandidates" type="range" min="1" max="10" step="1">
+                        </label>
+                    </div>
+
+                            </details>
+                        </div>
+                    </div>
+                    <div class="source-cache-tools">
+                        <label class="compact-check"><input id="enableCache" name="enableCache" type="checkbox"><span data-i18n="options.enableCache">開啟快取</span></label>
+                        <button id="clear-cache" type="button" class="secondary-button" data-i18n="options.clearCache">手動清理快取</button>
+                        <small class="field-note" data-i18n="options.enableCacheHelp">在本機保存查詢結果；關閉後不再讀寫曲目快取。</small>
+                        <p id="cache-status" role="status" aria-live="polite"></p>
+                    </div>
+                </section>
+            </section>
+
+            <!-- ── 底部動作列 ──────────────────────────────────────── -->
             <footer class="action-bar">
                 <button id="reload-settings" type="button" class="secondary-button">重新讀取 Chrome 設定</button>
+                <label class="workspace-sync"><input id="auto-sync-workspace" type="checkbox" checked>自動同步目前工作區<small>以工作區面板覆寫 Chrome 面板；資料來源與快取設定請儲存並套用。</small></label>
                 <button id="export-settings-draft" type="button" class="secondary-button">匯出完整草稿／衝突資料</button>
                 <textarea id="settings-draft" aria-label="完整設定草稿" hidden readonly></textarea>
                 <p id="save-status" role="status" aria-live="polite" data-i18n="options.waiting">等待調整</p>
@@ -184,6 +257,7 @@
                     <button class="primary-button" type="submit" data-i18n="options.save">儲存並套用</button>
                 </div>
             </footer>
+
         </form>
     </main>
 

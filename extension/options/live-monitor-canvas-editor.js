@@ -4,9 +4,41 @@
     const composer = globalThis.YtCdHudLiveMonitorComposer;
     const resizeEngine = globalThis.YtCdHudLiveMonitorResizeEngine;
 
+    function referencePlayerRect(canvas) {
+        const pageWidth = Math.min(canvas.width, 1800);
+        const left = (canvas.width - pageWidth) / 2 + 24;
+        const width = Math.min(pageWidth - 372, (canvas.height - 160) * 16 / 9);
+        return { left, top: 80, width, height: width * 9 / 16 };
+    }
+
     function createEditor({ preview, layout, onChange = () => {}, onSelect = () => {}, onRender = () => {} }) {
         if (!preview) throw new Error('Live Monitor preview stage is required.');
         const state = { layout: composer.normalizeLayout(layout), selected: null, selectedPart: null, dragging: null, resizing: null, pending: null };
+        const history = [];
+        let committedLayout = JSON.stringify(state.layout);
+        const notifyChange = onChange;
+        onChange = (nextLayout, reason) => {
+            recordHistory();
+            notifyChange(nextLayout, reason);
+        };
+        function recordHistory() {
+            const next = JSON.stringify(state.layout);
+            if (next === committedLayout) return;
+            history.push(committedLayout);
+            if (history.length > 100) history.shift();
+            committedLayout = next;
+        }
+        function undo() {
+            if (!history.length || state.dragging || state.resizing) return false;
+            clearPending();
+            state.layout = JSON.parse(history.pop());
+            committedLayout = JSON.stringify(state.layout);
+            if (!componentFor(state.selected)?.present) { state.selected = null; state.selectedPart = null; }
+            render();
+            onSelect(state.selected, componentFor(state.selected), state.selectedPart);
+            notifyChange(state.layout, 'undo');
+            return true;
+        }
         let initialized = false;
         const view = { x: 0, y: 0 };
         let panning = null;
@@ -30,6 +62,10 @@
             preview.classList.add('lm-editor-stage');
             preview.style.width = state.layout.canvas.width + 'px';
             preview.style.height = state.layout.canvas.height + 'px';
+            const player = referencePlayerRect(state.layout.canvas);
+            preview.style.setProperty('--yt-ref-left', player.left + 'px');
+            preview.style.setProperty('--yt-ref-width', player.width + 'px');
+            preview.style.setProperty('--yt-ref-height', player.height + 'px');
             preview.dataset.lmSizingMode = state.layout.canvas.sizingMode;
             preview.style.setProperty('--lm-primary-color', state.layout.palette.primaryColor);
             preview.style.setProperty('--lm-secondary-color', state.layout.palette.secondaryColor);
@@ -310,6 +346,7 @@
         function updateViewport(width, height) {
             state.layout = composer.updateViewport(state.layout, width, height);
             render();
+            centerPlayer();
             onSelect(state.selected, componentFor(state.selected), state.selectedPart);
             onChange(state.layout, 'viewport');
         }
@@ -323,7 +360,14 @@
                     if (group.length) ids = group.map(item => item.id);
                 }
             }
-            const result = resizeEngine.scaleGroup(state.layout, factor, ids);
+            let result = resizeEngine.scaleGroup(state.layout, factor, ids);
+            if (result.code === 'GROUP_COLLISION') {
+                const layered = resizeEngine.scaleGroup(state.layout, factor, ids, { resolveCollisions: true });
+                if (!layered.updated) return layered;
+                const accepted = globalThis.confirm?.('縮放後元件會在同一層重疊。是否自動分配 Z 軸層級並完成縮放？\n只調整本次縮放元件的層級；可用 UNDO 一併還原。\n取消會保留原配置。');
+                if (!accepted) return { ...result, reason: '已取消 Z 軸自動分配；原配置已保留。' };
+                result = layered;
+            }
             if (!result.updated) return result;
             state.layout = result.layout;
             render();
@@ -384,6 +428,15 @@
             applyView();
         }
 
+        function centerPlayer() {
+            const host = preview.parentElement;
+            if (!host) return;
+            const player = referencePlayerRect(state.layout.canvas);
+            view.x = (host.clientWidth || state.layout.canvas.width) / 2 - player.left - player.width / 2;
+            view.y = (host.clientHeight || state.layout.canvas.height) / 2 - player.top - player.height / 2;
+            applyView();
+        }
+
         function bindViewPanning() {
             const host = preview.parentElement;
             if (!host?.addEventListener) return;
@@ -415,6 +468,13 @@
         }
 
         function onKeyDown(event) {
+            const focused = document.activeElement;
+            const editingText = focused?.isContentEditable || ['TEXTAREA', 'SELECT'].includes(focused?.tagName)
+                || (focused?.tagName === 'INPUT' && !['range', 'checkbox', 'radio', 'button'].includes(focused.type));
+            if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key?.toLowerCase() === 'z') {
+                if (!editingText && undo()) event.preventDefault();
+                return;
+            }
             if (!preview.contains(document.activeElement) || document.activeElement?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
             if (event.key === 'Escape') return select(null);
             if (!state.selected || state.layout.locked) return;
@@ -463,19 +523,22 @@
             document.addEventListener('keydown', onKeyDown);
             render();
             onSelect(state.selected, componentFor(state.selected), state.selectedPart);
-            centerView();
+            centerPlayer();
             return api;
         }
 
-        function setLayout(nextLayout) {
+        function setLayout(nextLayout, { record = true, resetHistory = false } = {}) {
             clearPending();
             state.dragging = state.resizing = null;
             state.layout = composer.normalizeLayout(nextLayout);
+            if (resetHistory) history.length = 0;
+            if (record && !resetHistory) recordHistory();
+            else committedLayout = JSON.stringify(state.layout);
             state.selected = null;
             state.selectedPart = null;
             render();
             onSelect(null, null);
-            centerView();
+            centerPlayer();
         }
 
         const api = {
@@ -494,10 +557,11 @@
             scaleGroup,
             updateSplit,
             setLayout,
+            undo, recordHistory,
             getLayout: () => composer.normalizeLayout(state.layout),
         };
         return api;
     }
 
-    globalThis.YtCdHudLiveMonitorCanvasEditor = Object.freeze({ createEditor });
+    globalThis.YtCdHudLiveMonitorCanvasEditor = Object.freeze({ createEditor, referencePlayerRect });
 })();

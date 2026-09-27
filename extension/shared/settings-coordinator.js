@@ -16,9 +16,15 @@
     function clone(value) { return value === undefined ? undefined : JSON.parse(JSON.stringify(value)); }
     function enqueue(work) { const result = queue.then(work, work); queue = result.catch(() => {}); return result; }
     function digestInput(value) { return JSON.stringify(value === undefined ? null : value); }
+    function stableValue(value) {
+        if (Array.isArray(value)) return value.map(stableValue);
+        if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(key => [key, stableValue(value[key])]));
+        return value;
+    }
+    function stableDigestInput(value) { return JSON.stringify(stableValue(value === undefined ? null : value)); }
 
-    async function digest(value) {
-        const bytes = new TextEncoder().encode(digestInput(value));
+    async function digest(value, stable = false) {
+        const bytes = new TextEncoder().encode(stable ? stableDigestInput(value) : digestInput(value));
         if (globalThis.crypto?.subtle) {
             const hash = await crypto.subtle.digest('SHA-256', bytes);
             return Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
@@ -56,7 +62,7 @@
         const rawLayout = result[LAYOUT_KEY] ?? result[LEGACY_LAYOUT_KEY] ?? null;
         const settings = normalizeSettings(rawSettings);
         const layout = normalizeLayout(rawLayout);
-        const contentDigest = await digest({ settings, layout, rawSettings, rawLayout });
+        const contentDigest = await digest({ settings, layout, rawSettings, rawLayout }, true);
         return { revision: contentDigest, settings, layout, contentDigest };
     }
 
@@ -139,7 +145,7 @@
             ? current.settings
             : normalizeSettings({ ...current.settings, ...payload.settings });
         const nextLayout = payload.layout === undefined ? current.layout : validateLayout(payload.layout);
-        const nextRevision = await digest({ settings: nextSettings, layout: nextLayout, rawSettings: nextSettings, rawLayout: nextLayout });
+        const nextRevision = await digest({ settings: nextSettings, layout: nextLayout, rawSettings: nextSettings, rawLayout: nextLayout }, true);
         const result = { ok: true, status: 'STORED', snapshot: { revision: nextRevision, settings: nextSettings, layout: nextLayout } };
         const pending = { operationId, requestDigest, status: 'PENDING', result: null };
         await writeJournal([...journal.filter(entry => entry.operationId !== operationId), pending]);

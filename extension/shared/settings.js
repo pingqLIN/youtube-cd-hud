@@ -13,6 +13,8 @@
     });
     const DEFAULTS = Object.freeze({
         enabled: true,
+        enableYouTube: true,
+        enableCache: true,
         enable1001: true,
         autoSearch1001: true,
         prefer1001: false,
@@ -76,6 +78,8 @@
     function normalize(value = {}) {
         return {
             enabled: value.enabled !== false,
+            enableYouTube: value.enableYouTube !== false,
+            enableCache: value.enableCache !== false,
             enable1001: value.enable1001 !== false,
             autoSearch1001: value.autoSearch1001 !== false,
             prefer1001: value.prefer1001 === true,

@@ -65,6 +65,28 @@
     const SETTINGS_API = globalThis.YtCdHudSettings || null;
     const HUD_LAYOUT_STORAGE_KEY = 'ytCdHudLayoutV2';
     const HUD_LAYOUT_LEGACY_STORAGE_KEY = 'ytCdHudLayoutV1';
+    // Approved panel export; tests verify this against the original fixture.
+    const AUTHORED_DEFAULT_PANEL = {
+        version: 2,
+        palette: {"primaryColor":"#404549","secondaryColor":"#c5ee65"},
+        canvas: {"width":1280,"height":720,"sizingMode":"absolute","collisionPolicy":"no-overlap-closed","alignmentGrid":{"enabled":true,"unitWidth":4,"unitHeight":4,"visible":false}},
+        components: [
+            {"id":"panel-base","type":"panel-base","present":true,"geometry":{"x":0.7054821195058648,"y":0.28994931403575736,"width":401.92166193572143,"height":306.5261142982726,"z":-3},"locked":false,"layer":{"enabled":false},"boundary":{"state":"closed","shape":"rect","collision":false,"mode":"dynamic-envelope","padding":16},"style":{"backgroundColor":"#404549","borderColor":"#c5ee65","opacity":0.2,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":2,"backgroundBlurEnabled":false,"secondaryOpacity":0.53},"effects":{"shadow":false,"accentRail":false}},
+            {"id":"disc","type":"disc","present":true,"geometry":{"x":0.578125,"y":0.12777777777777777,"width":104,"height":104,"z":3},"locked":false,"layer":{"enabled":true},"style":{"backgroundColor":"#404549","borderColor":"#c5ee65","opacity":1,"texture":"classic","borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":3,"backgroundBlurEnabled":false,"discOpacity":1,"secondaryOpacity":0.65},"effects":{"glow":false}},
+            {"id":"track-title","type":"track-title","present":true,"geometry":{"x":0.721875,"y":0.11666666666666667,"width":300,"height":32,"z":4},"locked":false,"layer":{"enabled":true},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#4a4e52","borderColor":"#c5ee65","opacity":0.35,"borderEnabled":false,"cornerEnabled":true,"cornerRadiusLevel":10,"backgroundBlurEnabled":true,"secondaryOpacity":0.74},"textStyle":{"color":"#e8ece8","font":"jetbrains-mono","fontSize":14,"fontWeight":200,"textAlign":"justify","opacity":1},"effects":{"marquee":false}},
+            {"id":"time-readout","type":"time-readout","present":true,"geometry":{"x":0.578125,"y":0.12777777777777777,"width":100,"height":28,"z":3},"locked":false,"layer":{"enabled":true},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#404549","borderColor":"#c5ee65","opacity":0,"borderEnabled":false,"cornerEnabled":false,"cornerRadiusLevel":3,"backgroundBlurEnabled":false,"secondaryOpacity":0,"backgroundEnabled":false},"textStyle":{"color":"#c5ee65","font":"jetbrains-mono","fontSize":11,"fontWeight":400,"textAlign":"center","opacity":1},"effects":{}},
+            {"id":"source-selector","type":"source-selector","present":true,"geometry":{"x":0.7875,"y":0.17222222222222222,"width":180,"height":28,"z":5},"locked":false,"layer":{"enabled":true},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#2d3135","borderColor":"#c5ee65","opacity":1,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":10,"backgroundBlurEnabled":false,"secondaryOpacity":1},"textStyle":{"color":"#ffffff","font":"jetbrains-mono","fontSize":13,"fontWeight":900,"textAlign":"center","opacity":0.65},"effects":{"statusLamp":true}},
+            {"id":"tracklist-toggle","type":"tracklist-toggle","present":false,"geometry":{"x":0.559375,"y":0.48333333333333334,"width":76,"height":52,"z":1},"locked":false,"layer":{"enabled":true},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#2d3135","borderColor":"#c5ee65","opacity":1,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":3,"backgroundBlurEnabled":false,"secondaryOpacity":0.28},"textStyle":{"color":"#e8ece8","font":"jetbrains-mono","fontSize":11,"textAlign":"center","opacity":1},"effects":{}},
+            {"id":"transport-controls","type":"transport-controls","present":true,"geometry":{"x":0.659375,"y":0.17222222222222222,"width":136,"height":28,"z":2},"locked":false,"layer":{"enabled":true},"arrangement":{"split":false,"partSize":{"width":72,"height":48},"positions":{"previous":{"x":0.59375,"y":0.6111111111111112},"next":{"x":0.65625,"y":0.6111111111111112}}},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#0e2e4e","borderColor":"#c5ee65","opacity":1,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":9,"backgroundBlurEnabled":false,"secondaryOpacity":0.71},"textStyle":{"color":"#e8ece8","font":"cascadia-mono","fontSize":11,"fontWeight":900,"textAlign":"center","opacity":1},"effects":{}},
+            {"id":"close-control","type":"close-control","present":true,"geometry":{"x":0.853125,"y":0.1,"width":48,"height":32,"z":0},"locked":false,"layer":{"enabled":false},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#2d3135","borderColor":"#c5ee65","opacity":0,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":3,"backgroundBlurEnabled":false,"secondaryOpacity":0},"textStyle":{"color":"#e8ece8","font":"jetbrains-mono","fontSize":18,"textAlign":"center","opacity":1},"effects":{}},
+            {"id":"text-size-control","type":"text-size-control","present":false,"geometry":{"x":0.63125,"y":0.4777777777777778,"width":80,"height":48,"z":0},"locked":false,"layer":{"enabled":false},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#2d3135","borderColor":"#c5ee65","opacity":1,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":3,"backgroundBlurEnabled":false,"secondaryOpacity":0.28},"textStyle":{"color":"#e8ece8","font":"jetbrains-mono","fontSize":11,"textAlign":"center","opacity":1},"effects":{}},
+            {"id":"tracklist-panel","type":"tracklist-panel","present":true,"geometry":{"x":0.70625,"y":0.35,"width":392,"height":208,"z":-2},"locked":false,"layer":{"enabled":true},"boundary":{"state":"closed","shape":"rect","collision":true},"style":{"backgroundColor":"#2d3135","borderColor":"#c5ee65","opacity":0.9,"borderEnabled":true,"cornerEnabled":true,"cornerRadiusLevel":4,"backgroundBlurEnabled":false,"secondaryOpacity":0.66},"textStyle":{"color":"#e8ece8","font":"jetbrains-mono","fontSize":11,"textAlign":"left","opacity":1},"effects":{"shadow":false,"accentRail":false}},
+        ],
+        manualBase: true,
+        locked: true,
+        placement: {"x":0.15547610309024051,"y":0.21787420549377456},
+    };
+
     const HUD_LAYOUT_DEFAULTS = Object.freeze({
         version: 2,
         palette: Object.freeze({ primaryColor: '#1a202c', secondaryColor: '#63b3ed' }),
@@ -78,12 +100,14 @@
             Object.freeze({ id: 'tracklist-toggle', type: 'tracklist-toggle', present: true, geometry: Object.freeze({ x: .525, y: .6111111111111112, width: 48, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 11, textAlign: 'center' }), effects: Object.freeze({}) }),
             Object.freeze({ id: 'transport-controls', type: 'transport-controls', present: true, geometry: Object.freeze({ x: .625, y: .6111111111111112, width: 128, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), arrangement: Object.freeze({ split: false, partSize: Object.freeze({ width: 72, height: 48 }), positions: Object.freeze({ previous: Object.freeze({ x: .59375, y: .6111111111111112 }), next: Object.freeze({ x: .65625, y: .6111111111111112 }) }) }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 9, textAlign: 'center' }), effects: Object.freeze({}) }),
             Object.freeze({ id: 'close-control', type: 'close-control', present: true, geometry: Object.freeze({ x: .71875, y: .43333333333333335, width: 48, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 16, textAlign: 'center' }), effects: Object.freeze({}) }),
-            Object.freeze({ id: 'text-size-control', type: 'text-size-control', present: true, geometry: Object.freeze({ x: .71875, y: .5111111111111111, width: 64, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 14, textAlign: 'center' }), effects: Object.freeze({}) }),
+            Object.freeze({ id: 'text-size-control', type: 'text-size-control', present: false, geometry: Object.freeze({ x: .71875, y: .5111111111111111, width: 64, height: 48, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: 1 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 14, textAlign: 'center' }), effects: Object.freeze({}) }),
             Object.freeze({ id: 'tracklist-panel', type: 'tracklist-panel', present: false, geometry: Object.freeze({ x: .8375, y: .2222222222222222, width: 280, height: 256, z: 0 }), layer: Object.freeze({ enabled: false }), boundary: Object.freeze({ state: 'closed', shape: 'rect', collision: true }), style: Object.freeze({ backgroundColor: '#1a202c', borderColor: '#63b3ed', opacity: .88 }), textStyle: Object.freeze({ color: '#63b3ed', opacity: 1, font: 'cascadia-mono', fontSize: 11, textAlign: 'left' }), effects: Object.freeze({ shadow: true, accentRail: true }) }),
         ]),
     });
     const RUNTIME_DEFAULTS = Object.freeze({
         enabled: true,
+        enableYouTube: true,
+        enableCache: true,
         enable1001: true,
         autoSearch1001: true,
         prefer1001: false,
@@ -117,7 +141,7 @@
     let runtimeSettings = SETTINGS_API
         ? SETTINGS_API.normalize(SETTINGS_API.DEFAULTS)
         : { ...RUNTIME_DEFAULTS };
-    let runtimeLayout = HUD_LAYOUT_DEFAULTS;
+    let runtimeLayout = normalizeHudLayout(null);
     let runtimeStorageRevision = null;
     let runtimeLayoutDirty = false;
     let runtimeLayoutDragRevision = null;
@@ -144,6 +168,7 @@
     let tracklistCandidates = { '1001': [], mixesdb: [], trackid: [] };
     let tracklistCandidateIndexes = { '1001': 0, mixesdb: 0, trackid: 0 };
     let lastVideoIdFor1001 = '';
+    let activeTracklistVideoId = '';
     let lastSearchTitle = '';
 
     let initTimer = null;
@@ -313,7 +338,28 @@
             )));
     }
 
+    function handleTracklistCacheChange(changes, areaName) {
+        if (areaName !== 'local' || !changes[TRACKLIST_CACHE_STORAGE_KEY]) return;
+        const stored = changes[TRACKLIST_CACHE_STORAGE_KEY].newValue;
+        if (!stored || (typeof stored === 'object' && Object.keys(stored).length === 0)) {
+            if (cachePersistTimer !== null) clearTimeout(cachePersistTimer);
+            cachePersistTimer = null;
+            tracklistCache = {};
+            cacheHitVideoId = '';
+            return;
+        }
+        // A normal write can be our own acknowledgement or another tab's update.
+        // Preserve newer local results waiting for their debounced persistence.
+        const incoming = normalizeTracklistCache(stored);
+        const merged = { ...tracklistCache };
+        for (const [videoId, entry] of Object.entries(incoming)) {
+            if (!merged[videoId] || entry.savedAt >= merged[videoId].savedAt) merged[videoId] = entry;
+        }
+        tracklistCache = normalizeTracklistCache(merged);
+    }
+
     async function loadTracklistCache() {
+        globalThis.chrome?.storage?.onChanged?.addListener(handleTracklistCacheChange);
         try {
             let stored = null;
             if (globalThis.chrome?.storage?.local) {
@@ -330,6 +376,7 @@
     }
 
     async function persistTracklistCache() {
+        if (runtimeSettings.enableCache === false) return;
         try {
             tracklistCache = normalizeTracklistCache(tracklistCache);
             if (globalThis.chrome?.storage?.local) {
@@ -343,6 +390,7 @@
     }
 
     function scheduleTracklistCachePersist() {
+        if (runtimeSettings.enableCache === false) return;
         if (cachePersistTimer !== null) clearTimeout(cachePersistTimer);
         cachePersistTimer = setTimeout(() => {
             cachePersistTimer = null;
@@ -361,6 +409,7 @@
     }
 
     function normalizeHudLayout(value) {
+        if (value == null) value = AUTHORED_DEFAULT_PANEL;
         const source = value && typeof value === 'object' ? value : {};
         const sourceComponents = Array.isArray(source.components) ? source.components : [];
         const palette = {
@@ -507,7 +556,7 @@
             return {
                 id: base.id,
                 type: base.id,
-                present: base.id === 'panel-base' || (sourceItem ? item.present !== false : base.present !== false),
+                present: base.id !== 'text-size-control' && (base.id === 'panel-base' || (sourceItem ? item.present !== false : base.present !== false)),
                 geometry,
                 locked: item.locked === true,
                 ...(item.hidden === true ? { hidden: true } : {}),
@@ -522,6 +571,10 @@
                 effects,
             };
         });
+        const persistentPanel = components.find(component => component.id === 'tracklist-panel');
+        if (persistentPanel?.present && !persistentPanel.hidden) {
+            components.find(component => component.id === 'tracklist-toggle').present = false;
+        }
         const base = components.find(component => component.id === 'panel-base');
         const visible = components.filter(component => component.id !== 'panel-base' && component.present);
         const layerValues = components.filter(component => component.id !== 'panel-base' && component.present).map(component => component.layer.enabled ? component.geometry.z : 0);
@@ -633,7 +686,6 @@
             'tracklist-toggle': '.hud-tracklist-button',
             'transport-controls': '.hud-transport-controls',
             'close-control': '.hud-close-button',
-            'text-size-control': '.hud-text-size-button',
             'tracklist-panel': '#yt-tracklist-panel',
         };
         hud.classList.remove('ytcd-layout-v1');
@@ -687,7 +739,7 @@
             }
             if (id === 'time-readout') element.style.removeProperty('font-size');
             element.dataset.ytcdLayoutUnit = id;
-            element.classList.toggle('ytcd-layout-unit-hidden', component.present === false || component.hidden === true);
+            element.classList.toggle('ytcd-layout-unit-hidden', component.present === false || component.hidden === true || (id === 'tracklist-toggle' && isPersistentTracklistPanel()));
             element.style.opacity = '';
             element.style.pointerEvents = component.hidden ? 'none' : '';
             element.classList.toggle('ytcd-effect-shadow', component.effects.shadow === true);
@@ -888,6 +940,16 @@
         runtimeSettings = SETTINGS_API
             ? SETTINGS_API.normalize(nextSettings)
             : { ...RUNTIME_DEFAULTS, ...nextSettings };
+        if (runtimeSettings.enableCache === false && cachePersistTimer !== null) {
+            clearTimeout(cachePersistTimer);
+            cachePersistTimer = null;
+        }
+        if (runtimeSettings.enableYouTube === false) {
+            tracksFromYouTube = [];
+            youtubeTrackOrigin = '';
+            disconnectYouTubeCommentObserver();
+            reconcileActiveSource();
+        }
         hudTitleFontSize = runtimeSettings.titleFontSize;
         hudTimeFontSize = runtimeSettings.timeFontSize;
 
@@ -919,6 +981,7 @@
 
         if (reschedule && runtimeSettings.enabled && (
             !previous.enabled ||
+            previous.enableYouTube !== runtimeSettings.enableYouTube ||
             previous.enable1001 !== runtimeSettings.enable1001 ||
             previous.autoSearch1001 !== runtimeSettings.autoSearch1001 ||
             previous.enableMixesDb !== runtimeSettings.enableMixesDb ||
@@ -1036,10 +1099,10 @@
         return clamp(balancedSize * (Number(scale) || 1), 42, 148);
     }
 
-    function chooseHudTitle(source, currentTrack, officialChapter) {
+    function chooseHudTitle(source, currentTrack) {
         const trackTitle = trim(currentTrack);
         if (source === '1001') return trackTitle || '1001 Tracklist';
-        return trim(officialChapter) || trackTitle || t('fullTrackSet');
+        return trackTitle || t('fullTrackSet');
     }
 
     function getGoogleTrackSearchUrl(trackTitle) {
@@ -1134,7 +1197,13 @@
         }
     }
 
+    function isYouTubeMetadataCurrent() {
+        const pageVideoId = document.querySelector('ytd-watch-flexy[video-id]')?.getAttribute('video-id');
+        return !pageVideoId || pageVideoId === getVideoId();
+    }
+
     function getVideoTitle() {
+        if (!isYouTubeMetadataCurrent()) return '';
         const titleEl = document.querySelector([
             'ytd-watch-metadata h1 yt-formatted-string',
             '#above-the-fold #title h1 yt-formatted-string',
@@ -1851,7 +1920,7 @@
         return true;
     }
 
-    function chooseYouTubeTimestampPlaylist(descriptionText, commentTexts, recognizedTexts = []) {
+    function chooseYouTubeTimestampPlaylist(descriptionText, commentTexts) {
         const descriptionTracks = parseTimestampPlaylistText(descriptionText);
         if (isCredibleTimestampPlaylist(descriptionTracks)) {
             return { origin: 'description', commentIndex: -1, tracks: descriptionTracks };
@@ -1880,35 +1949,23 @@
             return { origin: 'description', commentIndex: -1, tracks: descriptionTracks };
         }
 
-        const recognizedCandidates = (Array.isArray(recognizedTexts) ? recognizedTexts : [])
-            .map((text, index) => {
-                const tracks = parseTimestampPlaylistText(text);
-                const coverage = tracks.length > 1
-                    ? tracks[tracks.length - 1].time - tracks[0].time
-                    : 0;
-                return { index, tracks, coverage };
-            })
-            .filter(candidate => isCredibleTimestampPlaylist(candidate.tracks))
-            .sort((left, right) => (
-                right.tracks.length - left.tracks.length ||
-                right.coverage - left.coverage ||
-                left.index - right.index
-            ));
-        if (recognizedCandidates.length) {
-            return { origin: 'recognized', commentIndex: -1, tracks: recognizedCandidates[0].tracks };
-        }
         return { origin: '', commentIndex: -1, tracks: [] };
     }
 
     function getYouTubeDescriptionText() {
-        const description = document.querySelector([
-            'ytd-watch-metadata #description-inline-expander',
-            'ytd-watch-metadata #description',
-            'ytd-text-inline-expander#description-inline-expander',
-            '#description-inline-expander',
-            '#description',
-        ].join(', '));
-        return description ? (description.innerText || description.textContent || '') : '';
+        // Read only author text, never the surrounding chapters/transcript UI.
+        const selectors = [
+            'ytd-watch-metadata #description-inline-expander #attributed-description-text',
+            'ytd-watch-metadata #description-inline-expander #attributed-snippet-text',
+            '#description-inline-expander .ytd-text-inline-expander#content',
+            '#description yt-formatted-string.content',
+        ];
+        for (const selector of selectors) {
+            const description = document.querySelector(selector);
+            const text = trim(description?.innerText || description?.textContent || '');
+            if (text) return text;
+        }
+        return '';
     }
 
     function getLoadedYouTubeCommentTexts() {
@@ -1928,23 +1985,6 @@
             });
     }
 
-    function getLoadedYouTubeRecognizedTexts() {
-        if (!document || typeof document.querySelectorAll !== 'function') return [];
-        const nodes = document.querySelectorAll([
-            'ytd-transcript-renderer #segments-container',
-            'ytd-transcript-search-panel-renderer #segments-container',
-            'ytd-transcript-segment-list-renderer',
-            '#transcript ytd-transcript-segment-renderer',
-        ].join(', '));
-        const seenTexts = new Set();
-        return Array.from(nodes).map(node => trim(node.innerText || node.textContent || ''))
-            .filter(text => {
-                if (!text || seenTexts.has(text)) return false;
-                seenTexts.add(text);
-                return true;
-            });
-    }
-
     function disconnectYouTubeCommentObserver() {
         if (youtubeCommentsObserver) youtubeCommentsObserver.disconnect();
         youtubeCommentsObserver = null;
@@ -1952,10 +1992,16 @@
     }
 
     function parseYouTubeLocalTracks() {
+        if (!isYouTubeMetadataCurrent()) return;
+        if (runtimeSettings.enableYouTube === false) {
+            tracksFromYouTube = [];
+            youtubeTrackOrigin = '';
+            reconcileActiveSource();
+            return;
+        }
         const selection = chooseYouTubeTimestampPlaylist(
             getYouTubeDescriptionText(),
-            getLoadedYouTubeCommentTexts(),
-            getLoadedYouTubeRecognizedTexts()
+            getLoadedYouTubeCommentTexts()
         );
         tracksFromYouTube = selection.tracks;
         youtubeTrackOrigin = selection.origin;
@@ -1976,7 +2022,7 @@
     }
 
     function bindYouTubeCommentObserver() {
-        if (typeof MutationObserver !== 'function') return;
+        if (runtimeSettings.enableYouTube === false || typeof MutationObserver !== 'function') return;
         const commentsRoot = document.querySelector('#comments');
         if (!commentsRoot || commentsRoot === youtubeCommentsRoot) return;
         disconnectYouTubeCommentObserver();
@@ -2054,7 +2100,7 @@
         else {
             updateSourceButtons();
             updateLinkButton();
-            if (tracklistPanel && tracklistVisible) renderTracklist(tracklistPanel);
+            if (tracklistPanel && isTracklistPanelVisible()) renderTracklist(tracklistPanel);
         }
         return true;
     }
@@ -2104,7 +2150,7 @@
     }
 
     function cacheCurrentTracklists(videoId) {
-        if (!videoId || !getAvailableRemoteSource()) return;
+        if (runtimeSettings.enableCache === false || !videoId || !getAvailableRemoteSource()) return;
         const activeRemoteSource = ['youtube', '1001', 'mixesdb', 'trackid'].includes(currentSource)
             ? currentSource
             : getAvailableRemoteSource();
@@ -2129,6 +2175,7 @@
     }
 
     function restoreCachedTracklists(videoId) {
+        if (runtimeSettings.enableCache === false) return "";
         const cached = tracklistCache[videoId];
         if (!cached) return false;
         if (Number(cached.savedAt) <= Date.now() - TRACKLIST_CACHE_TTL_MS) {
@@ -2184,7 +2231,7 @@
                 currentSource = 'none';
             }
         }
-        if (tracklistPanel && tracklistVisible) {
+        if (tracklistPanel && isTracklistPanelVisible()) {
             renderTracklist(tracklistPanel);
         }
         if (currentVideo) {
@@ -3605,6 +3652,31 @@
                 box-shadow: var(--hud-shadow), inset 2px 0 0 var(--hud-focus);
             }
             .hud-1001-menu.expanded { display: grid; }
+            /* The popup belongs to the designed source selector, including its palette. */
+            #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu {
+                color: color-mix(in srgb, var(--ytcd-unit-color) calc(var(--ytcd-unit-text-opacity, 1) * 100%), transparent);
+                background: color-mix(in srgb, var(--ytcd-unit-background-color) calc(var(--ytcd-unit-opacity, 1) * 100%), transparent);
+                border: var(--ytcd-unit-border-width, 1px) solid var(--ytcd-secondary-color);
+                border-radius: var(--ytcd-unit-border-radius, 0px);
+                backdrop-filter: var(--ytcd-unit-backdrop-filter, none);
+                box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha, .35));
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu .hud-control-button {
+                color: inherit;
+                background: transparent;
+                border: var(--ytcd-unit-border-width, 1px) solid var(--ytcd-secondary-color);
+                border-radius: var(--ytcd-unit-border-radius, 0px);
+                font: var(--ytcd-unit-font-weight, 500) var(--ytcd-unit-font-size, 12px)/1.4 var(--ytcd-unit-font);
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu .hud-control-button:is(:hover, :active, .active) {
+                color: inherit;
+                background: color-mix(in srgb, var(--ytcd-secondary-color) 16%, transparent);
+                border-color: var(--ytcd-secondary-color);
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu .hud-control-button:focus-visible {
+                outline: 2px solid var(--ytcd-secondary-color);
+                outline-offset: 2px;
+            }
             #yt-cd-hud .hud-1001-menu .hud-control-button {
                 min-height: 30px;
                 height: auto;
@@ -3987,12 +4059,9 @@
         const chapterEl = document.getElementById('hud-chapter');
         if (!video || !timeEl || !chapterEl) return;
         timeEl.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
-        const officialChapter = document.querySelector('.ytp-chapter-title-content');
-        const chapterText = officialChapter ? trim(officialChapter.textContent) : '';
         const displayedTrack = chooseHudTitle(
             currentSource,
-            getCurrentTrack(video.currentTime),
-            chapterText
+            getCurrentTrack(video.currentTime)
         );
         setHudTitleText(chapterEl, displayedTrack);
         chapterEl.href = getGoogleTrackSearchUrl(displayedTrack);
@@ -4999,7 +5068,6 @@
         setButtonCopy('.hud-previous-track', '◀ PREV', t('previousTrack'));
         setButtonCopy('.hud-next-track', 'NEXT ▶', t('nextTrack'));
         setButtonCopy('.hud-close-button', '×', t('closeHud'));
-        setButtonCopy('.hud-text-size-button', 'T±', t('textSize'));
         setButtonCopy('.hud-resize-handle', '', t('resize'));
         setButtonCopy('.hud-1001-menu button:nth-of-type(4)', t('retry1001'));
         const header = document.querySelector('#yt-tracklist-panel .tracklist-heading-title');
@@ -5007,7 +5075,7 @@
         updateStatusLight();
         updateSourceButtons();
         updateLinkButton();
-        if (tracklistPanel && tracklistVisible) renderTracklist(tracklistPanel);
+        if (tracklistPanel && isTracklistPanelVisible()) renderTracklist(tracklistPanel);
     }
 
     function updateSourceButtons() {
@@ -5016,6 +5084,7 @@
         const has1001 = tracksFrom1001.length > 0;
         const hasMixesDb = tracksFromMixesDb.length > 0;
         const hasTrackId = tracksFromTrackId.length > 0;
+        youtubeSourceBtn.style.display = runtimeSettings.enableYouTube === false ? 'none' : '';
         youtubeSourceBtn.disabled = !hasYouTube;
         tracklistSource1001Btn.disabled = !has1001;
         tracklistSourceMixesDbBtn.disabled = !hasMixesDb;
@@ -5171,7 +5240,8 @@
     }
 
     function isPersistentTracklistPanel() {
-        return getHudLayoutComponent('tracklist-panel')?.present === true;
+        const panel = getHudLayoutComponent('tracklist-panel');
+        return panel?.present === true && panel.hidden !== true;
     }
 
     function isTracklistPanelVisible() {
@@ -5432,27 +5502,7 @@
             });
             closeBtn.classList.add('hud-close-button');
 
-            const textSizeBtn = createControlButton(
-                'T±',
-                t('textSize'),
-                () => adjustHudTextSize(1)
-            );
-            textSizeBtn.classList.add('hud-text-size-button');
-            textSizeBtn.setAttribute('aria-keyshortcuts', 'ArrowUp ArrowRight ArrowDown ArrowLeft');
-            textSizeBtn.addEventListener('contextmenu', event => {
-                event.preventDefault();
-                event.stopPropagation();
-                adjustHudTextSize(-1);
-            }, true);
-            textSizeBtn.addEventListener('keydown', event => {
-                if (!['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(event.key)) return;
-                event.preventDefault();
-                event.stopPropagation();
-                adjustHudTextSize(['ArrowUp', 'ArrowRight'].includes(event.key) ? 1 : -1);
-            }, true);
-
             sideControls.appendChild(closeBtn);
-            sideControls.appendChild(textSizeBtn);
 
             const resizeHandle = document.createElement('button');
             resizeHandle.type = 'button';
@@ -5504,6 +5554,32 @@
         return hud;
     }
 
+    function refreshVideoTracklistState(videoId) {
+        if (!videoId || videoId === activeTracklistVideoId) return '';
+        activeSearchToken++;
+        cancelActiveRequests();
+        tracksFromYouTube = [];
+        resetProviderCandidates('1001');
+        resetProviderCandidates('mixesdb');
+        resetProviderCandidates('trackid');
+        parsedTracks = [];
+        currentSource = 'none';
+        sourceSelectionMode = 'auto';
+        searchState = 'idle';
+        searchStateDetail = '';
+        pending1001VerificationRequest = null;
+        clear1001VerificationReturn();
+        lastVideoIdFor1001 = videoId;
+        lastSearchTitle = '';
+        cacheHitVideoId = '';
+        youtubeTrackOrigin = '';
+        disconnectYouTubeCommentObserver();
+        activeTracklistVideoId = videoId;
+        const restoredSource = restoreCachedTracklists(videoId);
+        reconcileActiveSource();
+        return restoredSource;
+    }
+
     function initialize() {
         if (!runtimeSettings.enabled) {
             applyRuntimeAppearance();
@@ -5518,27 +5594,7 @@
         const title = getVideoTitle();
         let restoredCacheSource = '';
 
-        if (videoId && videoId !== lastVideoIdFor1001) {
-            activeSearchToken++;
-            cancelActiveRequests();
-            tracksFromYouTube = [];
-            resetProviderCandidates('1001');
-            resetProviderCandidates('mixesdb');
-            resetProviderCandidates('trackid');
-            parsedTracks = [];
-            currentSource = 'none';
-            sourceSelectionMode = 'auto';
-            searchState = 'idle';
-            searchStateDetail = '';
-            pending1001VerificationRequest = null;
-            clear1001VerificationReturn();
-            lastVideoIdFor1001 = videoId;
-            lastSearchTitle = '';
-            cacheHitVideoId = '';
-            youtubeTrackOrigin = '';
-            disconnectYouTubeCommentObserver();
-            restoredCacheSource = restoreCachedTracklists(videoId);
-        }
+        restoredCacheSource = refreshVideoTracklistState(videoId);
 
         parseYouTubeLocalTracks();
         bindYouTubeCommentObserver();
@@ -5592,10 +5648,7 @@
         let attempts = 0;
         if (initTimer) clearInterval(initTimer);
         const scheduledVideoId = getVideoId();
-        if (scheduledVideoId && scheduledVideoId !== lastVideoIdFor1001) {
-            activeSearchToken++;
-            cancelActiveRequests();
-        }
+        refreshVideoTracklistState(scheduledVideoId);
         metadataRefreshTimers.forEach(timer => clearTimeout(timer));
         metadataRefreshTimers = [];
         initTimer = setInterval(() => {
@@ -5613,6 +5666,7 @@
     }
 
     function cleanup() {
+        globalThis.chrome?.storage?.onChanged?.removeListener?.(handleTracklistCacheChange);
         activeSearchToken++;
         cancelActiveRequests();
         clear1001VerificationReturn();
@@ -5684,6 +5738,7 @@
             parseTimestampPlaylistText,
             isCredibleTimestampPlaylist,
             chooseYouTubeTimestampPlaylist,
+            getYouTubeDescriptionText,
             choosePreferredTracklistSource,
             parseTimestampToSeconds,
             parseTracklistDocument,

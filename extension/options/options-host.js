@@ -17,5 +17,12 @@
         async read() { return unwrap(await client.read()).snapshot; },
         async apply(request) { return unwrap(await client.apply(request)); },
         async operationStatus(operationId) { return unwrap(await client.operationStatus(operationId)); },
+        async clearCache() {
+            if (!globalThis.chrome?.storage?.local) throw new Error('CACHE_STORAGE_UNAVAILABLE');
+            const key = 'ytCdHudTracklistCacheV1';
+            await chrome.storage.local.set({ [key]: {} });
+            const stored = await chrome.storage.local.get(key);
+            if (!stored[key] || Object.keys(stored[key]).length) throw new Error('CACHE_CLEAR_UNCONFIRMED');
+        },
     });
 })();
