@@ -10,6 +10,16 @@ const outputPath = path.join(projectRoot, 'extension', 'content', 'youtube-cd-hu
 const userscriptHeader = /^\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==\s*/;
 const generatedBanner = '// Generated from src/youtube-cd-hud.user.js. Run npm run build:extension after source changes.\n\n';
 
+const skin = fs.readFileSync(path.join(projectRoot, 'extension/options/hud-skin.js'), 'utf8').replace(/\r\n?/g, '\n');
+const embedded = '// BEGIN GENERATED HUD SKIN\n' + skin + '// END GENERATED HUD SKIN';
+for (const target of [sourcePath, path.join(projectRoot, 'extension/options/live-monitor-composer.js')]) {
+    const current = fs.readFileSync(target, 'utf8').replace(/\r\n?/g, '\n');
+    const next = current.replace(new RegExp("// BEGIN GENERATED HUD SKIN[\\s\\S]*?// END GENERATED HUD SKIN"), () => embedded);
+    if (current !== next) {
+        if (process.argv.includes('--check')) { console.error('Shared Skin embedding is out of date: ' + path.relative(projectRoot, target)); process.exitCode = 1; }
+        else fs.writeFileSync(target, next, 'utf8');
+    }
+}
 const source = fs.readFileSync(sourcePath, 'utf8').replace(/\r\n?/g, '\n');
 const output = (generatedBanner + source.replace(userscriptHeader, '')).replace(/\r\n?/g, '\n');
 

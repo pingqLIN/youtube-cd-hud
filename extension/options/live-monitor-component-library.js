@@ -23,7 +23,7 @@
                 button.className = 'lm-library-item';
                 button.dataset.lmAdd = rule.type;
                 const marker = document.createElement('span');
-                marker.textContent = ({ disc: '◉', 'track-title': 'T', 'time-readout': '◷', 'source-selector': '⇄', 'tracklist-toggle': '≡', 'transport-controls': '⏮', 'close-control': '×', 'text-size-control': 'T±', 'tracklist-panel': '▤' })[rule.type] || '▦';
+                marker.textContent = ({ disc: '◉', 'track-title': 'T', 'time-readout': '◷', 'source-selector': '⇄', 'tracklist-toggle': '≡', 'transport-controls': '⏮', 'close-control': '×', 'text-size-control': 'T±', 'tracklist-panel': '▤', 'volume-control': '♪', 'agent-tools': 'A', 'system-status': 'ⓘ' })[rule.type] || '▦';
                 button.disabled = editor.state.layout.locked;
                 button.title = '加入 ' + rule.label;
                 marker.setAttribute('aria-hidden', 'true');

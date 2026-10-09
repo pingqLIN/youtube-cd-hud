@@ -1,3 +1,86 @@
+
+// BEGIN GENERATED HUD SKIN
+(function () {
+    'use strict';
+    // Pure presentation contract. No DOM, storage, selectors, or executable CSS.
+    const FORMAT = 'youtube-cd-hud-skin';
+    const EFFECTS = Object.freeze({ 'panel-base': ['shadow', 'accentRail'], disc: ['glow'], 'track-title': ['marquee'], 'time-readout': [], 'source-selector': ['statusLamp'], 'tracklist-toggle': [], 'transport-controls': [], 'close-control': [], 'text-size-control': [], 'tracklist-panel': ['shadow', 'accentRail'], 'volume-control': [], 'agent-tools': [], 'system-status': [] });
+    const color = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+    const range = (min, max) => v => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
+    const bool = v => typeof v === 'boolean';
+    const SURFACE = { volumeStyle: v => ['fader', 'knob'].includes(v), backgroundColor: color, borderColor: color, opacity: range(0, 1), secondaryOpacity: range(0, 1), discOpacity: range(0, 1), borderEnabled: bool, backgroundEnabled: bool, cornerEnabled: bool, cornerRadiusLevel: v => Number.isInteger(v) && v >= 1 && v <= 10, backgroundBlurEnabled: bool, texture: v => ['classic', 'gold', 'transparent-grooves', 'jog'].includes(v) };
+    const TEXT = { color, opacity: range(0, 1), font: v => typeof v === 'string' && /^[\p{L}\p{N} _-]{1,80}$/u.test(v), fontSize: range(8, 192), fontWeight: v => Number.isInteger(v) && v >= 100 && v <= 900, textAlign: v => ['left', 'right', 'center', 'justify'].includes(v) };
+    const TOKENS = { primaryColor: color, secondaryColor: color, primaryOpacity: range(0, 1), secondaryOpacity: range(0, 1) };
+    const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+    const clone = v => JSON.parse(JSON.stringify(v));
+    function normalizeSkin(input) {
+        const warnings = [];
+        const skin = { format: FORMAT, schemaVersion: 1, tokens: {}, roles: {} };
+        const warn = path => warnings.push('INVALID_SKIN:' + path);
+        function fields(source, rules, path) {
+            const result = {};
+            if (!object(source)) { warn(path); return result; }
+            for (const [key, value] of Object.entries(source).sort(([a], [b]) => a.localeCompare(b))) {
+                if (!Object.hasOwn(rules, key) || !rules[key](value)) warn(path + '.' + key);
+                else result[key] = value;
+            }
+            return result;
+        }
+        if (!object(input)) { warn('root'); return { skin, warnings }; }
+        for (const key of Object.keys(input)) if (!['format', 'schemaVersion', 'tokens', 'roles'].includes(key)) warn(key);
+        if (input.format !== FORMAT) warn('format');
+        if (input.schemaVersion !== 1) warn('schemaVersion');
+        skin.tokens = fields(input.tokens ?? {}, TOKENS, 'tokens');
+        if (!object(input.roles)) warn('roles');
+        else for (const [role, groups] of Object.entries(input.roles).sort(([a], [b]) => a.localeCompare(b))) {
+            if (!Object.hasOwn(EFFECTS, role) || !object(groups)) { warn('roles.' + role); continue; }
+            const result = {};
+            for (const [group, values] of Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))) {
+                let rules = null;
+                if (group === 'surface') rules = Object.fromEntries(Object.entries(SURFACE).filter(([key]) => (role === 'disc' || !['texture', 'discOpacity'].includes(key)) && (role === 'volume-control' || key !== 'volumeStyle')));
+                if (group === 'text' && !['disc', 'panel-base'].includes(role)) rules = TEXT;
+                if (group === 'effects') rules = Object.fromEntries(EFFECTS[role].map(key => [key, bool]));
+                if (!rules) warn('roles.' + role + '.' + group);
+                else result[group] = fields(values, rules, 'roles.' + role + '.' + group);
+            }
+            skin.roles[role] = result;
+        }
+        return { skin, warnings };
+    }
+    function requireSkin(input) {
+        const result = normalizeSkin(input);
+        if (result.warnings.length) throw new Error(result.warnings.join(';'));
+        return result.skin;
+    }
+    function extractSkin(layout) {
+        const roles = {};
+        for (const component of layout.components || []) {
+            const role = component.type || component.id;
+            if (!Object.hasOwn(EFFECTS, role)) continue;
+            roles[role] = { surface: clone(component.style || {}), ...(component.textStyle ? { text: clone(component.textStyle) } : {}), effects: clone(component.effects || {}) };
+        }
+        return requireSkin({ format: FORMAT, schemaVersion: 1, tokens: clone(layout.palette || {}), roles });
+    }
+    function compileSkin(input) {
+        const { skin, warnings } = normalizeSkin(input);
+        if (warnings.length) return { cssVariables: {}, patches: {}, warnings };
+        const cssVariables = Object.fromEntries(Object.entries(skin.tokens).map(([key, value]) => ['--hud-' + key.replace(/[A-Z]/g, x => '-' + x.toLowerCase()), String(value)]));
+        const patches = Object.fromEntries(Object.entries(skin.roles).map(([role, value]) => [role, { ...(value.surface ? { style: value.surface } : {}), ...(value.text ? { textStyle: value.text } : {}), ...(value.effects ? { effects: value.effects } : {}) }]));
+        return { cssVariables, patches, warnings };
+    }
+    function applySkinToLayout(layout, input) {
+        const skin = requireSkin(input), compiled = compileSkin(skin), next = clone(layout);
+        next.palette = { ...next.palette, ...skin.tokens };
+        for (const component of next.components || []) {
+            const patch = compiled.patches[component.type || component.id];
+            if (!patch) continue;
+            for (const field of ['style', 'textStyle', 'effects']) if (patch[field]) component[field] = { ...component[field], ...patch[field] };
+        }
+        next.skin = skin;
+        return next;
+    }
+    globalThis.YtCdHudSkin = Object.freeze({ FORMAT, normalizeSkin, requireSkin, extractSkin, compileSkin, applySkinToLayout });
+})();// END GENERATED HUD SKIN
 (function () {
     'use strict';
 
@@ -46,7 +129,7 @@
     const CORNER_RADIUS_STEP_PX = 2;
     const COLLISION_GAP = 8;
     const TEXT_ALIGNMENTS = Object.freeze(['left', 'right', 'center', 'justify']);
-    const DISC_TEXTURES = Object.freeze(['classic', 'gold', 'transparent-grooves']);
+    const DISC_TEXTURES = Object.freeze(['classic', 'gold', 'transparent-grooves', 'jog']);
     const FONT_STACKS = Object.freeze({
         'cascadia-mono': '"Cascadia Mono", Consolas, monospace',
         'ocr-machine': '"OCR A Extended", Consolas, monospace',
@@ -180,7 +263,32 @@
             effects: { shadow: true, accentRail: true }, supportedEffects: ['shadow', 'accentRail'],
             flags: { supportsZAxis: true, defaultPresent: false },
         }),
+        'volume-control': definition('volume-control', 'Volume / 音量', {
+            minSize: { width: 80, height: 144 }, maxSize: { width: 520, height: 480 },
+            supportedProperties: ['backgroundColor', 'opacity', 'size', 'volumeStyle'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
+            geometry: { x: .5, y: .5, width: 96, height: 192, z: 0 },
+            style: { opacity: 1, backgroundColor: '#202428', borderColor: PALETTE_DEFAULTS.secondaryColor, volumeStyle: 'fader' },
+            textStyle: { color: '#eef3f7', opacity: 1, font: 'Arial', fontSize: 14, fontWeight: 500, textAlign: 'center' },
+            flags: { supportsZAxis: true, defaultPresent: false },
+        }),
+        'agent-tools': definition('agent-tools', 'Agent 工具', {
+            minSize: { width: 160, height: 64 }, maxSize: { width: 520, height: 480 },
+            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
+            geometry: { x: .5, y: .5, width: 192, height: 80, z: 0 },
+            style: { opacity: 1, backgroundColor: '#202428', borderColor: PALETTE_DEFAULTS.secondaryColor },
+            textStyle: { color: '#eef3f7', opacity: 1, font: 'Arial', fontSize: 14, fontWeight: 500, textAlign: 'center' },
+            flags: { supportsZAxis: true, defaultPresent: false },
+        }),
+        'system-status': definition('system-status', '網路與快取狀態', {
+            minSize: { width: 220, height: 96 }, maxSize: { width: 520, height: 480 },
+            supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
+            geometry: { x: .5, y: .5, width: 280, height: 128, z: 0 },
+            style: { opacity: 1, backgroundColor: '#202428', borderColor: PALETTE_DEFAULTS.secondaryColor },
+            textStyle: { color: '#eef3f7', opacity: 1, font: 'Arial', fontSize: 14, fontWeight: 500, textAlign: 'center' },
+            flags: { supportsZAxis: true, defaultPresent: false },
+        }),
     });
+    const optionalControlIds = Object.freeze(['volume-control', 'agent-tools', 'system-status']);
     const requiredIds = Object.freeze(Object.keys(registry).filter(id => registry[id].required));
 
     function clamp(value, minimum, maximum, fallback) {
@@ -229,6 +337,7 @@
         if (rule.supportedProperties.includes('fontSize')) result.fontSize = clamp(source.fontSize, 8, TEXT_SIZE_MAXIMUM, defaults.fontSize);
         if (rule.supportedProperties.includes('textAlign')) result.textAlign = TEXT_ALIGNMENTS.includes(source.textAlign) ? source.textAlign : defaults.textAlign;
         if (rule.supportedProperties.includes('opacity')) result.opacity = clamp(source.opacity, 0, 1, defaults.opacity ?? 1);
+        if (rule.type === 'volume-control') result.volumeStyle = ['fader', 'knob'].includes(source.volumeStyle) ? source.volumeStyle : 'fader';
         if (rule.supportedProperties.includes('texture')) result.texture = DISC_TEXTURES.includes(source.texture) ? source.texture : defaults.texture;
         result.borderEnabled = source.borderEnabled === undefined ? defaults.borderEnabled !== false : source.borderEnabled !== false;
         result.cornerEnabled = rule.fixedRoundShape
@@ -662,7 +771,12 @@
         if (Number.isFinite(source.placement?.x) && Number.isFinite(source.placement?.y)) {
             normalized.placement = { x: clamp(source.placement.x, 0, 1), y: clamp(source.placement.y, 0, 1) };
         }
-        return normalized;
+        return source.skin === undefined ? normalized : globalThis.YtCdHudSkin.applySkinToLayout(normalized, source.skin);
+    }
+
+    function refreshSkin(layout) {
+        layout.skin = globalThis.YtCdHudSkin.extractSkin(layout);
+        return layout;
     }
 
     function prepareForSave(value) {
@@ -831,15 +945,22 @@
     }
 
     function exportCode(layout) {
-        return JSON.stringify({ format: 'youtube-cd-hud-panel', version: 1, layout: normalizeLayout(layout) }, null, 2);
+        const normalized = refreshSkin(normalizeLayout(layout));
+        return JSON.stringify({ format: 'youtube-cd-hud-panel', version: 1, layout: normalized, skin: normalized.skin }, null, 2);
     }
 
     function importCode(text) {
         if (typeof text !== 'string' || text.length > 100000) throw new Error('面板程式碼上限為 100 KB。');
-        const data = JSON.parse(text);
+        let data = JSON.parse(text);
+        if (Array.isArray(data?.components)) data = { format: 'youtube-cd-hud-panel', version: 1, layout: data };
+        if (data?.skin !== undefined) {
+            globalThis.YtCdHudSkin.requireSkin(data.skin);
+            if (data.layout?.skin !== undefined && JSON.stringify(globalThis.YtCdHudSkin.requireSkin(data.layout.skin)) !== JSON.stringify(data.skin)) throw new Error('INVALID_SKIN:envelope mismatch');
+            data.layout = { ...data.layout, skin: data.skin };
+        }
         if (data?.format !== 'youtube-cd-hud-panel' || data.version !== 1 || !Array.isArray(data.layout?.components)) throw new Error('請貼上完整的 HUD 面板 JSON 程式碼。');
         const ids = data.layout.components.map(item => item?.id);
-        if (ids.length !== Object.keys(registry).length || new Set(ids).size !== ids.length || ids.some(id => !Object.hasOwn(registry, id))) throw new Error('元件清單不完整或包含未知元件。');
+        if (Object.keys(registry).some(id => !optionalControlIds.includes(id) && !ids.includes(id)) || new Set(ids).size !== ids.length || ids.some(id => !Object.hasOwn(registry, id))) throw new Error('元件清單不完整或包含未知元件。');
         for (const item of data.layout.components) {
             if (!['x', 'y', 'width', 'height'].every(key => Number.isFinite(item.geometry?.[key]))) throw new Error('元件尺寸必須是有效數字。');
         }
@@ -878,7 +999,7 @@
             component.style.borderColor = palette.secondaryColor;
             if (secondaryChanged && component.textStyle) component.textStyle.color = palette.secondaryColor;
         });
-        return normalizeLayout(next);
+        return normalizeLayout(refreshSkin(next));
     }
 
     function updateSizingMode(layout, sizingMode) {
@@ -940,6 +1061,10 @@
     }
 
     function toCss(component, layout = { canvas: CANVAS }) {
+        if (layout.skin) {
+            const patch = globalThis.YtCdHudSkin.compileSkin(layout.skin).patches[component.type || component.id];
+            if (patch) component = { ...component, style: { ...component.style, ...patch.style }, textStyle: { ...component.textStyle, ...patch.textStyle } };
+        }
         const geometry = component.geometry;
         const style = component.style || {};
         const textStyle = component.textStyle || style;
@@ -958,7 +1083,7 @@
             '--lm-text-opacity': String(textStyle.opacity ?? 1),
             '--lm-background-color': style.backgroundEnabled === false ? 'transparent' : style.backgroundColor || layout.palette?.primaryColor || PALETTE_DEFAULTS.primaryColor,
             '--lm-secondary-color': colorWithAlpha(layout.palette?.secondaryColor || PALETTE_DEFAULTS.secondaryColor, style.secondaryOpacity ?? 1),
-            '--lm-border-color': colorWithAlpha(layout.palette?.secondaryColor || PALETTE_DEFAULTS.secondaryColor, style.secondaryOpacity ?? 1),
+            '--lm-border-color': colorWithAlpha(style.borderColor || layout.palette?.secondaryColor || PALETTE_DEFAULTS.secondaryColor, style.secondaryOpacity ?? 1),
             '--lm-border-width': style.borderEnabled === false ? '0px' : '1px',
             '--lm-border-radius': style.cornerEnabled && !registry[component.id]?.fixedRoundShape
                 ? String(style.cornerRadiusLevel * CORNER_RADIUS_STEP_PX) + 'px'
@@ -981,10 +1106,11 @@
     }
 
     globalThis.YtCdHudLiveMonitorComposer = Object.freeze({
+        skin: globalThis.YtCdHudSkin,
         VERSION, STORAGE_KEY, LEGACY_STORAGE_KEY, CANVAS, VIEWPORT_PRESETS, SIZING_MODES, PALETTE_DEFAULTS, TEXT_SIZE_MAXIMUM,
         CORNER_RADIUS_LEVEL_MINIMUM, CORNER_RADIUS_LEVEL_MAXIMUM, CORNER_RADIUS_STEP_PX,
         COLLISION_GAP, FONT_STACKS, TEXT_ALIGNMENTS, DISC_TEXTURES, registry, requiredIds,
-        normalizeLayout, prepareForSave, createDefaultLayout, getComponent, canDelete, availableComponents, addComponent, removeComponent,
+        normalizeLayout, prepareForSave, refreshSkin, createDefaultLayout, getComponent, canDelete, availableComponents, addComponent, removeComponent,
         defaultFontWeight, sizeFromInput, colorWithAlpha, fontSizeFromSlider, fontSizeToSlider, connectedToBase, fontStack, exportCode, importCode, normalizePalette, sizeScale, textSizeLimits, sizeLimits, clampSize, ensureTextFits, fitGeometry, fitInteractionGeometry, applyInteractionGeometry, interactionGeometry,
         componentRect, componentRects, rectsOverlap, effectiveZ, physicalOverlapsFor, overlapGroupFor,
         collisionFor, canPlace, canPlaceInteraction, refreshBase, updateAlignment, updateSplit, updateLayer,

@@ -1,0 +1,677 @@
+{
+  "format": "youtube-cd-hud-panel",
+  "version": 1,
+  "layout": {
+    "version": 2,
+    "palette": {
+      "primaryColor": "#17191c",
+      "secondaryColor": "#c9d0d6"
+    },
+    "canvas": {
+      "width": 1280,
+      "height": 720,
+      "sizingMode": "absolute",
+      "collisionPolicy": "no-overlap-closed",
+      "alignmentGrid": {
+        "enabled": true,
+        "unitWidth": 4,
+        "unitHeight": 4,
+        "visible": false
+      }
+    },
+    "components": [
+      {
+        "id": "panel-base",
+        "type": "panel-base",
+        "present": true,
+        "geometry": {
+          "x": 0.5,
+          "y": 0.5,
+          "width": 448,
+          "height": 640,
+          "z": -1
+        },
+        "locked": false,
+        "layer": {
+          "enabled": false
+        },
+        "boundary": {
+          "state": "closed",
+          "shape": "rect",
+          "collision": false,
+          "mode": "dynamic-envelope",
+          "padding": 16
+        },
+        "style": {
+          "backgroundColor": "#17191c",
+          "borderColor": "#50565d",
+          "opacity": 1,
+          "borderEnabled": true,
+          "cornerEnabled": true,
+          "cornerRadiusLevel": 5,
+          "backgroundBlurEnabled": false,
+          "secondaryOpacity": 1,
+          "backgroundEnabled": true
+        },
+        "effects": {
+          "shadow": false,
+          "accentRail": false
+        }
+      },
+      {
+        "id": "disc",
+        "type": "disc",
+        "present": true,
+        "geometry": {
+          "x": 0.53125,
+          "y": 0.7222222222222222,
+          "width": 304,
+          "height": 304,
+          "z": 1
+        },
+        "locked": false,
+        "layer": {
+          "enabled": true
+        },
+        "style": {
+          "backgroundColor": "#101316",
+          "borderColor": "#c9d0d6",
+          "opacity": 1,
+          "texture": "jog",
+          "borderEnabled": true,
+          "cornerEnabled": true,
+          "cornerRadiusLevel": 3,
+          "backgroundBlurEnabled": false,
+          "discOpacity": 1,
+          "secondaryOpacity": 1,
+          "backgroundEnabled": true
+        },
+        "effects": {
+          "glow": false
+        }
+      },
+      {
+        "id": "track-title",
+        "type": "track-title",
+        "present": true,
+        "geometry": {
+          "x": 0.5,
+          "y": 0.18333333333333332,
+          "width": 400,
+          "height": 40,
+          "z": 0
+        },
+        "locked": false,
+        "layer": {
+          "enabled": false
+        },
+        "boundary": {
+          "state": "closed",
+          "shape": "rect",
+          "collision": true
+        },
+        "style": {
+          "backgroundColor": "#090c0f",
+          "borderColor": "#41474e",
+          "opacity": 1,
+          "borderEnabled": false,
+          "cornerEnabled": true,
+          "cornerRadiusLevel": 1,
+          "backgroundBlurEnabled": false,
+          "secondaryOpacity": 1,
+          "backgroundEnabled": true
+        },
+        "textStyle": {
+          "color": "#f3f5f7",
+          "font": "Segoe UI",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "textAlign": "left",
+          "opacity": 1
+        },
+        "effects": {
+          "marquee": false
+        }
+      },
+      {
+        "id": "time-readout",
+        "type": "time-readout",
+        "present": true,
+        "geometry": {
+          "x": 0.453125,
+          "y": 0.2611111111111111,
+          "width": 280,
+          "height": 40,
+          "z": 0
+        },
+        "locked": false,
+        "layer": {
+          "enabled": false
+        },
+        "boundary": {
+          "state": "closed",
+          "shape": "rect",
+          "collision": true
+        },
+        "style": {
+          "backgroundColor": "#090c0f",
+          "borderColor": "#41474e",
+          "opacity": 1,
+          "borderEnabled": false,
+          "cornerEnabled": true,
+          "cornerRadiusLevel": 1,
+          "backgroundBlurEnabled": false,
+          "secondaryOpacity": 1,
+          "backgroundEnabled": true
+        },
+        "textStyle": {
+          "color": "#ffd079",
+          "font": "consolas",
+          "fontSize": 22,
+          "fontWeight": 500,
+          "textAlign": "left",
+          "opacity": 1
+        },
+        "effects": {}
+      },
+      {
+        "id": "source-selector",
+        "type": "source-selector",
+        "present": true,
+        "geometry": {
+          "x": 0.45,
+          "y": 0.1111111111111111,
+          "width": 272,
+          "height": 32,
+          "z": 0
+        },
+        "locked": false,
+        "layer": {
+          "enabled": false
+        },
+        "boundary": {
+          "state": "closed",
+          "shape": "rect",
+          "collision": true
+        },
+        "style": {
+          "backgroundColor": "#17202b",
+          "borderColor": "#567b9f",
+          "opacity": 1,
+          "borderEnabled": true,
+          "cornerEnabled": true,
+          "cornerRadiusLevel": 2,
+          "backgroundBlurEnabled": false,
+          "secondaryOpacity": 1,
+          "backgroundEnabled": true
+        },
+        "textStyle": {
+          "color": "#91c5ff",
+          "font": "Segoe UI",
+          "fontSize": 13,
+          "fontWeight": 600,
+          "textAlign": "center",
+          "opacity": 1
+        },
+        "effects": {
+          "statusLamp": true
+        }
+      },
+      {
+        "id": "tracklist-toggle",
+        "type": "tracklist-toggle",
+        "present": false,
+        "geometry": {
+          "x": 0.525,
+          "y": 0.6111111111111112,
+          "width": 48,
+          "height": 48,
+          "z": 0
+        },
+        "locked": false,
+        "layer": {
+          "enabled": false
+        },
+        "boundary": {
+          "state": "closed",
+          "shape": "rect",
+          "collision": true
+        },
+        "style": {
+          "backgroundColor": "#17191c",
+          "borderColor": "#41474e",
+          "opacity": 1,
+          "borderEnabled": true,
+          "cornerEnabled": true,
+          "cornerRadiusLevel": 3,
+          "backgroundBlurEnabled": false,
+          "secondaryOpacity": 1,
+          "backgroundEnabled": true
+        },
+        "textStyle": {
+          "color": "#e8edf2",
+          "font": "Segoe UI",
+          "fontSize": 14,
+          "fontWeight": 500,
+          "textAlign": "left",
+          "opacity": 1
+        },
+        "effects": {}
+      },
+      {
+        "id": "transport-controls",
+        "type": "transport-controls",
+        "present": true,
+        "geometry": {
+          "x": 0.39375,
+          "y": 0.6888888888888889,
+          "width": 128,
+          "height": 48,
+          "z": 0
+        },
+        "locked": false,
+        "layer": {
+          "enabled": false
+        },
+        "arrangement": {
+          "split": true,
+          "partSize": {
+            "width": 64,
+            "height": 44
+          },
+          "positions": {
+            "previous": {
+              "x": 0.36875,
+              "y": 0.6944444444444444
+            },
+            "next": {
+              "x": 0.36875,
+              "y": 0.7833333333333333
+            }
+          }
+        },
+        "boundary": {
+          "state": "closed",
+          "shape": "rect",
+          "collision": true
+        },
+        "style": {
+          "backgroundColor": "#272c31",
+          "borderColor": "#b0becb",
+          "opacity": 1,
+          "borderEnabled": true,
+          "cornerEnabled": true,
+          "cornerRadiusLevel": 10,
+          "backgroundBlurEnabled": false,
+          "secondaryOpacity": 1,
+          "backgroundEnabled": true
+        },
+        "textStyle": {
+          "color": "#f2f5f8",
+          "font": "Segoe UI",
+          "fontSize": 12,
+          "fontWeight": 600,
+          "textAlign": "center",
+          "opacity": 1
+        },
+        "effects": {}
+      },
+      {
+        "id": "close-control",
+        "type": "close-control",
+        "present": true,
+        "geometry": {
+          "x": 0.6375,
+          "y": 0.1111111111111111,
+          "width": 48,
+          "height": 32,
+          "z": 0
+        },
+        "locked": false,
+        "layer": {
+          "enabled": false
+        },
+        "boundary": {
+          "state": "closed",
+          "shape": "rect",
+          "collision": true
+        },
+        "style": {
+          "backgroundColor": "#17191c",
+          "borderColor": "#626d78",
+          "opacity": 1,
+          "borderEnabled": true,
+          "cornerEnabled": true,
+          "cornerRadiusLevel": 2,
+          "backgroundBlurEnabled": false,
+          "secondaryOpacity": 1,
+          "backgroundEnabled": true
+        },
+        "textStyle": {
+          "color": "#e8edf2",
+          "font": "Segoe UI",
+          "fontSize": 20,
+          "fontWeight": 500,
+          "textAlign": "center",
+          "opacity": 1
+        },
+        "effects": {}
+      },
+      {
+        "id": "text-size-control",
+        "type": "text-size-control",
+        "present": false,
+        "geometry": {
+          "x": 0.71875,
+          "y": 0.5111111111111111,
+          "width": 64,
+          "height": 48,
+          "z": 0
+        },
+        "locked": false,
+        "layer": {
+          "enabled": false
+        },
+        "boundary": {
+          "state": "closed",
+          "shape": "rect",
+          "collision": true
+        },
+        "style": {
+          "backgroundColor": "#17191c",
+          "borderColor": "#41474e",
+          "opacity": 1,
+          "borderEnabled": true,
+          "cornerEnabled": true,
+          "cornerRadiusLevel": 3,
+          "backgroundBlurEnabled": false,
+          "secondaryOpacity": 1,
+          "backgroundEnabled": true
+        },
+        "textStyle": {
+          "color": "#e8edf2",
+          "font": "Segoe UI",
+          "fontSize": 14,
+          "fontWeight": 500,
+          "textAlign": "left",
+          "opacity": 1
+        },
+        "effects": {}
+      },
+      {
+        "id": "tracklist-panel",
+        "type": "tracklist-panel",
+        "present": true,
+        "geometry": {
+          "x": 0.5,
+          "y": 0.39444444444444443,
+          "width": 400,
+          "height": 120,
+          "z": 0
+        },
+        "locked": false,
+        "layer": {
+          "enabled": false
+        },
+        "boundary": {
+          "state": "closed",
+          "shape": "rect",
+          "collision": true
+        },
+        "style": {
+          "backgroundColor": "#090c0f",
+          "borderColor": "#3d4957",
+          "opacity": 1,
+          "borderEnabled": true,
+          "cornerEnabled": true,
+          "cornerRadiusLevel": 1,
+          "backgroundBlurEnabled": false,
+          "secondaryOpacity": 1,
+          "backgroundEnabled": true
+        },
+        "textStyle": {
+          "color": "#e0e7ed",
+          "font": "Segoe UI",
+          "fontSize": 14,
+          "fontWeight": 400,
+          "textAlign": "left",
+          "opacity": 1
+        },
+        "effects": {
+          "shadow": false,
+          "accentRail": false
+        }
+      }
+    ],
+    "manualBase": true,
+    "locked": false,
+    "skin": {
+      "format": "youtube-cd-hud-skin",
+      "schemaVersion": 1,
+      "tokens": {
+        "primaryColor": "#17191c",
+        "secondaryColor": "#c9d0d6"
+      },
+      "roles": {
+        "close-control": {
+          "effects": {},
+          "surface": {
+            "backgroundBlurEnabled": false,
+            "backgroundColor": "#17191c",
+            "backgroundEnabled": true,
+            "borderColor": "#626d78",
+            "borderEnabled": true,
+            "cornerEnabled": true,
+            "cornerRadiusLevel": 2,
+            "opacity": 1,
+            "secondaryOpacity": 1
+          },
+          "text": {
+            "color": "#e8edf2",
+            "font": "Segoe UI",
+            "fontSize": 20,
+            "fontWeight": 500,
+            "opacity": 1,
+            "textAlign": "center"
+          }
+        },
+        "disc": {
+          "effects": {
+            "glow": false
+          },
+          "surface": {
+            "backgroundBlurEnabled": false,
+            "backgroundColor": "#101316",
+            "backgroundEnabled": true,
+            "borderColor": "#c9d0d6",
+            "borderEnabled": true,
+            "cornerEnabled": true,
+            "cornerRadiusLevel": 3,
+            "discOpacity": 1,
+            "opacity": 1,
+            "secondaryOpacity": 1,
+            "texture": "jog"
+          }
+        },
+        "panel-base": {
+          "effects": {
+            "accentRail": false,
+            "shadow": false
+          },
+          "surface": {
+            "backgroundBlurEnabled": false,
+            "backgroundColor": "#17191c",
+            "backgroundEnabled": true,
+            "borderColor": "#50565d",
+            "borderEnabled": true,
+            "cornerEnabled": true,
+            "cornerRadiusLevel": 5,
+            "opacity": 1,
+            "secondaryOpacity": 1
+          }
+        },
+        "source-selector": {
+          "effects": {
+            "statusLamp": true
+          },
+          "surface": {
+            "backgroundBlurEnabled": false,
+            "backgroundColor": "#17202b",
+            "backgroundEnabled": true,
+            "borderColor": "#567b9f",
+            "borderEnabled": true,
+            "cornerEnabled": true,
+            "cornerRadiusLevel": 2,
+            "opacity": 1,
+            "secondaryOpacity": 1
+          },
+          "text": {
+            "color": "#91c5ff",
+            "font": "Segoe UI",
+            "fontSize": 13,
+            "fontWeight": 600,
+            "opacity": 1,
+            "textAlign": "center"
+          }
+        },
+        "text-size-control": {
+          "effects": {},
+          "surface": {
+            "backgroundBlurEnabled": false,
+            "backgroundColor": "#17191c",
+            "backgroundEnabled": true,
+            "borderColor": "#41474e",
+            "borderEnabled": true,
+            "cornerEnabled": true,
+            "cornerRadiusLevel": 3,
+            "opacity": 1,
+            "secondaryOpacity": 1
+          },
+          "text": {
+            "color": "#e8edf2",
+            "font": "Segoe UI",
+            "fontSize": 14,
+            "fontWeight": 500,
+            "opacity": 1,
+            "textAlign": "left"
+          }
+        },
+        "time-readout": {
+          "effects": {},
+          "surface": {
+            "backgroundBlurEnabled": false,
+            "backgroundColor": "#090c0f",
+            "backgroundEnabled": true,
+            "borderColor": "#41474e",
+            "borderEnabled": false,
+            "cornerEnabled": true,
+            "cornerRadiusLevel": 1,
+            "opacity": 1,
+            "secondaryOpacity": 1
+          },
+          "text": {
+            "color": "#ffd079",
+            "font": "consolas",
+            "fontSize": 22,
+            "fontWeight": 500,
+            "opacity": 1,
+            "textAlign": "left"
+          }
+        },
+        "track-title": {
+          "effects": {
+            "marquee": false
+          },
+          "surface": {
+            "backgroundBlurEnabled": false,
+            "backgroundColor": "#090c0f",
+            "backgroundEnabled": true,
+            "borderColor": "#41474e",
+            "borderEnabled": false,
+            "cornerEnabled": true,
+            "cornerRadiusLevel": 1,
+            "opacity": 1,
+            "secondaryOpacity": 1
+          },
+          "text": {
+            "color": "#f3f5f7",
+            "font": "Segoe UI",
+            "fontSize": 20,
+            "fontWeight": 600,
+            "opacity": 1,
+            "textAlign": "left"
+          }
+        },
+        "tracklist-panel": {
+          "effects": {
+            "accentRail": false,
+            "shadow": false
+          },
+          "surface": {
+            "backgroundBlurEnabled": false,
+            "backgroundColor": "#090c0f",
+            "backgroundEnabled": true,
+            "borderColor": "#3d4957",
+            "borderEnabled": true,
+            "cornerEnabled": true,
+            "cornerRadiusLevel": 1,
+            "opacity": 1,
+            "secondaryOpacity": 1
+          },
+          "text": {
+            "color": "#e0e7ed",
+            "font": "Segoe UI",
+            "fontSize": 14,
+            "fontWeight": 400,
+            "opacity": 1,
+            "textAlign": "left"
+          }
+        },
+        "tracklist-toggle": {
+          "effects": {},
+          "surface": {
+            "backgroundBlurEnabled": false,
+            "backgroundColor": "#17191c",
+            "backgroundEnabled": true,
+            "borderColor": "#41474e",
+            "borderEnabled": true,
+            "cornerEnabled": true,
+            "cornerRadiusLevel": 3,
+            "opacity": 1,
+            "secondaryOpacity": 1
+          },
+          "text": {
+            "color": "#e8edf2",
+            "font": "Segoe UI",
+            "fontSize": 14,
+            "fontWeight": 500,
+            "opacity": 1,
+            "textAlign": "left"
+          }
+        },
+        "transport-controls": {
+          "effects": {},
+          "surface": {
+            "backgroundBlurEnabled": false,
+            "backgroundColor": "#272c31",
+            "backgroundEnabled": true,
+            "borderColor": "#b0becb",
+            "borderEnabled": true,
+            "cornerEnabled": true,
+            "cornerRadiusLevel": 10,
+            "opacity": 1,
+            "secondaryOpacity": 1
+          },
+          "text": {
+            "color": "#f2f5f8",
+            "font": "Segoe UI",
+            "fontSize": 12,
+            "fontWeight": 600,
+            "opacity": 1,
+            "textAlign": "center"
+          }
+        }
+      }
+    }
+  }
+}

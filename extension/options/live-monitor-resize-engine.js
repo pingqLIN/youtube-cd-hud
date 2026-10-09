@@ -87,6 +87,7 @@
             if (members.some(item => composer.collisionFor(item, next.components, next.canvas))) return fail('Z 軸分配後仍有碰撞；原配置已保留。');
         }
         if (!composer.connectedToBase(next, composer.getComponent(next, 'panel-base'))) return fail('縮放後元件會離開底座。');
+        if (next.skin) composer.refreshSkin(next);
         const normalized = composer.normalizeLayout(next);
         const same = (a, b) => ['x', 'y', 'width', 'height'].every(key => Math.abs(a[key] - b[key]) < 1e-7);
         for (const item of members) {

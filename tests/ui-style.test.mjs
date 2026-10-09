@@ -9,7 +9,7 @@ const sourcePath = path.resolve(testDirectory, '..', 'src', 'youtube-cd-hud.user
 const source = fs.readFileSync(sourcePath, 'utf8');
 
 test('fills the balanced responsive circular disc with a native widescreen thumbnail', () => {
-  const discArtRule = source.match(/\.cd-art\s*\{[\s\S]*?\n\s*\}/)?.[0] || '';
+  const discArtRule = source.match(/(?:^|\n)\s*\.cd-art\s*\{[\s\S]*?\n\s*\}/)?.[0] || '';
 
   assert.match(source, /mqdefault\.jpg/);
   assert.match(source, /--hud-disc-size:\s*clamp\(52\.8px,\s*6\.24vmin,\s*76\.8px\)/);
