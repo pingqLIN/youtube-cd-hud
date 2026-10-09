@@ -23,6 +23,8 @@ class Element {
 function setup(){
     const context={document:{createElement:tag=>new Element(tag)}};
     vm.runInNewContext(fs.readFileSync(path.join(root,'extension/options/live-monitor-composer.js'),'utf8'),context);
+    for (const file of ['property-section-registry.js', 'property-sections/unit.js', 'property-sections/appearance.js', 'property-sections/text.js', 'property-sections/effects.js'])
+        vm.runInNewContext(fs.readFileSync(path.join(root,'extension/options',file),'utf8'),context);
     vm.runInNewContext(fs.readFileSync(path.join(root,'extension/options/live-monitor-property-toolbar.js'),'utf8'),context);
     const composer=context.YtCdHudLiveMonitorComposer;
     const editor={state:{layout:composer.normalizeLayout(JSON.parse(fs.readFileSync(path.join(root,'tests/fixtures/legacy-panel-layout.json'),'utf8')))},render(){toolbar.update(selected,composer.getComponent(editor.state.layout,selected));}};

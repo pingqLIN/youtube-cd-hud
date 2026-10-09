@@ -53,7 +53,7 @@ function studioDocument(){
 }
 test('actual Studio toolbar switches fader and knob with Skin roundtrip; optional library dispatch adds real roles',()=>{
  const c=context(),doc=studioDocument();c.document=doc;
- vm.runInContext(read('extension/options/live-monitor-property-toolbar.js'),c);vm.runInContext(read('extension/options/live-monitor-component-library.js'),c);
+ for(const file of ['property-section-registry.js', 'property-sections/unit.js', 'property-sections/appearance.js', 'property-sections/text.js', 'property-sections/effects.js']) vm.runInContext(read('extension/options/'+file),c);vm.runInContext(read('extension/options/live-monitor-property-toolbar.js'),c);vm.runInContext(read('extension/options/live-monitor-component-library.js'),c);
  const co=c.YtCdHudLiveMonitorComposer,layout=co.createDefaultLayout();layout.locked=false;
  const volume=co.getComponent(layout,'volume-control');volume.present=true;
  const editor={state:{layout},render(){},recordHistory(){},add(id){this.added=id;}};

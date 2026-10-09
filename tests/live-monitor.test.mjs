@@ -864,6 +864,11 @@ test('package check covers every shipped live monitor script', () => {
     'live-monitor-layout-store.js',
     'live-monitor-resize-engine.js',
     'live-monitor-canvas-editor.js',
+    'property-section-registry.js',
+    'property-sections/unit.js',
+    'property-sections/appearance.js',
+    'property-sections/text.js',
+    'property-sections/effects.js',
     'live-monitor-property-toolbar.js',
     'live-monitor-component-library.js',
     'live-monitor-layout-presets.js',
@@ -963,7 +968,7 @@ test('projects the editor canvas onto the YouTube player without moving any unit
 
 test('wires every component property to an auditable control and keeps component values authoritative', () => {
   const composer = loadComposer();
-  const toolbar = read('extension/options/live-monitor-property-toolbar.js');
+  const toolbar = [read('extension/options/live-monitor-property-toolbar.js'), ...['property-section-registry.js', 'property-sections/unit.js', 'property-sections/appearance.js', 'property-sections/text.js', 'property-sections/effects.js'].map(f => read('extension/options/'+f))].join('\n');
   const options = read('extension/options/options.js');
   const css = read('extension/options/options.css');
   const declared = new Set([...toolbar.matchAll(/dataset\.lmProperty\s*=\s*'([^']+)'/g)].map(match => match[1]));
@@ -1200,7 +1205,7 @@ test('viewport changes preserve pixel sizes and distances between units', () => 
 
 test('exposes the foundation palette, viewport, sizing mode, and English alignment abbreviations', () => {
   const presets = read('extension/options/live-monitor-layout-presets.js');
-  const toolbar = read('extension/options/live-monitor-property-toolbar.js');
+  const toolbar = [read('extension/options/live-monitor-property-toolbar.js'), ...['property-section-registry.js', 'property-sections/unit.js', 'property-sections/appearance.js', 'property-sections/text.js', 'property-sections/effects.js'].map(f => read('extension/options/'+f))].join('\n');
   const css = read('extension/options/options.css');
   assert.match(presets, /dataset\.lmPalette = 'primaryColor'/);
   assert.match(presets, /dataset\.lmPalette = 'secondaryColor'/);
