@@ -825,7 +825,7 @@
     }
 
     function defaultSlots() {
-        return { '0': composer.createDefaultLayout(), ...Object.fromEntries(BUNDLED_PRESETS.map((preset, index) => [String(index + 1), createBundledLayout(preset.id)])) };
+        return { '0': composer.createDefaultLayout(), ...Object.fromEntries(BUNDLED_PRESETS.filter(preset => !preset.optIn).map((preset, index) => [String(index + 1), createBundledLayout(preset.id)])) };
     }
 
     function normalizeSlots(value) {
@@ -948,6 +948,20 @@
         status.setAttribute('role', 'status');
         status.setAttribute('aria-live', 'polite');
         status.textContent = '0 預設 · 1 全功能 · 2 精簡 · 3 隱形 · 4 靜謐背景 · 5 工作台 · 6 海報展示 · 7–9 自訂；選擇儲存槽後讀取或儲存。';
+        BUNDLED_PRESETS.filter(preset => preset.optIn).forEach(preset => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = preset.label;
+            button.dataset.lmPreset = preset.id;
+            button.title = '載入可選面板；依目前自動同步設定套用，不覆寫儲存槽。';
+            button.addEventListener('click', () => {
+                editor.setLayout(createBundledLayout(preset.id));
+                onChange(editor.state.layout, 'preset-load');
+                status.textContent = preset.label + ' 已載入；儲存槽保持不變。';
+                sync();
+            });
+            actions.appendChild(button);
+        });
         const pack = document.createElement('div');
         pack.className = 'lm-layout-pack';
         const scope = document.createElement('select');

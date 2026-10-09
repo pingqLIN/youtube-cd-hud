@@ -79,6 +79,7 @@
                     }
                 }
             }
+            composer.refreshSkin(candidate);
             const normalized = composer.prepareForSave(composer.normalizeLayout(candidate));
             // Normalization must not silently turn the requested edit into a different one.
             for (const change of input.changes) {

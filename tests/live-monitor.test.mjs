@@ -323,7 +323,7 @@ test('migrates v1 layouts into the bounded v2 component schema', () => {
   assert.equal(composer.LEGACY_STORAGE_KEY, 'ytCdHudLayoutV1');
   assert.deepEqual(JSON.parse(JSON.stringify(layout.components.map(component => component.id))), [
     'panel-base', 'disc', 'track-title', 'time-readout', 'source-selector',
-    'tracklist-toggle', 'transport-controls', 'close-control', 'text-size-control', 'tracklist-panel',
+    'tracklist-toggle', 'transport-controls', 'close-control', 'text-size-control', 'tracklist-panel', 'volume-control', 'agent-tools', 'system-status',
   ]);
   const disc = composer.getComponent(layout, 'disc');
   assert.equal(disc.geometry.width, 720);
@@ -444,7 +444,7 @@ test('keeps numbered layouts in local storage and normalizes restored data', asy
 test('ships three fresh built-in panels without relying on session slots', async () => {
   const composer = loadComposer();
   const presets = loadLayoutPresets(composer);
-  assert.deepEqual([...presets.BUNDLED_PRESETS].map(preset => preset.id), ['full', 'compact', 'invisible', 'ambient-quiet', 'crate-ledger', 'shop-poster']);
+  assert.deepEqual([...presets.BUNDLED_PRESETS].filter(preset => !preset.optIn).map(preset => preset.id), ['full', 'compact', 'invisible', 'ambient-quiet', 'crate-ledger', 'shop-poster']);
   assert.deepEqual(Object.keys(await presets.readSlots()), ['0', '1', '2', '3', '4', '5', '6']);
   assert.equal(presets.createBundledLayout('unknown'), null);
   const compact = presets.createBundledLayout('compact');
@@ -518,7 +518,7 @@ test('preserves every approved A/B layout value without recentering or restyling
     const layout = presets.createBundledLayout(id);
     const raw = JSON.parse(read('extension/options/live-monitor-layout-presets.js').match(/const BUNDLED_LAYOUTS = ([\s\S]*?);/)[1])[id];
     assert.equal(createHash('sha256').update(JSON.stringify(canonical(raw))).digest('hex'), digest, id);
-    for (const item of layout.components.filter(item => item.id !== 'panel-base')) assert.deepEqual(JSON.parse(JSON.stringify(item.geometry)), raw.components.find(source => source.id === item.id).geometry);
+    for (const item of layout.components.filter(item => item.id !== 'panel-base' && raw.components.some(source => source.id === item.id))) assert.deepEqual(JSON.parse(JSON.stringify(item.geometry)), raw.components.find(source => source.id === item.id).geometry);
     const normalized = composer.normalizeLayout(layout);
     assert.deepEqual(JSON.parse(JSON.stringify(normalized)), JSON.parse(JSON.stringify(layout)));
   }
@@ -697,19 +697,19 @@ test('defers drag collision handling until pointer release and presents the laye
 test('component library contains only units that are not on the panel', () => {
   const composer = loadComposer();
   const initial = legacyLayout(composer);
-  assert.deepEqual([...composer.availableComponents(initial)].map(rule => rule.type), ['tracklist-panel']);
+  assert.deepEqual([...composer.availableComponents(initial)].map(rule => rule.type), ['tracklist-panel', 'volume-control', 'agent-tools', 'system-status']);
   const removed = composer.removeComponent(initial, 'disc');
   assert.equal(removed.removed, true);
-  assert.deepEqual([...composer.availableComponents(removed.layout)].map(rule => rule.type), ['disc', 'tracklist-panel']);
+  assert.deepEqual([...composer.availableComponents(removed.layout)].map(rule => rule.type), ['disc', 'tracklist-panel', 'volume-control', 'agent-tools', 'system-status']);
   const restored = composer.addComponent(removed.layout, 'disc');
   assert.equal(restored.added, true);
-  assert.deepEqual([...composer.availableComponents(restored.layout)].map(rule => rule.type), ['tracklist-panel']);
+  assert.deepEqual([...composer.availableComponents(restored.layout)].map(rule => rule.type), ['tracklist-panel', 'volume-control', 'agent-tools', 'system-status']);
   assert.equal(composer.collisionFor(composer.getComponent(restored.layout, 'disc'), restored.layout.components, restored.layout.canvas), null);
   assert.equal(composer.removeComponent(restored.layout, 'panel-base').removed, false);
   const withTracklist = composer.addComponent(restored.layout, 'tracklist-panel');
   assert.equal(withTracklist.added, true);
   assert.equal(composer.getComponent(withTracklist.layout, 'tracklist-panel').present, true);
-  assert.equal(composer.availableComponents(withTracklist.layout).length, 0);
+  assert.equal(composer.availableComponents(withTracklist.layout).length, 3);
 });
 
 test('legacy typography buttons retire and persistent tracklists replace their toggle in editor and runtime', () => {
@@ -805,7 +805,7 @@ test('options page exposes the component library and all atomic preview units', 
   assert.match(html, /data-lm-part="next"/);
   assert.deepEqual(ids, [
     'panel-base', 'disc', 'track-title', 'time-readout', 'source-selector',
-    'tracklist-toggle', 'transport-controls', 'close-control', 'tracklist-panel',
+    'tracklist-toggle', 'transport-controls', 'close-control', 'volume-control', 'agent-tools', 'system-status', 'tracklist-panel',
   ]);
   assert.doesNotMatch(html, /data-lm-component="track-info"/);
   assert.doesNotMatch(html, /data-lm-component="source-badge"/);
@@ -880,7 +880,7 @@ test('keeps v2 layout migration and every atomic unit on the real HUD path', () 
   assert.match(source, /function applyRuntimeLayout/);
   for (const id of [
     'panel-base', 'disc', 'track-title', 'time-readout', 'source-selector',
-    'tracklist-toggle', 'transport-controls', 'close-control', 'text-size-control', 'tracklist-panel',
+    'tracklist-toggle', 'transport-controls', 'close-control', 'text-size-control', 'tracklist-panel', 'volume-control', 'agent-tools', 'system-status',
   ]) assert.match(source, new RegExp("'" + id + "'", 'u'));
   assert.match(source, /dataset\.ytcdLayoutUnit/);
   assert.match(source, /dataset\.ytcdLayoutPart/);
@@ -988,7 +988,7 @@ test('wires every component property to an auditable control and keeps component
   assert.equal(composer.normalizeLayout({ components: [{ id: 'panel-base', style: { opacity: 0 } }] }).components[0].style.opacity, 0);
   assert.equal(composer.registry.disc.maxSize.width, 720);
   assert.equal(composer.registry.disc.allowCanvasOverflow, true);
-  assert.deepEqual([...composer.DISC_TEXTURES], ['classic', 'gold', 'transparent-grooves']);
+  assert.deepEqual([...composer.DISC_TEXTURES], ['classic', 'gold', 'transparent-grooves', 'jog']);
   assert.doesNotMatch(options, /preview-title-text'\)\.style\.fontSize/);
   assert.match(css, /\.preview-title \{ --lm-font-size: var\(--preview-title-font-size, 14px\); \}/);
 });
@@ -1176,6 +1176,7 @@ test('applies global primary and secondary colors before allowing component over
   const title = composer.getComponent(themed, 'track-title');
   title.style.backgroundColor = '#223344';
   title.textStyle.color = '#ddeeff';
+  composer.refreshSkin(themed); // Property edits publish the new authoritative Skin.
   const overridden = composer.normalizeLayout(themed);
   assert.equal(composer.getComponent(overridden, 'track-title').style.backgroundColor, '#223344');
   assert.equal(composer.getComponent(overridden, 'track-title').textStyle.color, '#ddeeff');
@@ -1273,7 +1274,7 @@ test('panel JSON round trips locks, geometry, local fonts and zero opacity witho
   title.textStyle.font = 'Noto Sans TC';
   const normalized = composer.normalizeLayout(layout);
   const restored = composer.importCode(composer.exportCode(normalized));
-  assert.deepEqual(JSON.parse(JSON.stringify(restored)), JSON.parse(JSON.stringify(normalized)));
+  assert.deepEqual(JSON.parse(JSON.stringify(restored)), JSON.parse(JSON.stringify(composer.refreshSkin(normalized))));
   const runtime = loadRuntimeLayoutNormalizer()(restored);
   assert.equal(runtime.locked, true);
   const runtimeTitle = runtime.components.find(item => item.id === 'track-title');
@@ -1420,6 +1421,7 @@ test('hidden is independent of every color alpha and persists across panel code 
   const composer = loadComposer();
   const layout = composer.applyPalette(legacyLayout(composer), { primaryOpacity: .25, secondaryOpacity: .4 });
   for (const item of layout.components) { item.hidden = true; item.style.opacity = 0; }
+  composer.refreshSkin(layout);
   const restored = composer.importCode(composer.exportCode(layout));
   const runtime = loadRuntimeLayoutNormalizer()(restored);
   for (const item of restored.components) {

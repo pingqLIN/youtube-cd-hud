@@ -13,7 +13,7 @@
  *   booth-crate  640 × 352       booth + taller tracklist (Ledger)     Purpose B
  *   poster       520 × 280       large disc + large title + time       Purpose C
  *
- * Visual languages (V-axis, stored in LANGUAGES map)
+ * Visual languages (V-axis, stored as validated role Skin data)
  *   default    original grey/lime palette — full / compact / invisible
  *   quiet      Swiss/Braun grid, restraint — ambient-quiet (A)
  *   glass      Nothing/glass panel         — ambient-glass (A)
@@ -32,6 +32,8 @@
 
     // ── META ─────────────────────────────────────────────────────────────────
     const META = Object.freeze([
+        Object.freeze({ id: 'cdj-inspired', label: 'CDJ 風格', width: 448, height: 640, optIn: true,
+            description: '直式資訊螢幕與大型唱盤；僅使用來源、曲目、時間、跳曲與 scrub 既有功能' }),
         // tool / utility presets (v1.1.0 — id and behaviour frozen)
         Object.freeze({ id: 'full',     label: '全功能',   width: 640, height: 320, description: '唱片、播放控制與曲目清單' }),
         Object.freeze({ id: 'compact',  label: '精簡',     width: 448, height: 112, description: '曲名、時間與跳曲控制' }),
@@ -51,6 +53,16 @@
     // Values are [x, y, width, height] in CSS px relative to the panel top-left.
     // Absent component keys → component.present = false.
     const RECTS = {
+        'cdj-inspired': {
+            'panel-base': [0, 0, 448, 640],
+            'source-selector': [24, 24, 272, 32],
+            'close-control': [376, 24, 48, 32],
+            'track-title': [24, 72, 400, 40],
+            'time-readout': [24, 128, 280, 40],
+            'tracklist-panel': [24, 184, 400, 120],
+            'disc': [112, 328, 304, 304],
+            'transport-controls': [24, 432, 128, 48],
+        },
         // ── L: booth (original full) ────────────────────────────────────
         full: {
             'panel-base':         [0,   0,   640, 320],
@@ -104,184 +116,1512 @@
 
     // ── VISUAL LANGUAGES ─────────────────────────────────────────────────────
     // Token objects; undefined keys fall through to 'default'.
-    const LANGUAGES = {
-        // original grey/lime — full / compact / invisible
-        default: {
-            palette:  { primaryColor: '#404549', secondaryColor: '#c5ee65' },
-            base:     { opacity: 1, secondaryOpacity: .2, backgroundEnabled: true, borderEnabled: true,
-                        cornerEnabled: true, backgroundBlurEnabled: false },
-            disc:     { texture: 'classic', secondaryOpacity: .65 },
-            time:     { color: '#c5ee65', font: 'cascadia-mono', fontSize: 14 },
-            title:    { color: '#e8ece8', font: 'Segoe UI' /* fontSize: per-id below */ },
-            surface:  { titleBg: '#4a4e52', controlBg: '#2d3135' },
-        },
-        // Quiet — Swiss / Braun; Purpose A
-        quiet: {
-            palette:  { primaryColor: '#1c1c1c', secondaryColor: '#c8c4b8' },
-            base:     { opacity: 0.32, secondaryOpacity: 0, backgroundEnabled: true, borderEnabled: false,
-                        cornerEnabled: true, backgroundBlurEnabled: false },
-            time:     { color: '#c8c4b8', font: 'cascadia-mono', fontSize: 13 },
-            title:    { color: '#d8d4cc', font: 'Segoe UI', fontSize: 16 },
-        },
-        // Glass — Nothing / glass panel; Purpose A
-        glass: {
-            palette:  { primaryColor: '#0b0d10', secondaryColor: '#e8eaef' },
-            base:     { opacity: 0.38, secondaryOpacity: .12, backgroundEnabled: true, borderEnabled: true,
-                        cornerEnabled: true, backgroundBlurEnabled: true },
-            time:     { color: '#e8eaef', font: 'cascadia-mono', fontSize: 13 },
-            title:    { color: '#e8eaef', font: 'Segoe UI', fontSize: 15 },
-        },
-        // Booth-v — Technics / meter; Purpose B
-        'booth-v': {
-            palette:  { primaryColor: '#2a2c2e', secondaryColor: '#d7a84a' },
-            base:     { opacity: 1, secondaryOpacity: .15, backgroundEnabled: true, borderEnabled: true,
-                        cornerEnabled: true, backgroundBlurEnabled: false },
-            disc:     { texture: 'classic', secondaryOpacity: .55 },
-            time:     { color: '#d7a84a', font: 'cascadia-mono', fontSize: 16 },
-            title:    { color: '#f0ede8', font: 'Segoe UI', fontSize: 20 },
-            surface:  { controlBg: '#1f2123' },
-        },
-        // Ledger — Pioneer density; Purpose B
-        ledger: {
-            palette:  { primaryColor: '#12141a', secondaryColor: '#3ad0e8' },
-            base:     { opacity: 1, secondaryOpacity: .18, backgroundEnabled: true, borderEnabled: true,
-                        cornerEnabled: true, backgroundBlurEnabled: false },
-            disc:     { texture: 'classic', secondaryOpacity: .55 },
-            time:     { color: '#3ad0e8', font: 'cascadia-mono', fontSize: 16 },
-            title:    { color: '#eef2f4', font: 'Segoe UI', fontSize: 20 },
-            surface:  { controlBg: '#1a1d26' },
-        },
-        // Poster-v — B&O large, sparse; Purpose C
-        'poster-v': {
-            palette:  { primaryColor: '#0a0a0a', secondaryColor: '#f2efe8' },
-            base:     { opacity: 1, secondaryOpacity: 0, backgroundEnabled: true, borderEnabled: false,
-                        cornerEnabled: false, backgroundBlurEnabled: false },
-            disc:     { texture: 'gold', secondaryOpacity: .70, layerEnabled: false },
-            time:     { color: '#a09a90', font: 'cascadia-mono', fontSize: 13 },
-            title:    { color: '#f2efe8', font: 'Segoe UI', fontSize: 32 },
-        },
-        // Club — nightclub HUD, limited neon; Purpose C
-        club: {
-            palette:  { primaryColor: '#07060c', secondaryColor: '#ff3cad' },
-            base:     { opacity: 1, secondaryOpacity: .22, backgroundEnabled: true, borderEnabled: true,
-                        cornerEnabled: true, backgroundBlurEnabled: false },
-            disc:     { texture: 'classic', secondaryOpacity: .65, layerEnabled: true },
-            time:     { color: '#ff3cad', font: 'cascadia-mono', fontSize: 14 },
-            title:    { color: '#f8f0f6', font: 'Segoe UI', fontSize: 28 },
-        },
-    };
-
-    // Visual language assigned to each preset id.
-    const PRESET_LANGUAGE = {
-        'full':          'default',
-        'compact':       'default',
-        'invisible':     'default',
-        'ambient-quiet': 'quiet',
-        'ambient-glass': 'glass',
-        'booth-work':    'booth-v',
-        'crate-ledger':  'ledger',
-        'shop-poster':   'poster-v',
-        'club-window':   'club',
-    };
+    const DISC_LAYERS = {"cdj-inspired":true,"full":true,"compact":true,"invisible":true,"ambient-quiet":true,"crate-ledger":true,"shop-poster":true};
 
     const IDS = ['panel-base', 'disc', 'track-title', 'time-readout', 'source-selector',
         'tracklist-toggle', 'transport-controls', 'close-control', 'text-size-control', 'tracklist-panel'];
 
-    // ── Language applicator ───────────────────────────────────────────────────
-    // Applies visual language tokens to a single component in-place.
-    // 'default' language reproduces the original v1.1.0 styling exactly.
-    function applyLanguage(component, lang, id) {
-        const L = LANGUAGES[lang] || LANGUAGES.default;
-        const D = LANGUAGES.default;
-        const pal = L.palette || D.palette;
-
-        if (component.id === 'panel-base') {
-            const b = L.base || D.base;
-            component.style.backgroundColor    = pal.primaryColor;
-            component.style.borderColor         = pal.secondaryColor;
-            component.style.backgroundEnabled   = id !== 'invisible' && b.backgroundEnabled !== false;
-            component.style.borderEnabled       = id !== 'invisible' && b.borderEnabled !== false;
-            component.style.backgroundBlurEnabled = b.backgroundBlurEnabled || false;
-            component.style.opacity             = id === 'invisible' ? 0 : b.opacity;
-            component.style.secondaryOpacity    = id === 'invisible' ? 0 : (b.secondaryOpacity ?? .2);
-            component.style.cornerEnabled       = b.cornerEnabled !== false;
-            component.boundary.padding          = 16;
-            return;
-        }
-
-        if (component.id === 'disc') {
-            const d = L.disc || D.disc;
-            component.style.backgroundColor    = pal.primaryColor;
-            component.style.borderColor         = pal.secondaryColor;
-            component.style.backgroundEnabled   = true;
-            component.style.borderEnabled       = true;
-            component.style.cornerEnabled       = false;
-            component.style.secondaryOpacity    = d.secondaryOpacity ?? .65;
-            component.style.texture             = d.texture || 'classic';
-            component.layer                     = { enabled: d.layerEnabled === true };
-            return;
-        }
-
-        if (component.id === 'time-readout') {
-            const t = L.time || D.time;
-            component.style.backgroundEnabled   = false;
-            component.style.borderEnabled       = false;
-            component.style.cornerEnabled       = false;
-            if (component.textStyle) {
-                component.textStyle = { color: t.color, opacity: 1,
-                    font: t.font || 'cascadia-mono', fontSize: t.fontSize || 14, textAlign: 'left' };
+    // Validated presentation data, independent of component IDs and geometry.
+    const SKINS = {
+        "cdj-inspired": {
+    "format": "youtube-cd-hud-skin",
+    "schemaVersion": 1,
+    "tokens": {
+        "primaryColor": "#17191c",
+        "secondaryColor": "#c9d0d6"
+    },
+    "roles": {
+        "close-control": {
+            "effects": {},
+            "surface": {
+                "backgroundColor": "#17191c",
+                "borderColor": "#626d78",
+                "opacity": 1,
+                "secondaryOpacity": 1,
+                "borderEnabled": true,
+                "backgroundEnabled": true,
+                "cornerEnabled": true,
+                "cornerRadiusLevel": 2,
+                "backgroundBlurEnabled": false
+            },
+            "text": {
+                "color": "#e8edf2",
+                "font": "Segoe UI",
+                "fontSize": 20,
+                "fontWeight": 500,
+                "textAlign": "center",
+                "opacity": 1
             }
-            return;
-        }
-
-        if (component.id === 'track-title') {
-            const tl = L.title || D.title;
-            // fontSize: language-provided, or legacy per-id fallback for 'default'
-            const fontSize = tl.fontSize !== undefined ? tl.fontSize : (id === 'full' ? 20 : 18);
-            if (lang === 'default' && id !== 'invisible') {
-                component.style.backgroundEnabled = true;
-                component.style.backgroundColor   = D.surface.titleBg;
+        },
+        "disc": {
+            "effects": {
+                "glow": false
+            },
+            "surface": {
+                "backgroundColor": "#101316",
+                "borderColor": "#c9d0d6",
+                "opacity": 1,
+                "secondaryOpacity": 1,
+                "borderEnabled": true,
+                "backgroundEnabled": true,
+                "cornerEnabled": true,
+                "cornerRadiusLevel": 3,
+                "backgroundBlurEnabled": false,
+                "texture": "jog",
+                "discOpacity": 1
             }
-            if (component.textStyle) {
-                component.textStyle = { color: tl.color, opacity: 1,
-                    font: tl.font || 'Segoe UI', fontSize, textAlign: 'left' };
+        },
+        "panel-base": {
+            "effects": {
+                "accentRail": false,
+                "shadow": false
+            },
+            "surface": {
+                "backgroundColor": "#17191c",
+                "borderColor": "#50565d",
+                "opacity": 1,
+                "secondaryOpacity": 1,
+                "borderEnabled": true,
+                "backgroundEnabled": true,
+                "cornerEnabled": true,
+                "cornerRadiusLevel": 5,
+                "backgroundBlurEnabled": false
             }
-            return;
-        }
-
-        if (component.id === 'tracklist-panel') {
-            const tl = L.title || D.title;
-            const ctrlBg = (L.surface?.controlBg) || D.surface.controlBg;
-            if (lang === 'default') {
-                component.style.backgroundEnabled = true;
-                component.style.backgroundColor   = ctrlBg;
-            } else {
-                component.style.backgroundEnabled = true;
-                component.style.backgroundColor   = ctrlBg || pal.primaryColor;
+        },
+        "source-selector": {
+            "effects": {
+                "statusLamp": true
+            },
+            "surface": {
+                "backgroundColor": "#17202b",
+                "borderColor": "#567b9f",
+                "opacity": 1,
+                "secondaryOpacity": 1,
+                "borderEnabled": true,
+                "backgroundEnabled": true,
+                "cornerEnabled": true,
+                "cornerRadiusLevel": 2,
+                "backgroundBlurEnabled": false
+            },
+            "text": {
+                "color": "#91c5ff",
+                "font": "Segoe UI",
+                "fontSize": 13,
+                "fontWeight": 600,
+                "textAlign": "center",
+                "opacity": 1
             }
-            if (component.textStyle) {
-                component.textStyle = { color: tl.color, opacity: 1,
-                    font: 'Segoe UI', fontSize: 14, textAlign: 'left' };
+        },
+        "text-size-control": {
+            "effects": {},
+            "surface": {
+                "backgroundColor": "#17191c",
+                "borderColor": "#41474e",
+                "opacity": 1,
+                "secondaryOpacity": 1,
+                "borderEnabled": true,
+                "backgroundEnabled": true,
+                "cornerEnabled": true,
+                "cornerRadiusLevel": 3,
+                "backgroundBlurEnabled": false
+            },
+            "text": {
+                "color": "#e8edf2",
+                "font": "Segoe UI",
+                "fontSize": 14,
+                "fontWeight": 500,
+                "textAlign": "left",
+                "opacity": 1
             }
-            return;
-        }
-
-        const isControl = ['transport-controls', 'tracklist-toggle', 'text-size-control',
-            'close-control', 'source-selector'].includes(component.id);
-        if (isControl && id !== 'invisible') {
-            const ctrlBg = (L.surface?.controlBg) || D.surface.controlBg;
-            component.style.backgroundEnabled = true;
-            component.style.borderEnabled     = true;
-            component.style.cornerEnabled     = true;
-            component.style.backgroundColor   = ctrlBg || pal.primaryColor;
-            component.style.borderColor       = pal.secondaryColor;
-            if (component.textStyle) {
-                const tl = L.title || D.title;
-                component.textStyle = { color: tl.color, opacity: 1,
-                    font: 'Segoe UI', fontSize: 14, textAlign: 'center' };
+        },
+        "time-readout": {
+            "effects": {},
+            "surface": {
+                "backgroundColor": "#090c0f",
+                "borderColor": "#41474e",
+                "opacity": 1,
+                "secondaryOpacity": 1,
+                "borderEnabled": false,
+                "backgroundEnabled": true,
+                "cornerEnabled": true,
+                "cornerRadiusLevel": 1,
+                "backgroundBlurEnabled": false
+            },
+            "text": {
+                "color": "#ffd079",
+                "font": "consolas",
+                "fontSize": 22,
+                "fontWeight": 500,
+                "textAlign": "left",
+                "opacity": 1
+            }
+        },
+        "track-title": {
+            "effects": {
+                "marquee": false
+            },
+            "surface": {
+                "backgroundColor": "#090c0f",
+                "borderColor": "#41474e",
+                "opacity": 1,
+                "secondaryOpacity": 1,
+                "borderEnabled": false,
+                "backgroundEnabled": true,
+                "cornerEnabled": true,
+                "cornerRadiusLevel": 1,
+                "backgroundBlurEnabled": false
+            },
+            "text": {
+                "color": "#f3f5f7",
+                "font": "Segoe UI",
+                "fontSize": 20,
+                "fontWeight": 600,
+                "textAlign": "left",
+                "opacity": 1
+            }
+        },
+        "tracklist-panel": {
+            "effects": {
+                "accentRail": false,
+                "shadow": false
+            },
+            "surface": {
+                "backgroundColor": "#090c0f",
+                "borderColor": "#3d4957",
+                "opacity": 1,
+                "secondaryOpacity": 1,
+                "borderEnabled": true,
+                "backgroundEnabled": true,
+                "cornerEnabled": true,
+                "cornerRadiusLevel": 1,
+                "backgroundBlurEnabled": false
+            },
+            "text": {
+                "color": "#e0e7ed",
+                "font": "Segoe UI",
+                "fontSize": 14,
+                "fontWeight": 400,
+                "textAlign": "left",
+                "opacity": 1
+            }
+        },
+        "tracklist-toggle": {
+            "effects": {},
+            "surface": {
+                "backgroundColor": "#17191c",
+                "borderColor": "#41474e",
+                "opacity": 1,
+                "secondaryOpacity": 1,
+                "borderEnabled": true,
+                "backgroundEnabled": true,
+                "cornerEnabled": true,
+                "cornerRadiusLevel": 3,
+                "backgroundBlurEnabled": false
+            },
+            "text": {
+                "color": "#e8edf2",
+                "font": "Segoe UI",
+                "fontSize": 14,
+                "fontWeight": 500,
+                "textAlign": "left",
+                "opacity": 1
+            }
+        },
+        "transport-controls": {
+            "effects": {},
+            "surface": {
+                "backgroundColor": "#272c31",
+                "borderColor": "#b0becb",
+                "opacity": 1,
+                "secondaryOpacity": 1,
+                "borderEnabled": true,
+                "backgroundEnabled": true,
+                "cornerEnabled": true,
+                "cornerRadiusLevel": 10,
+                "backgroundBlurEnabled": false
+            },
+            "text": {
+                "color": "#f2f5f8",
+                "font": "Segoe UI",
+                "fontSize": 12,
+                "fontWeight": 600,
+                "textAlign": "center",
+                "opacity": 1
             }
         }
     }
+},
+    "full": {
+        "format": "youtube-cd-hud-skin",
+        "schemaVersion": 1,
+        "tokens": {
+            "primaryColor": "#404549",
+            "secondaryColor": "#c5ee65"
+        },
+        "roles": {
+            "panel-base": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.2
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            },
+            "disc": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "texture": "classic",
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.65
+                },
+                "effects": {
+                    "glow": false
+                }
+            },
+            "track-title": {
+                "surface": {
+                    "backgroundColor": "#4a4e52",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 20,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "marquee": false
+                }
+            },
+            "time-readout": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#c5ee65",
+                    "font": "cascadia-mono",
+                    "fontSize": 14,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "source-selector": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {
+                    "statusLamp": false
+                }
+            },
+            "tracklist-toggle": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "transport-controls": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "close-control": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "text-size-control": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "tracklist-panel": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            }
+        }
+    },
+    "compact": {
+        "format": "youtube-cd-hud-skin",
+        "schemaVersion": 1,
+        "tokens": {
+            "primaryColor": "#404549",
+            "secondaryColor": "#c5ee65"
+        },
+        "roles": {
+            "panel-base": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.2
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            },
+            "disc": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "texture": "classic",
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.65
+                },
+                "effects": {
+                    "glow": false
+                }
+            },
+            "track-title": {
+                "surface": {
+                    "backgroundColor": "#4a4e52",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 18,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "marquee": false
+                }
+            },
+            "time-readout": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#c5ee65",
+                    "font": "cascadia-mono",
+                    "fontSize": 14,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "source-selector": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {
+                    "statusLamp": false
+                }
+            },
+            "tracklist-toggle": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "transport-controls": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "close-control": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "text-size-control": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "tracklist-panel": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            }
+        }
+    },
+    "invisible": {
+        "format": "youtube-cd-hud-skin",
+        "schemaVersion": 1,
+        "tokens": {
+            "primaryColor": "#404549",
+            "secondaryColor": "#c5ee65"
+        },
+        "roles": {
+            "panel-base": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 0,
+                    "borderEnabled": false,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0,
+                    "backgroundEnabled": false
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            },
+            "disc": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "texture": "classic",
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.65
+                },
+                "effects": {
+                    "glow": false
+                }
+            },
+            "track-title": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 18,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "marquee": false
+                }
+            },
+            "time-readout": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#c5ee65",
+                    "font": "cascadia-mono",
+                    "fontSize": 14,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "source-selector": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#63b3ed",
+                    "font": "cascadia-mono",
+                    "fontSize": 9,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {
+                    "statusLamp": false
+                }
+            },
+            "tracklist-toggle": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#63b3ed",
+                    "font": "cascadia-mono",
+                    "fontSize": 11,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "transport-controls": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#63b3ed",
+                    "font": "cascadia-mono",
+                    "fontSize": 9,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "close-control": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#63b3ed",
+                    "font": "cascadia-mono",
+                    "fontSize": 16,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "text-size-control": {
+                "surface": {
+                    "backgroundColor": "#404549",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#63b3ed",
+                    "font": "cascadia-mono",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "tracklist-panel": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c5ee65",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#e8ece8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            }
+        }
+    },
+    "ambient-quiet": {
+        "format": "youtube-cd-hud-skin",
+        "schemaVersion": 1,
+        "tokens": {
+            "primaryColor": "#1c1c1c",
+            "secondaryColor": "#c8c4b8"
+        },
+        "roles": {
+            "panel-base": {
+                "surface": {
+                    "backgroundColor": "#1c1c1c",
+                    "borderColor": "#c8c4b8",
+                    "opacity": 0.32,
+                    "borderEnabled": false,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            },
+            "disc": {
+                "surface": {
+                    "backgroundColor": "#1c1c1c",
+                    "borderColor": "#c8c4b8",
+                    "opacity": 1,
+                    "texture": "classic",
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.65
+                },
+                "effects": {
+                    "glow": false
+                }
+            },
+            "track-title": {
+                "surface": {
+                    "backgroundColor": "#1c1c1c",
+                    "borderColor": "#c8c4b8",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#d8d4cc",
+                    "font": "Segoe UI",
+                    "fontSize": 16,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "marquee": false
+                }
+            },
+            "time-readout": {
+                "surface": {
+                    "backgroundColor": "#1c1c1c",
+                    "borderColor": "#c8c4b8",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#c8c4b8",
+                    "font": "cascadia-mono",
+                    "fontSize": 13,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "source-selector": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c8c4b8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#d8d4cc",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {
+                    "statusLamp": false
+                }
+            },
+            "tracklist-toggle": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c8c4b8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#d8d4cc",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "transport-controls": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c8c4b8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#d8d4cc",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "close-control": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c8c4b8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#d8d4cc",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "text-size-control": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c8c4b8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#d8d4cc",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "tracklist-panel": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#c8c4b8",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#d8d4cc",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            }
+        }
+    },
+    "crate-ledger": {
+        "format": "youtube-cd-hud-skin",
+        "schemaVersion": 1,
+        "tokens": {
+            "primaryColor": "#12141a",
+            "secondaryColor": "#3ad0e8"
+        },
+        "roles": {
+            "panel-base": {
+                "surface": {
+                    "backgroundColor": "#12141a",
+                    "borderColor": "#3ad0e8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.18
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            },
+            "disc": {
+                "surface": {
+                    "backgroundColor": "#12141a",
+                    "borderColor": "#3ad0e8",
+                    "opacity": 1,
+                    "texture": "classic",
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.55
+                },
+                "effects": {
+                    "glow": false
+                }
+            },
+            "track-title": {
+                "surface": {
+                    "backgroundColor": "#12141a",
+                    "borderColor": "#3ad0e8",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#eef2f4",
+                    "font": "Segoe UI",
+                    "fontSize": 20,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "marquee": false
+                }
+            },
+            "time-readout": {
+                "surface": {
+                    "backgroundColor": "#12141a",
+                    "borderColor": "#3ad0e8",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#3ad0e8",
+                    "font": "cascadia-mono",
+                    "fontSize": 16,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "source-selector": {
+                "surface": {
+                    "backgroundColor": "#1a1d26",
+                    "borderColor": "#3ad0e8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#eef2f4",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {
+                    "statusLamp": false
+                }
+            },
+            "tracklist-toggle": {
+                "surface": {
+                    "backgroundColor": "#1a1d26",
+                    "borderColor": "#3ad0e8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#eef2f4",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "transport-controls": {
+                "surface": {
+                    "backgroundColor": "#1a1d26",
+                    "borderColor": "#3ad0e8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#eef2f4",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "close-control": {
+                "surface": {
+                    "backgroundColor": "#1a1d26",
+                    "borderColor": "#3ad0e8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#eef2f4",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "text-size-control": {
+                "surface": {
+                    "backgroundColor": "#1a1d26",
+                    "borderColor": "#3ad0e8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#eef2f4",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "tracklist-panel": {
+                "surface": {
+                    "backgroundColor": "#1a1d26",
+                    "borderColor": "#3ad0e8",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#eef2f4",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            }
+        }
+    },
+    "shop-poster": {
+        "format": "youtube-cd-hud-skin",
+        "schemaVersion": 1,
+        "tokens": {
+            "primaryColor": "#0a0a0a",
+            "secondaryColor": "#f2efe8"
+        },
+        "roles": {
+            "panel-base": {
+                "surface": {
+                    "backgroundColor": "#0a0a0a",
+                    "borderColor": "#f2efe8",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            },
+            "disc": {
+                "surface": {
+                    "backgroundColor": "#0a0a0a",
+                    "borderColor": "#f2efe8",
+                    "opacity": 1,
+                    "texture": "gold",
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.7
+                },
+                "effects": {
+                    "glow": false
+                }
+            },
+            "track-title": {
+                "surface": {
+                    "backgroundColor": "#0a0a0a",
+                    "borderColor": "#f2efe8",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#f2efe8",
+                    "font": "Segoe UI",
+                    "fontSize": 32,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "marquee": false
+                }
+            },
+            "time-readout": {
+                "surface": {
+                    "backgroundColor": "#0a0a0a",
+                    "borderColor": "#f2efe8",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28,
+                    "backgroundEnabled": false
+                },
+                "text": {
+                    "color": "#a09a90",
+                    "font": "cascadia-mono",
+                    "fontSize": 13,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "source-selector": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#f2efe8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#f2efe8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {
+                    "statusLamp": false
+                }
+            },
+            "tracklist-toggle": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#f2efe8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#f2efe8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "transport-controls": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#f2efe8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#f2efe8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "close-control": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#f2efe8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#f2efe8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "text-size-control": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#f2efe8",
+                    "opacity": 1,
+                    "borderEnabled": true,
+                    "cornerEnabled": true,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#f2efe8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "center",
+                    "opacity": 1
+                },
+                "effects": {}
+            },
+            "tracklist-panel": {
+                "surface": {
+                    "backgroundColor": "#2d3135",
+                    "borderColor": "#f2efe8",
+                    "opacity": 1,
+                    "borderEnabled": false,
+                    "cornerEnabled": false,
+                    "cornerRadiusLevel": 3,
+                    "backgroundBlurEnabled": false,
+                    "secondaryOpacity": 0.28
+                },
+                "text": {
+                    "color": "#f2efe8",
+                    "font": "Segoe UI",
+                    "fontSize": 14,
+                    "textAlign": "left",
+                    "opacity": 1
+                },
+                "effects": {
+                    "shadow": false,
+                    "accentRail": false
+                }
+            }
+        }
+    }
+};
 
     function create(id, composer) {
         const preset = META.find(item => item.id === id);
@@ -292,16 +1632,14 @@
         }
         // Built-in presets start from the schema, not the independently authored install default.
         const layout = composer.normalizeLayout({ version: 2, components: Object.keys(composer.registry).map(cid => ({ id: cid })) });
-        if (layout.components.length !== IDS.length || IDS.some(key => !layout.components.some(c => c.id === key))) {
+        if (layout.components.filter(c => !['volume-control', 'agent-tools', 'system-status'].includes(c.id)).length !== IDS.length || IDS.some(key => !layout.components.some(c => c.id === key))) {
             throw new TypeError('The composer component registry differs from this preset pack.');
         }
         layout.canvas = { width: 1280, height: 720, sizingMode: 'absolute',
             collisionPolicy: 'no-overlap-closed',
             alignmentGrid: { enabled: true, unitWidth: 4, unitHeight: 4, visible: false } };
 
-        const lang = PRESET_LANGUAGE[id] || 'default';
-        const L = LANGUAGES[lang] || LANGUAGES.default;
-        layout.palette = { ...(L.palette || LANGUAGES.default.palette) };
+        layout.palette = { ...SKINS[id].tokens };
 
         // Fixed base prevents normalization from reflowing the authored composition.
         layout.manualBase = true;
@@ -314,18 +1652,13 @@
             component.locked = false;
             delete component.hidden;
             component.layer = { enabled: false };
-            component.effects = Object.fromEntries(Object.keys(component.effects || {}).map(key => [key, false]));
-            component.style = {
-                ...component.style,
-                backgroundColor: layout.palette.primaryColor,
-                borderColor: layout.palette.secondaryColor,
-                opacity: 1, secondaryOpacity: .28, borderEnabled: false,
-                backgroundEnabled: false, backgroundBlurEnabled: false,
-                cornerEnabled: component.id === 'disc', cornerRadiusLevel: 3,
-            };
+            component.style = {};
+            if (component.textStyle) component.textStyle = {};
+            component.effects = {};
             if (component.arrangement) component.arrangement.split = false;
-            // Apply the visual language for this component.
-            applyLanguage(component, lang, id);
+            // Layer enablement is a functional composition choice, outside Skin.
+            if (component.type === 'disc') component.layer.enabled = DISC_LAYERS[id] === true;
+            if (component.type === 'panel-base') component.boundary.padding = 16;
             if (rect) {
                 const [x, y, width, height] = rect;
                 component.geometry = { x: (left + x + width / 2) / 1280,
@@ -333,11 +1666,18 @@
                     z: component.id === 'panel-base' ? -1 : component.id === 'disc' ? 1 : 0 };
             }
         }
-        return composer.normalizeLayout(layout);
+        if (id === 'cdj-inspired') {
+            const transport = composer.getComponent(layout, 'transport-controls');
+            transport.arrangement = { split: true, partSize: { width: 64, height: 44 }, positions: {
+                previous: { x: (left + 56) / 1280, y: (top + 458) / 720 },
+                next: { x: (left + 56) / 1280, y: (top + 522) / 720 },
+            } };
+        }
+        return composer.refreshSkin(composer.normalizeLayout(composer.skin.applySkinToLayout(layout, SKINS[id])));
     }
 
     function exportCode(id, composer) {
-        return JSON.stringify({ format: 'youtube-cd-hud-panel', version: 1, layout: create(id, composer) }, null, 2);
+        return composer.exportCode(create(id, composer));
     }
 
     root.YtCdHudPanelPack = Object.freeze({ version: '1.2.0', presets: META, create, exportCode });

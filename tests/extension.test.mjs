@@ -893,7 +893,8 @@ test('keeps the generated extension HUD synchronized with the userscript source'
   const stripped = userscript.replace(/^\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==\s*/, '').replace(/\r\n?/g, '\n');
 
   assert.match(generated, /^\/\/ Generated from src\/youtube-cd-hud\.user\.js\./);
-  assert.equal(generated.slice(generated.indexOf('(function ()')), stripped);
+  assert.ok(generated.includes('// BEGIN GENERATED HUD SKIN'), 'Generated runtime must include shared Skin marker');
+  assert.equal(generated.slice(generated.indexOf('// BEGIN GENERATED HUD SKIN')), stripped);
   assert.match(generated, /prepareExtensionSettings/);
   assert.match(generated, /runtimeSettings\.maxCandidates/);
   assert.match(generated, /yt-cd-hud-custom-style/);

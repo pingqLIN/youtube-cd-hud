@@ -20,6 +20,7 @@
         }
 
         function commit(reason = 'property') {
+            composer.refreshSkin(editor.state.layout);
             composer.refreshBase(editor.state.layout);
             editor.recordHistory?.();
             onChange(editor.state.layout, reason);
@@ -310,6 +311,13 @@
                 });
                 addLabel('唱盤不透明度 · 0% 透明 / 100% 不透明', input);
                 toolbar.appendChild(output);
+            }
+            if (rule.supportedProperties.includes('volumeStyle')) {
+                const input = document.createElement('select'); input.dataset.lmProperty = 'volumeStyle';
+                for (const [value, label] of [['fader', '音量推桿'], ['knob', '音量旋鈕（上下拖曳）']]) { const option = document.createElement('option'); option.value = value; option.textContent = label; input.appendChild(option); }
+                input.value = component.style.volumeStyle;
+                input.addEventListener('change', () => { component.style.volumeStyle = input.value; commit('volumeStyle'); });
+                addLabel('音量樣式', input);
             }
             if (rule.supportedProperties.includes('texture')) {
                 const input = document.createElement('select');

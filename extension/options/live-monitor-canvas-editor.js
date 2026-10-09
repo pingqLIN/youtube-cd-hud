@@ -60,6 +60,7 @@
         function render() {
             composer.refreshBase(state.layout);
             preview.classList.add('lm-editor-stage');
+            preview.dataset.hudRoot = '';
             preview.style.width = state.layout.canvas.width + 'px';
             preview.style.height = state.layout.canvas.height + 'px';
             const player = referencePlayerRect(state.layout.canvas);
@@ -86,6 +87,7 @@
                 node.classList.toggle('lm-effect-status-lamp', component.effects.statusLamp === true);
                 node.classList.toggle('lm-effect-marquee', component.effects.marquee === true);
                 node.dataset.lmTextAlign = component.textStyle?.textAlign || 'left';
+                if (component.id === 'volume-control') node.dataset.volumeStyle = component.style.volumeStyle;
                 if (component.id === 'disc') node.dataset.lmTexture = component.style.texture;
                 node.setAttribute('aria-selected', state.selected === component.id ? 'true' : 'false');
                 node.querySelectorAll('[data-lm-part]').forEach(partNode => {
