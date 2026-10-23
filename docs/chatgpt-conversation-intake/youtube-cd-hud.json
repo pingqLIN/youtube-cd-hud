@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "projectName": "YOUTUBE CD HUD",
+  "repo": "D:\\projects\\youtube-cd-hud",
+  "searchQueries": [
+    "YouTube CD HUD",
+    "youtube-cd-hud",
+    "CDJ HUD",
+    "Live Monitor Visual Composer",
+    "CueFox QF",
+    "CD HUD",
+    "Selected component properties"
+  ],
+  "identityTerms": [
+    "YouTube CD HUD",
+    "youtube-cd-hud",
+    "CDJ HUD",
+    "CueFox QF"
+  ],
+  "secondaryTerms": [
+    "Live Monitor",
+    "Visual Composer",
+    "CDJ",
+    "Cue Fox",
+    "1001Tracklists",
+    "Panel text size",
+    "Disc control",
+    "Volume",
+    "Selected component properties"
+  ],
+  "reviewTerms": [
+    "TUNNAL",
+    "Lead Agent Control Plane",
+    "TaskContracts-Automation",
+    "AgentRelay",
+    "Split Focus Colors",
+    "Vibe Reading",
+    "Falcon-Player-Enhance"
+  ],
+  "candidates": [
+    {
+      "key": "P0-2026-10-11-16-maintenance",
+      "period": "2026-10-11 至 2026-10-16",
+      "query": "Selected component properties；Panel text size；CDJ 模式",
+      "priority": "P0",
+      "status": "search-needed",
+      "reason": "目前專案可見歷史對話「維護專案進度」：Selected component properties 預設展開、寬高、文字大小、Volume/Agent/網路快取、CDJ 命名。需要以官方 UI 搜尋核實原始聊天 URL 與整段純度。"
+    },
+    {
+      "key": "P0-2026-10-09-recovery",
+      "period": "2026-10-09",
+      "query": "youtube-cd-hud；recovery/cdj-modular-20261009；6036925",
+      "priority": "P0",
+      "status": "search-needed",
+      "reason": "模組化操作台復原、CDJ HUD、settings、WebMCP 討論。至少兩個時間區段，是否同一聊天室未經核實。"
+    },
+    {
+      "key": "P0-2026-10-12-studio-shell",
+      "period": "2026-10-12",
+      "query": "feature/studio-floating-shell-20261012；浮動屬性面板；249/249",
+      "priority": "P0",
+      "status": "search-needed",
+      "reason": "專門的固定上下工作列、中央畫布、浮動屬性面板討論。"
+    },
+    {
+      "key": "P0-2026-09-27-debug",
+      "period": "2026-09-27",
+      "query": "youtube-cd-hud；Skin Layout；f06d8f8；55a4ccd",
+      "priority": "P0",
+      "status": "search-needed",
+      "reason": "worktree、分岔、debug、Skin/Layout、main 整合與 CI；整段純度仍應由 UI 核實。"
+    },
+    {
+      "key": "P0-2026-09-11-live-preview",
+      "period": "2026-09-11",
+      "query": "youtube-cd-hud；live-preview-fix；透明底座；fcb115ff",
+      "priority": "P0",
+      "status": "search-needed",
+      "reason": "Live preview、整體縮放、透明底座殘影與測試。"
+    },
+    {
+      "key": "P0-2026-09-10-layout",
+      "period": "2026-09-10",
+      "query": "YouTube CD HUD；720P；Banner README；整體縮放",
+      "priority": "P0",
+      "status": "search-needed",
+      "reason": "UI 排版縮放與 README/品牌、1280x720 審視；可能另有後續 Work 子對話，需逐筆識別。"
+    },
+    {
+      "key": "P0-2026-08-23-composer",
+      "period": "2026-08-23",
+      "query": "feature/live-monitor-visual-composer-mvp；youtube-cd-hud-live-monitor-mvp-20260823-r1",
+      "priority": "P0",
+      "status": "search-needed",
+      "reason": "Live Monitor Visual Composer MVP 與 TaskContracts 提示詞交付，先確認有無跨專案治理工作。"
+    },
+    {
+      "key": "P1-2026-08-18-release",
+      "period": "2026-08-18",
+      "query": "youtube-cd-hud；v5.12.0；README；local timestamp",
+      "priority": "P1",
+      "status": "search-needed",
+      "reason": "README 雙語重寫、description/comments timestamp playlist、發布記錄。"
+    },
+    {
+      "key": "P1-2026-08-23-version-icon",
+      "period": "2026-08-23",
+      "query": "youtube-cd-hud；889c281；icon-128.png；v5.12.0",
+      "priority": "P1",
+      "status": "search-needed",
+      "reason": "版本、Icon、README、文件、分支清理；可能有獨立 ICON 視覺創作聊天室，應以 URL 去重。"
+    },
+    {
+      "key": "P1-2026-08-12-track-resolver",
+      "period": "2026-08-12",
+      "query": "youtube-cd-hud；1001Tracklists；TrackResolver；f459185",
+      "priority": "P1",
+      "status": "review-needed",
+      "reason": "涉及核心資料匹配、CueSync/TrackSync 命名與 CD HUD 定位，是否屬單一專案需審核。"
+    },
+    {
+      "key": "P1-2026-09-17-runtime-acceptance",
+      "period": "2026-09-17",
+      "query": "youtube-cd-hud；settings.read；operation.status；Chrome Runtime Acceptance",
+      "priority": "P1",
+      "status": "review-needed",
+      "reason": "專案整合 TUNNAL/Chrome runtime E2E；與跨 repo 治理邊界需審核。"
+    },
+    {
+      "key": "P1-2026-08-29-control-plane",
+      "period": "2026-08-29",
+      "query": "youtube-cd-hud；lead-agent-control-plane；FINAL_REVIEW_BUNDLE",
+      "priority": "P1",
+      "status": "review-needed",
+      "reason": "已知含 Lead Agent Control Plane Canary 與 verifier 工作，原則上保留原處，只在台帳作交叉引用。"
+    },
+    {
+      "key": "P1-2026-09-17-tunnal",
+      "period": "2026-09-17",
+      "query": "TUNNAL Broker；YouTube CD HUD；/acceptance；/connector",
+      "priority": "P1",
+      "status": "review-needed",
+      "reason": "已知 TUNNAL 平台泛化討論；不整篇搬至 YouTube CD HUD，保留來源並建立引用。"
+    }
+  ]
+}
