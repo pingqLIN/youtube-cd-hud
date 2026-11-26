@@ -152,12 +152,14 @@
 #panel-studio .preview-canvas-tools .lm-canvas-zoom { margin-right: 0; padding-right: var(--st-2); border-right: var(--st-hairline); }
 #panel-studio .preview-canvas-tools .lm-canvas-size { padding-right: var(--st-2); border-right: var(--st-hairline); }
 #panel-studio .preview-canvas-tools .lm-layout-extra { margin-left: auto; }
-#panel-studio .preview-canvas-tools .lm-layout-extra[open] { position: relative; top: auto; padding: 0; border: 0; box-shadow: none; background: none; }
-#panel-studio .preview-canvas-tools .lm-layout-extra[open] > :not(summary) {
+#panel-studio .preview-canvas-tools .lm-layout-extra[open] { position: relative; top: auto; left: auto; padding: 0; border: 0; box-shadow: none; background: none; }
+#panel-studio .preview-canvas-tools .lm-layout-extra[open] > .lm-layout-extra-body {
     position: absolute;
     right: 0;
     top: calc(100% + var(--st-1));
     z-index: 40;
+    display: grid;
+    gap: var(--st-2);
     min-width: 280px;
     padding: var(--st-3);
     background: var(--panel);
@@ -165,6 +167,8 @@
     border-radius: var(--st-radius);
     box-shadow: 0 10px 28px rgba(0, 0, 0, .28);
 }
+#panel-studio .preview-canvas-tools .lm-layout-extra-body > .lm-layout-pack { margin-bottom: 0; }
+#panel-studio .preview-canvas-tools .lm-layout-extra-body > .lm-layout-reset { justify-self: start; }
 #panel-studio .preview-workbench .preview-stage,
 #panel-studio .studio-canvas-column > .preview-stage {
     grid-column: 1 / -1;

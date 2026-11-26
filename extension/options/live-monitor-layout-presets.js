@@ -1087,7 +1087,9 @@
         center.addEventListener('click', () => editor.centerView());
         const extra = document.createElement('details'); extra.className = 'lm-layout-extra';
         const summary = document.createElement('summary'); summary.textContent = '尺寸工具';
-        extra.append(summary, pack, reset);
+        const extraBody = document.createElement('div'); extraBody.className = 'lm-layout-extra-body';
+        extraBody.append(pack, reset);
+        extra.append(summary, extraBody);
         // Zoom changes only the editor view; it stays available while the panel is locked.
         const zoom = document.createElement('div');
         zoom.className = 'lm-canvas-zoom';

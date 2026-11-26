@@ -69,7 +69,9 @@ test('scale controls invoke the real editor, undo atomically, and preserve inter
   assert.equal(hudFont.disabled, false);
 
   const extra = controls.element.children.find(element => element.className === 'lm-layout-extra');
-  const pack = extra.children.find(element => element.className === 'lm-layout-pack');
+  const extraBody = extra.children.find(element => element.className === 'lm-layout-extra-body');
+  assert.ok(extraBody, 'size tools wrap pack and reset in one popup body');
+  const pack = extraBody.children.find(element => element.className === 'lm-layout-pack');
   const [scope, scale, apply, undo] = pack.children;
   scope.value = 'all'; scale.value = '110';
   apply.listeners.click();
