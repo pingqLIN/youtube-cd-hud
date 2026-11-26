@@ -4026,6 +4026,7 @@
                 border: 1px solid var(--hud-border);
                 background: rgba(17, 24, 39, .97);
                 box-shadow: var(--hud-shadow), inset 2px 0 0 var(--hud-focus);
+                pointer-events: auto;
                 touch-action: none;
             }
             .hud-1001-menu.expanded { display: grid; }
@@ -5465,19 +5466,27 @@
         return { left: best.left, top: best.top };
     }
 
+    function dbMenuContainingOrigin(menu) {
+        const container = menu?.parentElement;
+        if (!container || container === document.body || container === document.documentElement) return { left: 0, top: 0 };
+        const rect = container.getBoundingClientRect();
+        return { left: rect.left, top: rect.top };
+    }
+
     function position1001Menu() {
         if (!oneThousandMenu || !statusBtn || !oneThousandMenu.classList.contains('expanded')) return;
         const viewport = {
             width: document.documentElement.clientWidth || window.innerWidth,
             height: document.documentElement.clientHeight || window.innerHeight,
         };
+        const origin = dbMenuContainingOrigin(oneThousandMenu);
         const menuRect = oneThousandMenu.getBoundingClientRect();
         const menuSize = { width: menuRect.width || 240, height: menuRect.height || 200 };
         if (oneThousandMenu.dataset.ytcdMenuDragged === 'true') {
-            const curLeft = parseFloat(oneThousandMenu.style.left) || 12;
-            const curTop = parseFloat(oneThousandMenu.style.top) || 12;
-            oneThousandMenu.style.left = clamp(curLeft, 12, Math.max(12, viewport.width - menuSize.width - 12)) + 'px';
-            oneThousandMenu.style.top = clamp(curTop, 12, Math.max(12, viewport.height - menuSize.height - 12)) + 'px';
+            const curVpLeft = clamp(menuRect.left, 12, Math.max(12, viewport.width - menuSize.width - 12));
+            const curVpTop = clamp(menuRect.top, 12, Math.max(12, viewport.height - menuSize.height - 12));
+            oneThousandMenu.style.left = Math.round(curVpLeft - origin.left) + 'px';
+            oneThousandMenu.style.top = Math.round(curVpTop - origin.top) + 'px';
             return;
         }
         const anchorRect = statusBtn.getBoundingClientRect();
@@ -5493,8 +5502,8 @@
         }
         const pos = computeDbMenuPosition({ anchorRect, menuSize, viewport, obstacles });
         oneThousandMenu.style.transform = '';
-        oneThousandMenu.style.left = pos.left + 'px';
-        oneThousandMenu.style.top = pos.top + 'px';
+        oneThousandMenu.style.left = Math.round(pos.left - origin.left) + 'px';
+        oneThousandMenu.style.top = Math.round(pos.top - origin.top) + 'px';
     }
 
     function bindDbMenuDragging(menu) {
@@ -5519,7 +5528,6 @@
                 moved: false,
             };
             if (onHeader) event.preventDefault();
-            menu.setPointerCapture?.(event.pointerId);
         });
         menu.addEventListener('pointermove', event => {
             if (!drag || event.pointerId !== drag.pointerId) return;
@@ -5528,19 +5536,22 @@
             if (!drag.moved) {
                 if (Math.hypot(dx, dy) < drag.threshold) return;
                 drag.moved = true;
+                menu.setPointerCapture?.(event.pointerId);
                 menu.classList.add('ytcd-menu-dragging');
                 menu.dataset.ytcdMenuDragged = 'true';
             }
             const vw = document.documentElement.clientWidth || window.innerWidth;
             const vh = document.documentElement.clientHeight || window.innerHeight;
-            const left = clamp(drag.origLeft + dx, 12, Math.max(12, vw - drag.width - 12));
-            const top = clamp(drag.origTop + dy, 12, Math.max(12, vh - drag.height - 12));
-            menu.style.left = Math.round(left) + 'px';
-            menu.style.top = Math.round(top) + 'px';
+            const origin = dbMenuContainingOrigin(menu);
+            const vpLeft = clamp(drag.origLeft + dx, 12, Math.max(12, vw - drag.width - 12));
+            const vpTop = clamp(drag.origTop + dy, 12, Math.max(12, vh - drag.height - 12));
+            menu.style.left = Math.round(vpLeft - origin.left) + 'px';
+            menu.style.top = Math.round(vpTop - origin.top) + 'px';
         });
         const finish = event => {
             if (!drag || event.pointerId !== drag.pointerId) return;
             const moved = drag.moved;
+            if (moved) menu.releasePointerCapture?.(event.pointerId);
             drag = null;
             menu.classList.remove('ytcd-menu-dragging');
             if (moved) {
