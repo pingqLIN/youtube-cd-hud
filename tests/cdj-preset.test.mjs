@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const plain=x=>JSON.parse(JSON.stringify(x));
-const legacyProjection = value => { const result=JSON.parse(JSON.stringify(value)); for(const role of ['volume-control','agent-tools','system-status']) { const c=result.components?.find(x=>x.id===role); if(c) assert.equal(c.present,false,role+' must remain absent'); } if(result.components) result.components=result.components.filter(x=>!['volume-control','agent-tools','system-status'].includes(x.id)); return result; };
+const legacyProjection = value => { const result=JSON.parse(JSON.stringify(value)); for(const role of ['volume-control','agent-tools','system-status','db-menu']) { const c=result.components?.find(x=>x.id===role); if(c) assert.equal(c.present,false,role+' must remain absent'); } if(result.components) result.components=result.components.filter(x=>!['volume-control','agent-tools','system-status','db-menu'].includes(x.id)); return result; };
 function setup(){const c={console};for(const f of ['live-monitor-composer.js','panel-presets.js'])vm.runInNewContext(read('extension/options/'+f),c);return c;}
 test('CDJ preset is opt-in and maps only real registered controls into a connected portrait deck',()=>{
  const c=setup(),co=c.YtCdHudLiveMonitorComposer,pack=c.YtCdHudPanelPack;

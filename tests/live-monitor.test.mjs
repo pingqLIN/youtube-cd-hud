@@ -69,7 +69,9 @@ test('scale controls invoke the real editor, undo atomically, and preserve inter
   assert.equal(hudFont.disabled, false);
 
   const extra = controls.element.children.find(element => element.className === 'lm-layout-extra');
-  const pack = extra.children.find(element => element.className === 'lm-layout-pack');
+  const extraBody = extra.children.find(element => element.className === 'lm-layout-extra-body');
+  assert.ok(extraBody, 'size tools wrap pack and reset in one popup body');
+  const pack = extraBody.children.find(element => element.className === 'lm-layout-pack');
   const [scope, scale, apply, undo] = pack.children;
   scope.value = 'all'; scale.value = '110';
   apply.listeners.click();
@@ -323,7 +325,7 @@ test('migrates v1 layouts into the bounded v2 component schema', () => {
   assert.equal(composer.LEGACY_STORAGE_KEY, 'ytCdHudLayoutV1');
   assert.deepEqual(JSON.parse(JSON.stringify(layout.components.map(component => component.id))), [
     'panel-base', 'disc', 'track-title', 'time-readout', 'source-selector',
-    'tracklist-toggle', 'transport-controls', 'close-control', 'text-size-control', 'tracklist-panel', 'volume-control', 'agent-tools', 'system-status',
+    'tracklist-toggle', 'transport-controls', 'close-control', 'text-size-control', 'tracklist-panel', 'volume-control', 'agent-tools', 'system-status', 'db-menu',
   ]);
   const disc = composer.getComponent(layout, 'disc');
   assert.equal(disc.geometry.width, 720);
@@ -697,19 +699,19 @@ test('defers drag collision handling until pointer release and presents the laye
 test('component library contains only units that are not on the panel', () => {
   const composer = loadComposer();
   const initial = legacyLayout(composer);
-  assert.deepEqual([...composer.availableComponents(initial)].map(rule => rule.type), ['tracklist-panel', 'volume-control', 'agent-tools', 'system-status']);
+  assert.deepEqual([...composer.availableComponents(initial)].map(rule => rule.type), ['tracklist-panel', 'volume-control', 'agent-tools', 'system-status', 'db-menu']);
   const removed = composer.removeComponent(initial, 'disc');
   assert.equal(removed.removed, true);
-  assert.deepEqual([...composer.availableComponents(removed.layout)].map(rule => rule.type), ['disc', 'tracklist-panel', 'volume-control', 'agent-tools', 'system-status']);
+  assert.deepEqual([...composer.availableComponents(removed.layout)].map(rule => rule.type), ['disc', 'tracklist-panel', 'volume-control', 'agent-tools', 'system-status', 'db-menu']);
   const restored = composer.addComponent(removed.layout, 'disc');
   assert.equal(restored.added, true);
-  assert.deepEqual([...composer.availableComponents(restored.layout)].map(rule => rule.type), ['tracklist-panel', 'volume-control', 'agent-tools', 'system-status']);
+  assert.deepEqual([...composer.availableComponents(restored.layout)].map(rule => rule.type), ['tracklist-panel', 'volume-control', 'agent-tools', 'system-status', 'db-menu']);
   assert.equal(composer.collisionFor(composer.getComponent(restored.layout, 'disc'), restored.layout.components, restored.layout.canvas), null);
   assert.equal(composer.removeComponent(restored.layout, 'panel-base').removed, false);
   const withTracklist = composer.addComponent(restored.layout, 'tracklist-panel');
   assert.equal(withTracklist.added, true);
   assert.equal(composer.getComponent(withTracklist.layout, 'tracklist-panel').present, true);
-  assert.equal(composer.availableComponents(withTracklist.layout).length, 3);
+  assert.equal(composer.availableComponents(withTracklist.layout).length, 4);
 });
 
 test('legacy typography buttons retire and persistent tracklists replace their toggle in editor and runtime', () => {
@@ -805,7 +807,7 @@ test('options page exposes the component library and all atomic preview units', 
   assert.match(html, /data-lm-part="next"/);
   assert.deepEqual(ids, [
     'panel-base', 'disc', 'track-title', 'time-readout', 'source-selector',
-    'tracklist-toggle', 'transport-controls', 'close-control', 'volume-control', 'agent-tools', 'system-status', 'tracklist-panel',
+    'tracklist-toggle', 'transport-controls', 'close-control', 'volume-control', 'agent-tools', 'system-status', 'db-menu', 'tracklist-panel',
   ]);
   assert.doesNotMatch(html, /data-lm-component="track-info"/);
   assert.doesNotMatch(html, /data-lm-component="source-badge"/);
@@ -849,8 +851,8 @@ test('exposes RESET and three explicit temporary style slots', () => {
   assert.match(presets, /reset\.textContent\s*=\s*'RESET'/);
   assert.match(presets, /length: 10/);
   assert.match(presets, /chrome\?\.storage\?\.session/);
-  assert.match(presets, /'SAVE'/);
-  assert.match(presets, /'LOAD'/);
+  assert.match(presets, /'寫入'/);
+  assert.match(presets, /'讀取'/);
   assert.match(presets, /align\.textContent\s*=\s*'AUTO ALIGN'/);
   assert.match(presets, /editor\.updateAlignment\(enabled\)/);
 });
@@ -880,7 +882,7 @@ test('keeps v2 layout migration and every atomic unit on the real HUD path', () 
   assert.match(source, /function applyRuntimeLayout/);
   for (const id of [
     'panel-base', 'disc', 'track-title', 'time-readout', 'source-selector',
-    'tracklist-toggle', 'transport-controls', 'close-control', 'text-size-control', 'tracklist-panel', 'volume-control', 'agent-tools', 'system-status',
+    'tracklist-toggle', 'transport-controls', 'close-control', 'text-size-control', 'tracklist-panel', 'volume-control', 'agent-tools', 'system-status', 'db-menu',
   ]) assert.match(source, new RegExp("'" + id + "'", 'u'));
   assert.match(source, /dataset\.ytcdLayoutUnit/);
   assert.match(source, /dataset\.ytcdLayoutPart/);
@@ -1592,6 +1594,8 @@ test('studio viewport resizing retains actual pixel sizes and view origin withou
   vm.runInNewContext(read('extension/options/live-monitor-canvas-editor.js'),context);
   const editor=context.YtCdHudLiveMonitorCanvasEditor.createEditor({preview,layout:legacyLayout(composer)}).init();
   const before=JSON.stringify(editor.getLayout());
+  assert.equal(preview.style.transform,'scale(0.47)');
+  editor.setZoom(1);
   assert.equal(preview.style.transform,'none');
   const origin=[preview.style.left,preview.style.top];
   host.clientWidth=960;host.clientHeight=720;resized();
@@ -1712,18 +1716,18 @@ test('panning the studio changes only the view and remains available while the p
   assert.equal(parseFloat(preview.style.left),x+40);assert.equal(parseFloat(preview.style.top),y+20);
   listeners.pointerdown(event(635,355));listeners.pointermove(event(630,340));
   assert.equal(parseFloat(preview.style.left),x+40,'native resize corner does not pan');
-  const rect=context.YtCdHudLiveMonitorCanvasEditor.referencePlayerRect(editor.state.layout.canvas);
-  assert.equal(x,host.clientWidth/2-rect.left-rect.width/2);
-  assert.equal(y,host.clientHeight/2-rect.top-rect.height/2);
+  const initZoom=editor.getZoom();
+  assert.equal(x,(host.clientWidth-editor.state.layout.canvas.width*initZoom)/2);
+  assert.equal(y,(host.clientHeight-editor.state.layout.canvas.height*initZoom)/2);
   editor.centerView();
   assert.equal(JSON.stringify(editor.getLayout()),before);
   for (const [width,height] of [[1280,720],[1920,1080],[3840,2160]]) {
     editor.updateViewport(width,height);
-    const player=context.YtCdHudLiveMonitorCanvasEditor.referencePlayerRect(editor.state.layout.canvas);
-    assert.equal(parseFloat(preview.style.left)+player.left+player.width/2,host.clientWidth/2);
-    assert.equal(parseFloat(preview.style.top)+player.top+player.height/2,host.clientHeight/2);
+    const zoom=editor.getZoom();
+    assert.equal(parseFloat(preview.style.left),(host.clientWidth-width*zoom)/2);
+    assert.equal(parseFloat(preview.style.top),(host.clientHeight-height*zoom)/2);
     assert.equal(preview.style.width,width+'px');
-    assert.equal(preview.style.transform,'none');
+    assert.equal(preview.style.transform,zoom===1?'none':'scale('+zoom+')');
   }
 });
 

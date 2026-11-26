@@ -40,16 +40,38 @@
         // Independent grid rounding would change distances and aspect ratios on
         // save/reload. Keep exact geometry until the user enables alignment again.
         next.canvas.alignmentGrid.enabled = false;
+        const clampedIds = [];
+        const scaledIds = [];
+        function availableFactor(item) {
+            if (factor >= 1) return factor;
+            const limits = composer.sizeLimits(item, next.canvas);
+            const fontFloor = composer.textSizeLimits(next.canvas).minimum;
+            const textHeight = item.textStyle ? Math.ceil(fontFloor * 1.35 + 4 * composer.sizeScale(next.canvas)) : 0;
+            const partMinimum = item.arrangement?.split
+                ? Math.max(64 * composer.sizeScale(next.canvas) / item.arrangement.partSize.width,
+                    24 * composer.sizeScale(next.canvas) / item.arrangement.partSize.height) : 0;
+            return Math.min(1, Math.max(factor,
+                limits.minWidth / item.geometry.width,
+                limits.minHeight / item.geometry.height,
+                textHeight / item.geometry.height,
+                partMinimum));
+        }
         for (const item of members) {
+            const localFactor = availableFactor(item);
+            if (factor < 1 && localFactor >= 1 - 1e-9) {
+                clampedIds.push(item.id);
+                continue; // At its minimum: leave size AND position unchanged.
+            }
+            scaledIds.push(item.id);
             move(item.geometry);
-            item.geometry.width *= factor;
-            item.geometry.height *= factor;
+            item.geometry.width *= localFactor;
+            item.geometry.height *= localFactor;
             if (item.arrangement) {
-                item.arrangement.partSize.width *= factor;
-                item.arrangement.partSize.height *= factor;
+                item.arrangement.partSize.width *= localFactor;
+                item.arrangement.partSize.height *= localFactor;
                 Object.values(item.arrangement.positions).forEach(move);
             }
-            if (item.textStyle) item.textStyle.fontSize = Math.max(composer.textSizeLimits(next.canvas).minimum, item.textStyle.fontSize * factor);
+            if (item.textStyle) item.textStyle.fontSize = Math.max(composer.textSizeLimits(next.canvas).minimum, item.textStyle.fontSize * localFactor);
             const limits = composer.sizeLimits(item, next.canvas);
             if (item.geometry.width < limits.minWidth - 1e-7 || item.geometry.height < limits.minHeight - 1e-7
                 || item.geometry.width > limits.maxWidth + 1e-7 || item.geometry.height > limits.maxHeight + 1e-7) {
@@ -61,9 +83,15 @@
         if (!componentIds) {
             const base = next.components.find(item => item.id === 'panel-base');
             if (base) {
-                move(base.geometry);
-                base.geometry.width *= factor;
-                base.geometry.height *= factor;
+                const baseFactor = availableFactor(base);
+                if (baseFactor < 1 - 1e-9 || factor >= 1) {
+                    move(base.geometry);
+                    base.geometry.width *= baseFactor;
+                    base.geometry.height *= baseFactor;
+                    scaledIds.push(base.id);
+                } else {
+                    clampedIds.push(base.id);
+                }
                 const limits = composer.sizeLimits(base, next.canvas);
                 if (base.geometry.width < limits.minWidth || base.geometry.height < limits.minHeight || base.geometry.width > limits.maxWidth || base.geometry.height > limits.maxHeight) return fail('底座尺寸超過上下限。');
             }
@@ -86,6 +114,7 @@
             }
             if (members.some(item => composer.collisionFor(item, next.components, next.canvas))) return fail('Z 軸分配後仍有碰撞；原配置已保留。');
         }
+        if (!scaledIds.length) return fail('所選元件皆已達最小尺寸，沒有可繼續縮小的元件。');
         if (!composer.connectedToBase(next, composer.getComponent(next, 'panel-base'))) return fail('縮放後元件會離開底座。');
         if (next.skin) composer.refreshSkin(next);
         const normalized = composer.normalizeLayout(next);
@@ -98,7 +127,8 @@
                 return fail('The split controls would exceed their size limits.');
             }
         }
-        return { updated: true, layout: normalized, componentIds: members.map(item => item.id), layersAssigned };
+        return { updated: true, layout: normalized, componentIds: members.map(item => item.id),
+            scaledIds, clampedIds, layersAssigned };
     }
 
     globalThis.YtCdHudLiveMonitorResizeEngine = Object.freeze({ geometryForSize, geometryFromHandle, scaleGroup });

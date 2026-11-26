@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>背景設計選擇 A - 漸層動態變化 DEMO (支援環境音響應)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      user-select: none;
+      background-color: #0d1117;
+    }
+
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Ambient radial glow overlay for extra lushness matching Option A */
+    .ambient-sun-glow {
+      position: absolute;
+      bottom: -15%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90vw;
+      height: 70vh;
+      background: radial-gradient(circle, rgba(255, 94, 0, 0.45) 0%, rgba(255, 120, 50, 0.25) 35%, rgba(255, 180, 120, 0.08) 60%, transparent 80%);
+      pointer-events: none;
+      z-index: 2;
+      filter: blur(40px);
+      transition: background 0.6s ease;
+      animation: breathe 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes breathe {
+      0% {
+        transform: translateX(-50%) scale(0.96);
+        opacity: 0.85;
+      }
+      100% {
+        transform: translateX(-50%) scale(1.05);
+        opacity: 1;
+      }
+    }
+
+    /* UI Content Overlay */
+    .ui-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    /* Central Search Capsule */
+    .search-card {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 90%;
+      max-width: 440px;
+      padding: 8px 10px 8px 24px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-radius: 9999px;
+      box-shadow: 0 16px 40px -10px rgba(220, 70, 0, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.8) inset, 0 4px 12px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .search-card:hover, .search-card:focus-within {
+      background: rgba(255, 255, 255, 0.98);
+      transform: translateY(-2px);
+      box-shadow: 0 20px 48px -8px rgba(220, 70, 0, 0.25), 0 0 0 1.5px rgba(255, 140, 60, 0.4) inset, 0 6px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    .search-input {
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 15px;
+      color: #1e293b;
+      width: 100%;
+      font-weight: 450;
+      letter-spacing: -0.01em;
+    }
+
+    .search-input::placeholder {
+      color: #94a3b8;
+    }
+
+    .mic-button {
+      position: relative;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #111827;
+      color: #ffffff;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s, box-shadow 0.2s;
+    }
+
+    .mic-button:hover {
+      transform: scale(1.08);
+      background: #000000;
+    }
+
+    .mic-button:active {
+      transform: scale(0.95);
+    }
+
+    .mic-button.listening {
+      background: #ff5500;
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(255, 85, 0, 0.6);
+    }
+
+    .mic-ripple {
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 85, 0, 0.6);
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.9);
+      transition: opacity 0.3s ease, border-color 0.1s ease;
+    }
+
+    .mic-button.listening .mic-ripple {
+      opacity: 1;
+    }
+
+    .mic-icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      transition: transform 0.2s;
+    }
+
+    .caption {
+      margin-top: 18px;
+      font-size: 13px;
+      color: rgba(30, 41, 59, 0.7);
+      text-align: center;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+      transition: color 0.3s;
+    }
+
+    /* Top Navigation bar */
+    .header-bar {
+      position: absolute;
+      top: 20px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      pointer-events: auto;
+    }
+
+    .badge-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .indicator-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff5500;
+      box-shadow: 0 0 8px #ff5500;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    .controls-panel {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      padding: 4px;
+      border-radius: 9999px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 9999px;
+      border: none;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: #ff5500;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(255, 85, 0, 0.35);
+    }
+
+    .toggle-btn:hover:not(.active) {
+      color: #1e293b;
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    /* Mini EQ Equalizer Bars inside button */
+    .audio-bars-mini {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 12px;
+    }
+
+    .mini-bar {
+      width: 2.5px;
+      height: 3px;
+      border-radius: 1px;
+      background: currentColor;
+      transition: height 0.06s ease;
+    }
+
+    /* Floating Info Footer */
+    .footer-panel {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      font-size: 12px;
+      color: rgba(30, 41, 59, 0.75);
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(10px);
+      padding: 6px 18px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      pointer-events: auto;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation & Controls -->
+  <div class="header-bar">
+    <div class="badge-title">
+      <span class="indicator-dot"></span>
+      <span>背景設計選擇 A · 晨曦漸層動態 Shader</span>
+    </div>
+
+    <div class="controls-panel">
+      <button id="btn-option-a" class="toggle-btn active" onclick="setPreset('optionA')">A 款 (日出晨曦)</button>
+      <button id="btn-option-ocean" class="toggle-btn" onclick="setPreset('ocean')">D 款 (深藍洋流)</button>
+      <button id="btn-toggle-cursor" class="toggle-btn" onclick="toggleCursor()">滑鼠互動: 開</button>
+      <button id="btn-toggle-audio" class="toggle-btn" onclick="toggleAudio()" title="點擊切換麥克風環境音響應">
+        <span class="audio-bars-mini">
+          <span class="mini-bar b1"></span>
+          <span class="mini-bar b2"></span>
+          <span class="mini-bar b3"></span>
+        </span>
+        <span id="audio-btn-label">環境音: 關</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- WebGL Canvas for Mesh Drift Shader -->
+  <div id="canvas-container">
+    <canvas id="shader-canvas"></canvas>
+  </div>
+
+  <!-- Ambient Radiant Overlay -->
+  <div class="ambient-sun-glow" id="sun-glow"></div>
+
+  <!-- Central User Interface (Design A) -->
+  <div class="ui-layer">
+    <div class="search-card">
+      <input type="text" class="search-input" placeholder="Ask anything..." autofocus>
+      <button class="mic-button" id="mic-btn" title="點擊啟用環境音拾取" onclick="toggleAudio()">
+        <span class="mic-ripple" id="mic-ripple"></span>
+        <svg class="mic-icon" viewBox="0 0 24 24">
+          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="caption" id="preset-caption">
+      Design A · 晨光微嵐動態漸層（支援滑鼠牽引波紋與環境音頻動態）
+    </div>
+  </div>
+
+  <div class="footer-panel" id="footer-text">
+    點擊麥克風圖示或上方「環境音」按鈕，漸層動態與光暈將隨聲音節奏律動
+  </div>
+
+  <script>
+    const VERT = `attribute vec2 a_position;
+    void main() {
+      gl_Position = vec4(a_position, 0.0, 1.0);
+    }`;
+
+    const FRAG = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    #else
+    precision mediump float;
+    #endif
+
+    uniform vec3 u_colors[8];
+    uniform vec4 u_scene;      // resolution.xy, time, colour count
+    uniform vec4 u_shape;      // scale, intensity, paramA, warp
+    uniform vec4 u_surface;    // detail, contrast, brightness, saturation
+    uniform vec4 u_finish;     // hue, vignette, blur, grain
+    uniform vec4 u_transform;  // seed, rotation, drift, OKLab toggle
+    uniform vec4 u_space;      // offset.xy, pointer.xy
+    uniform vec4 u_cursor;
+    uniform vec4 u_audio;      // vol, bass, mid, treble
+
+    #define u_resolution u_scene.xy
+    #define u_time u_scene.z
+    #define u_colorCount u_scene.w
+    #define u_scale u_shape.x
+    #define u_intensity u_shape.y
+    #define u_paramA u_shape.z
+    #define u_warp u_shape.w
+    #define u_detail u_surface.x
+    #define u_contrast u_surface.y
+    #define u_brightness u_surface.z
+    #define u_saturation u_surface.w
+    #define u_hue u_finish.x
+    #define u_vignette u_finish.y
+    #define u_blur u_finish.z
+    #define u_grain u_finish.w
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+    #define u_seed u_transform.x
+    #else
+    #define u_seed mod(u_transform.x, 31.0)
+    #endif
+    #define u_rotate u_transform.y
+    #define u_drift u_transform.z
+    #define u_oklab u_transform.w
+    #define u_offset u_space.xy
+    #define u_mouse u_space.zw
+    #define u_cursorPresence u_cursor.x
+    #define u_cursorEffect u_cursor.y
+    #define u_cursorStrength u_cursor.z
+    #define u_cursorRadius u_cursor.w
+
+    float hash21(vec2 p) {
+    #ifndef GL_FRAGMENT_PRECISION_HIGH
+      p = mod(p, 31.0);
+    #endif
+      p = fract(p * vec2(234.34, 435.345));
+      p += dot(p, p + 34.23);
+      return fract(p.x * p.y);
+    }
+
+    float grainHash(vec2 p) {
+      vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+      p3 += dot(p3, p3.yzx + 33.33);
+      return fract((p3.x + p3.y) * p3.z);
+    }
+
+    float noise(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(
+        mix(hash21(i), hash21(i + vec2(1.0, 0.0)), u.x),
+        mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), u.x),
+        u.y);
+    }
+
+    float fbm(vec2 p) {
+      float v = 0.0;
+      float a = 0.5;
+      for (int i = 0; i < 5; i++) {
+        v += a * noise(p);
+        p = p * 2.03 + vec2(17.0, 9.2);
+        a *= 0.5;
+      }
+      return v;
+    }
+
+    vec3 srgbToLinear(vec3 c) {
+      return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+    }
+    vec3 linearToSrgb(vec3 c) {
+      return mix(c * 12.92, 1.055 * pow(max(c, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
+    }
+    vec3 linToOklab(vec3 c) {
+      float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
+      float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
+      float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
+      l = pow(max(l, 0.0), 1.0 / 3.0);
+      m = pow(max(m, 0.0), 1.0 / 3.0);
+      s = pow(max(s, 0.0), 1.0 / 3.0);
+      return vec3(
+        0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+        1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
+    }
+    vec3 oklabToLin(vec3 c) {
+      float l = c.x + 0.3963377774 * c.y + 0.2158037573 * c.z;
+      float m = c.x - 0.1055613458 * c.y - 0.0638541728 * c.z;
+      float s = c.x - 0.0894841775 * c.y - 1.2914855480 * c.z;
+      l = l * l * l; m = m * m * m; s = s * s * s;
+      return vec3(
+        4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+        -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+        -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+    }
+    vec3 mixColour(vec3 a, vec3 b, float t) {
+      if (u_oklab > 0.5) {
+        vec3 la = linToOklab(srgbToLinear(a));
+        vec3 lb = linToOklab(srgbToLinear(b));
+        return clamp(linearToSrgb(oklabToLin(mix(la, lb, t))), 0.0, 1.0);
+      }
+      return mix(a, b, t);
+    }
+
+    vec3 shade(vec2 uv, vec2 p, float t) {
+      vec3 acc = u_colors[0] * 0.15;
+      float total = 0.15;
+      // Low-frequency Bass dynamically expands the intensity and radius of color pools
+      float dynamicIntensity = u_intensity + u_audio.y * 0.45;
+      float dynamicSpread = 6.0 - u_audio.y * 2.2;
+      for (int i = 0; i < 8; i++) {
+        if (float(i) >= u_colorCount) break;
+        float fi = float(i);
+        vec2 c = vec2(
+          sin(t * (0.21 + fi * 0.071) + fi * 2.4 + u_seed),
+          cos(t * (0.17 + fi * 0.093) + fi * 1.7)) * (0.45 + dynamicIntensity * 0.35);
+        float w = exp(-dot(p - c, p - c) * dynamicSpread);
+        acc += u_colors[i] * w;
+        total += w;
+      }
+      return acc / total;
+    }
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+      vec2 screenUv = uv;
+      vec2 p = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
+      float cursorMask = 0.0;
+
+      if (u_cursorPresence > 0.001) {
+        vec2 cursor = (0.5 * u_mouse * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
+        vec2 cursorDelta = p - cursor;
+        float cursorDistance = length(cursorDelta);
+        vec2 cursorDirection = cursorDelta / max(cursorDistance, 0.0001);
+        cursorMask = u_cursorPresence * (1.0 - smoothstep(0.0, u_cursorRadius, cursorDistance));
+        if (u_cursorEffect < 1.5) {
+          p -= cursorDirection * cursorMask * u_cursorStrength * 0.24;
+        } else if (u_cursorEffect < 2.5) {
+          float cursorAngle = cursorMask * u_cursorStrength * 2.2;
+          float cc = cos(cursorAngle), cs = sin(cursorAngle);
+          p = cursor + mat2(cc, -cs, cs, cc) * cursorDelta;
+        } else {
+          float ripple = sin(cursorDistance / max(u_cursorRadius, 0.001) * 18.0 - u_time * 5.0);
+          p -= cursorDirection * ripple * cursorMask * u_cursorStrength * 0.07;
+        }
+      }
+
+      uv = p * min(u_resolution.x, u_resolution.y) / u_resolution.xy + 0.5;
+      p *= u_scale;
+
+      if (abs(u_rotate) > 0.0001) {
+        float cr = cos(u_rotate), sr = sin(u_rotate);
+        p = mat2(cr, -sr, sr, cr) * p;
+      }
+      p += u_offset;
+      if (u_drift > 0.0001) {
+        p += u_drift * vec2(sin(u_time * 0.31), cos(u_time * 0.23));
+      }
+
+      // Voice and Mid frequencies enhance fluid mesh distortion
+      float dynamicWarp = u_warp + u_audio.z * 0.16 + u_audio.y * 0.08;
+      if (dynamicWarp > 0.0) {
+        // High frequencies add crisp micro-surface turbulence
+        float dynamicDetail = u_detail + u_audio.w * 0.75;
+        p += dynamicWarp * (vec2(
+          fbm(p * dynamicDetail + u_seed),
+          fbm(p * dynamicDetail + vec2(5.2, 1.3))) - 0.5);
+      }
+
+      vec3 col = shade(uv, p, u_time);
+
+      if (abs(u_contrast - 1.0) > 0.0001) col = (col - 0.5) * u_contrast + 0.5;
+
+      // Audio volume subtly enlivens color saturation and luminous brightness
+      float dynamicSat = u_saturation + u_audio.x * 0.35;
+      if (abs(dynamicSat - 1.0) > 0.0001) {
+        float luma = dot(col, vec3(0.299, 0.587, 0.114));
+        col = mix(vec3(luma), col, dynamicSat);
+      }
+      float dynamicBright = u_brightness + u_audio.x * 0.07;
+      if (abs(dynamicBright) > 0.0001) col += dynamicBright;
+
+      if (u_vignette > 0.0001) {
+        float vd = length(screenUv - 0.5) * 1.41421356;
+        col *= 1.0 - u_vignette * smoothstep(0.35, 1.0, vd);
+      }
+      if (u_grain > 0.0001) {
+        col += (grainHash(gl_FragCoord.xy + vec2(u_seed * 17.0, u_seed * 31.0)) - 0.5) * u_grain;
+      }
+      gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+    }`;
+
+    // PRESET DEFINITIONS
+    const PRESETS = {
+      optionA: {
+        name: 'optionA',
+        colors: [
+          [0.68, 0.78, 0.91], // Sky Blue (Top)
+          [0.82, 0.72, 0.86], // Lavender Mauve
+          [0.95, 0.62, 0.74], // Pastel Rose Pink
+          [0.98, 0.40, 0.08], // Vibrant Sunset Orange (Bottom)
+          [1.00, 0.56, 0.15], // Golden Sun Glow
+          [0.68, 0.78, 0.91],
+          [0.82, 0.72, 0.86],
+          [0.98, 0.40, 0.08]
+        ],
+        colorCount: 5,
+        scale: 1.15,
+        intensity: 0.65,
+        paramA: 0.67,
+        warp: 0.14,
+        detail: 1.85,
+        contrast: 1.12,
+        brightness: 0.02,
+        saturation: 1.15,
+        hue: 0.0,
+        vignette: 0.06,
+        blur: 0.006,
+        grain: 0.045,
+        seed: 4210.0,
+        rotate: 1.57,
+        offsetX: 0.0,
+        offsetY: 0.22,
+        drift: 0.10,
+        cursorEffect: 2.0,
+        cursorStrength: 0.65,
+        cursorRadius: 0.46,
+        oklab: 1.0,
+        timeScale: -0.85
+      },
+      ocean: {
+        name: 'ocean',
+        colors: [
+          [0.0117, 0.1098, 0.1490],
+          [0.1058, 0.4235, 0.6588],
+          [0.3529, 0.8235, 0.9568],
+          [0.9176, 0.9764, 1.0],
+          [0.9176, 0.9764, 1.0],
+          [0.9176, 0.9764, 1.0],
+          [0.9176, 0.9764, 1.0],
+          [0.9176, 0.9764, 1.0]
+        ],
+        colorCount: 4,
+        scale: 1.30,
+        intensity: 0.56,
+        paramA: 0.67,
+        warp: 0.192,
+        detail: 2.016,
+        contrast: 1.167,
+        brightness: 0.0,
+        saturation: 1.0,
+        hue: 0.0,
+        vignette: 0.15,
+        blur: 0.0072,
+        grain: 0.098,
+        seed: 5069.0,
+        rotate: 2.7227,
+        offsetX: 0.09,
+        offsetY: 0.15,
+        drift: 0.148,
+        cursorEffect: 2.0,
+        cursorStrength: 0.65,
+        cursorRadius: 0.46,
+        oklab: 0.0,
+        timeScale: -1.373
+      }
+    };
+
+    let activePreset = PRESETS.optionA;
+    let cursorInteractive = true;
+
+    const canvas = document.getElementById('shader-canvas');
+    const gl = canvas.getContext('webgl', { antialias: false });
+    if (!gl) {
+      alert("WebGL not supported by your browser");
+    }
+
+    function compile(type, src) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      return s;
+    }
+    const program = gl.createProgram();
+    gl.attachShader(program, compile(gl.VERTEX_SHADER, VERT));
+    gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAG));
+    gl.linkProgram(program);
+    gl.useProgram(program);
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(program, "a_position");
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+    const uni = {
+      colors: gl.getUniformLocation(program, "u_colors"),
+      scene: gl.getUniformLocation(program, "u_scene"),
+      shape: gl.getUniformLocation(program, "u_shape"),
+      surface: gl.getUniformLocation(program, "u_surface"),
+      finish: gl.getUniformLocation(program, "u_finish"),
+      transform: gl.getUniformLocation(program, "u_transform"),
+      space: gl.getUniformLocation(program, "u_space"),
+      cursor: gl.getUniformLocation(program, "u_cursor"),
+      audio: gl.getUniformLocation(program, "u_audio"),
+    };
+
+    function applyUniforms() {
+      gl.uniform3fv(uni.colors, new Float32Array(activePreset.colors.flat()));
+      gl.uniform4f(uni.shape, activePreset.scale, activePreset.intensity, activePreset.paramA, activePreset.warp);
+      gl.uniform4f(uni.surface, activePreset.detail, activePreset.contrast, activePreset.brightness, activePreset.saturation);
+      gl.uniform4f(uni.finish, activePreset.hue, activePreset.vignette, activePreset.blur, activePreset.grain);
+      gl.uniform4f(uni.transform, activePreset.seed, activePreset.rotate, activePreset.drift, activePreset.oklab);
+    }
+    applyUniforms();
+
+    let targetX = 0, targetY = 0, targetPresence = 0;
+    let mouseX = 0, mouseY = 0, cursorPresence = 0;
+    let pointerKnown = false;
+    let bounds = canvas.getBoundingClientRect();
+    let accumulatedTime = 0;
+
+    function resize() {
+      bounds = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.round(bounds.width * dpr);
+      const h = Math.round(bounds.height * dpr);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+        gl.viewport(0, 0, w, h);
+      }
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    window.addEventListener('pointermove', (e) => {
+      if (!cursorInteractive) return;
+      pointerKnown = true;
+      const x = ((e.clientX - bounds.left) / bounds.width) * 2 - 1;
+      const y = -(((e.clientY - bounds.top) / bounds.height) * 2 - 1);
+      targetX = x;
+      targetY = y;
+      targetPresence = 1;
+    });
+
+    document.addEventListener('pointerleave', () => {
+      targetPresence = 0;
+    });
+
+    // ==========================================
+    // AUDIO PICKUP & REACTIVITY ENGINE
+    // ==========================================
+    let audioCtx = null;
+    let analyser = null;
+    let micSource = null;
+    let mediaStream = null;
+    let audioActive = false;
+    let freqArray = null;
+
+    let rawVol = 0, rawBass = 0, rawMid = 0, rawTreble = 0;
+    let smoothVol = 0, smoothBass = 0, smoothMid = 0, smoothTreble = 0;
+
+    const micBtn = document.getElementById('mic-btn');
+    const micRipple = document.getElementById('mic-ripple');
+    const audioBtn = document.getElementById('btn-toggle-audio');
+    const audioBtnLabel = document.getElementById('audio-btn-label');
+    const sunGlow = document.getElementById('sun-glow');
+    const miniBar1 = document.querySelector('.mini-bar.b1');
+    const miniBar2 = document.querySelector('.mini-bar.b2');
+    const miniBar3 = document.querySelector('.mini-bar.b3');
+    const captionEl = document.getElementById('preset-caption');
+    const footerEl = document.getElementById('footer-text');
+
+    async function startAudio() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("您的瀏覽器環境尚未支援麥克風錄音 API (getUserMedia)。");
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: true
+          }
+        });
+
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume();
+        }
+
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.72;
+
+        micSource = audioCtx.createMediaStreamSource(stream);
+        micSource.connect(analyser);
+
+        mediaStream = stream;
+        freqArray = new Uint8Array(analyser.frequencyBinCount);
+        audioActive = true;
+        updateAudioUI(true);
+      } catch (err) {
+        console.warn("取得麥克風環境音失敗：", err);
+        alert("無法存取麥克風環境音，請檢查瀏覽器設定並允許麥克風權限。\n" + (err.message || ""));
+        updateAudioUI(false);
+      }
+    }
+
+    function stopAudio() {
+      audioActive = false;
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+      if (audioCtx) {
+        audioCtx.close().catch(() => {});
+        audioCtx = null;
+      }
+      analyser = null;
+      micSource = null;
+      updateAudioUI(false);
+    }
+
+    window.toggleAudio = function() {
+      if (audioActive) {
+        stopAudio();
+      } else {
+        startAudio();
+      }
+    };
+
+    function updateAudioUI(active) {
+      micBtn.classList.toggle('listening', active);
+      audioBtn.classList.toggle('active', active);
+      audioBtnLabel.innerText = active ? '環境音: 開' : '環境音: 關';
+      micBtn.setAttribute('title', active ? '點擊關閉環境音拾取' : '點擊啟用環境音拾取');
+
+      if (active) {
+        captionEl.innerText = activePreset.name === 'optionA'
+          ? 'Design A · 晨光微嵐動態漸層（🎤 環境音拾取中 · 隨人聲低音律動擴散）'
+          : 'Design D · 深藍海洋流動（🎤 環境音拾取中 · 隨人聲低音律動擴散）';
+        footerEl.innerText = '🎤 環境音拾取已開啟：對麥克風說話、播放音樂或拍手，色彩漸層將隨音浪動態變化';
+      } else {
+        captionEl.innerText = activePreset.name === 'optionA'
+          ? 'Design A · 晨光微嵐動態漸層（支援滑鼠牽引波紋與環境音頻動態）'
+          : 'Design D · 深藍海洋流動（冷調深色 Mesh Drift 網格）';
+        footerEl.innerText = '點擊麥克風圖示或上方「環境音」按鈕，漸層動態與光暈將隨聲音節奏律動';
+      }
+    }
+
+    function sampleAudio() {
+      if (!audioActive || !analyser || !freqArray) {
+        rawVol = 0;
+        rawBass = 0;
+        rawMid = 0;
+        rawTreble = 0;
+        return;
+      }
+
+      analyser.getByteFrequencyData(freqArray);
+
+      // Low frequencies: Bass (Bins 0..2, approx 0 - 350Hz)
+      let bassSum = 0;
+      const bassCount = Math.min(3, freqArray.length);
+      for (let i = 0; i < bassCount; i++) bassSum += freqArray[i];
+      rawBass = bassSum / (bassCount * 255);
+
+      // Mid frequencies: Vocals / Ambience (Bins 3..9, approx 350 - 1300Hz)
+      let midSum = 0;
+      const midCount = Math.min(10, freqArray.length);
+      for (let i = 3; i < midCount; i++) midSum += freqArray[i];
+      rawMid = midSum / ((midCount - 3) * 255);
+
+      // High frequencies: Treble (Bins 10..28, approx 1300 - 4500Hz)
+      let trebleSum = 0;
+      const trebleCount = Math.min(30, freqArray.length);
+      for (let i = 10; i < trebleCount; i++) trebleSum += freqArray[i];
+      rawTreble = trebleSum / ((trebleCount - 10) * 255);
+
+      // Overall Volume (Average of active bands)
+      let totalSum = 0;
+      const totalCount = Math.min(48, freqArray.length);
+      for (let i = 0; i < totalCount; i++) totalSum += freqArray[i];
+      rawVol = totalSum / (totalCount * 255);
+    }
+
+    // ==========================================
+    // MAIN RENDER LOOP
+    // ==========================================
+    let lastNow = null;
+    function render(now) {
+      requestAnimationFrame(render);
+      const dt = lastNow === null ? 0 : Math.min((now - lastNow) / 1000, 0.1);
+      lastNow = now;
+
+      // Cursor physics
+      const follow = 1 - Math.exp(-12 * dt);
+      mouseX += (targetX - mouseX) * follow;
+      mouseY += (targetY - mouseY) * follow;
+      cursorPresence += (targetPresence - cursorPresence) * follow;
+
+      // Audio analysis & smoothing
+      sampleAudio();
+      const audioLerp = 1 - Math.exp(-14 * dt);
+      smoothVol += (rawVol - smoothVol) * audioLerp;
+      smoothBass += (rawBass - smoothBass) * audioLerp;
+      smoothMid += (rawMid - smoothMid) * audioLerp;
+      smoothTreble += (rawTreble - smoothTreble) * audioLerp;
+
+      // Time progression dynamically boosted by audio energy
+      const audioSpeedBoost = audioActive ? (1.0 + smoothBass * 2.2 + smoothVol * 1.5) : 1.0;
+      accumulatedTime += dt * activePreset.timeScale * audioSpeedBoost;
+
+      // Pass uniforms to WebGL
+      gl.uniform4f(uni.scene, canvas.width, canvas.height, accumulatedTime, activePreset.colorCount);
+      gl.uniform4f(uni.space, activePreset.offsetX, activePreset.offsetY, mouseX, mouseY);
+      gl.uniform4f(uni.cursor, cursorInteractive ? cursorPresence : 0, activePreset.cursorEffect, activePreset.cursorStrength, activePreset.cursorRadius);
+      gl.uniform4f(uni.audio, smoothVol, smoothBass, smoothMid, smoothTreble);
+
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+      // Update UI feedback based on ambient audio
+      if (audioActive) {
+        // Equalizer mini-bars
+        if (miniBar1) miniBar1.style.height = `${3 + Math.round(smoothBass * 11)}px`;
+        if (miniBar2) miniBar2.style.height = `${3 + Math.round(smoothMid * 11)}px`;
+        if (miniBar3) miniBar3.style.height = `${3 + Math.round(smoothTreble * 11)}px`;
+
+        // Search mic pulsating halo
+        if (micRipple) {
+          const rippleScale = 1.0 + smoothVol * 0.75 + smoothBass * 0.35;
+          const rippleAlpha = 0.4 + smoothVol * 0.6;
+          micRipple.style.transform = `scale(${rippleScale})`;
+          micRipple.style.borderColor = `rgba(255, 85, 0, ${rippleAlpha})`;
+        }
+
+        // Ambient sun glow pulsing
+        if (sunGlow) {
+          const glowScale = 1.0 + smoothBass * 0.28 + smoothVol * 0.12;
+          const glowAlpha = Math.min(1.0, 0.85 + smoothVol * 0.45);
+          sunGlow.style.transform = `translateX(-50%) scale(${glowScale})`;
+          sunGlow.style.opacity = `${glowAlpha}`;
+        }
+      } else {
+        if (miniBar1) miniBar1.style.height = '3px';
+        if (miniBar2) miniBar2.style.height = '3px';
+        if (miniBar3) miniBar3.style.height = '3px';
+        if (sunGlow) {
+          sunGlow.style.transform = '';
+          sunGlow.style.opacity = '';
+        }
+      }
+    }
+    requestAnimationFrame(render);
+
+    // ==========================================
+    // PRESETS & INTERACTION CONTROLS
+    // ==========================================
+    window.setPreset = function(name) {
+      document.getElementById('btn-option-a').classList.toggle('active', name === 'optionA');
+      document.getElementById('btn-option-ocean').classList.toggle('active', name === 'ocean');
+
+      const glow = document.getElementById('sun-glow');
+
+      if (name === 'optionA') {
+        activePreset = PRESETS.optionA;
+        glow.style.display = 'block';
+        glow.style.background = 'radial-gradient(circle, rgba(255, 94, 0, 0.45) 0%, rgba(255, 120, 50, 0.25) 35%, rgba(255, 180, 120, 0.08) 60%, transparent 80%)';
+      } else {
+        activePreset = PRESETS.ocean;
+        glow.style.display = 'block';
+        glow.style.background = 'radial-gradient(circle, rgba(0, 180, 240, 0.35) 0%, rgba(10, 80, 160, 0.22) 35%, rgba(10, 40, 80, 0.08) 60%, transparent 80%)';
+      }
+      applyUniforms();
+      updateAudioUI(audioActive);
+    };
+
+    window.toggleCursor = function() {
+      cursorInteractive = !cursorInteractive;
+      const btn = document.getElementById('btn-toggle-cursor');
+      btn.innerText = `滑鼠互動: ${cursorInteractive ? '開' : '關'}`;
+      btn.classList.toggle('active', cursorInteractive);
+    };
+  </script>
+</body>
+</html>

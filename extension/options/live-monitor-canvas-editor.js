@@ -4,6 +4,10 @@
     const composer = globalThis.YtCdHudLiveMonitorComposer;
     const resizeEngine = globalThis.YtCdHudLiveMonitorResizeEngine;
 
+    const ZOOM_MINIMUM = .1;
+    const ZOOM_MAXIMUM = 4;
+    const ZOOM_STEP = 1.1;
+
     function referencePlayerRect(canvas) {
         const pageWidth = Math.min(canvas.width, 1800);
         const left = (canvas.width - pageWidth) / 2 + 24;
@@ -11,7 +15,7 @@
         return { left, top: 80, width, height: width * 9 / 16 };
     }
 
-    function createEditor({ preview, layout, onChange = () => {}, onSelect = () => {}, onRender = () => {} }) {
+    function createEditor({ preview, layout, onChange = () => {}, onSelect = () => {}, onRender = () => {}, onView = () => {} }) {
         if (!preview) throw new Error('Live Monitor preview stage is required.');
         const state = { layout: composer.normalizeLayout(layout), selected: null, selectedPart: null, dragging: null, resizing: null, pending: null };
         const history = [];
@@ -40,7 +44,10 @@
             return true;
         }
         let initialized = false;
-        const view = { x: 0, y: 0 };
+        const view = { x: 0, y: 0, zoom: 1 };
+        // Until the user pans or zooms, the view keeps re-framing itself when the stage is resized
+        // (for example when the Studio tab first becomes visible or a dock opens/closes).
+        let autoFrame = true;
         let panning = null;
         const componentFor = id => composer.getComponent(state.layout, id);
 
@@ -68,6 +75,8 @@
             preview.style.setProperty('--yt-ref-width', player.width + 'px');
             preview.style.setProperty('--yt-ref-height', player.height + 'px');
             preview.dataset.lmSizingMode = state.layout.canvas.sizingMode;
+            // A whole-panel lock is reported once on the stage instead of stamping every unit.
+            preview.classList.toggle('lm-layout-locked', state.layout.locked === true);
             preview.style.setProperty('--lm-primary-color', state.layout.palette.primaryColor);
             preview.style.setProperty('--lm-secondary-color', state.layout.palette.secondaryColor);
             preview.querySelectorAll('[data-lm-component]').forEach(node => {
@@ -77,7 +86,7 @@
                 const split = component.arrangement?.split === true;
                 node.classList.toggle('lm-transport-split', split);
                 node.classList.toggle('lm-component-selected', !split && state.selected === component.id);
-                node.classList.toggle('lm-component-locked', state.layout.locked || component.locked);
+                node.classList.toggle('lm-component-locked', !state.layout.locked && component.locked === true);
                 node.classList.toggle('lm-component-hidden', component.present === false || component.hidden === true);
 
                 node.classList.toggle('lm-component-invalid', component._lmInvalid === true);
@@ -270,6 +279,7 @@
         }
 
         function onWheel(event) {
+            if (event.ctrlKey || event.metaKey) return;
             const target = event.target.closest('[data-lm-component]');
             if (!target || target.dataset.lmComponent !== state.selected || state.selected === 'panel-base') return;
             const component = componentFor(state.selected);
@@ -348,7 +358,7 @@
         function updateViewport(width, height) {
             state.layout = composer.updateViewport(state.layout, width, height);
             render();
-            centerPlayer();
+            frameView();
             onSelect(state.selected, componentFor(state.selected), state.selectedPart);
             onChange(state.layout, 'viewport');
         }
@@ -409,41 +419,105 @@
             onChange(state.layout, 'panel-lock');
         }
 
+        // The view (pan + zoom) is presentation only; it never changes layout data.
+        // At 100% the transform stays `none` so components keep exact CSS pixels.
         function applyView() {
-            preview.style.transform = 'none';
+            preview.style.transformOrigin = '0 0';
+            preview.style.transform = view.zoom === 1 ? 'none' : 'scale(' + view.zoom + ')';
             preview.style.left = view.x + 'px';
             preview.style.top = view.y + 'px';
+            onView({ ...view });
+        }
+
+        function hostSize() {
+            const host = preview.parentElement;
+            return {
+                width: host?.clientWidth || state.layout.canvas.width,
+                height: host?.clientHeight || state.layout.canvas.height,
+            };
+        }
+
+        function clampZoom(value) {
+            const number = Number(value);
+            if (!Number.isFinite(number)) return view.zoom;
+            return Math.min(ZOOM_MAXIMUM, Math.max(ZOOM_MINIMUM, Math.round(number * 100) / 100));
+        }
+
+        // Keep the canvas point under `anchor` (host coordinates) fixed while zooming.
+        function setZoom(value, anchor = null) {
+            autoFrame = false;
+            const next = clampZoom(value);
+            const size = hostSize();
+            const point = anchor || { x: size.width / 2, y: size.height / 2 };
+            const canvasX = (point.x - view.x) / view.zoom;
+            const canvasY = (point.y - view.y) / view.zoom;
+            view.zoom = next;
+            view.x = point.x - canvasX * next;
+            view.y = point.y - canvasY * next;
+            applyView();
+            return next;
+        }
+
+        function zoomBy(factor, anchor = null) { return setZoom(view.zoom * factor, anchor); }
+
+        function fitView() {
+            autoFrame = true;
+            const size = hostSize();
+            const canvas = state.layout.canvas;
+            view.zoom = clampZoom(Math.min(size.width / canvas.width, size.height / canvas.height) * .94);
+            view.x = (size.width - canvas.width * view.zoom) / 2;
+            view.y = (size.height - canvas.height * view.zoom) / 2;
+            applyView();
+            return view.zoom;
         }
 
         function centerView(componentId = null) {
-            const host = preview.parentElement;
-            if (!host) return;
-            const width = host.clientWidth || state.layout.canvas.width;
-            const height = host.clientHeight || state.layout.canvas.height;
+            if (!preview.parentElement) return;
+            autoFrame = false;
+            const { width, height } = hostSize();
             const units = componentId ? [componentFor(componentId)].filter(Boolean)
                 : state.layout.components.filter(item => item.present && !item.hidden);
             const bounds = units.flatMap(item => composer.componentRects(item, state.layout.canvas));
             const centerX = bounds.length ? (Math.min(...bounds.map(r => r.left)) + Math.max(...bounds.map(r => r.right))) / 2 : state.layout.canvas.width / 2;
             const centerY = bounds.length ? (Math.min(...bounds.map(r => r.top)) + Math.max(...bounds.map(r => r.bottom))) / 2 : state.layout.canvas.height / 2;
-            view.x = width / 2 - centerX;
-            view.y = height / 2 - centerY;
+            view.x = width / 2 - centerX * view.zoom;
+            view.y = height / 2 - centerY * view.zoom;
             applyView();
         }
 
+        // Show the whole canvas when the stage is smaller than it; otherwise centre the player at 1:1.
+        function frameView() {
+            const size = hostSize();
+            const canvas = state.layout.canvas;
+            if (size.width < canvas.width || size.height < canvas.height) { fitView(); return; }
+            view.zoom = 1;
+            centerPlayer();
+            autoFrame = true;
+        }
+
         function centerPlayer() {
-            const host = preview.parentElement;
-            if (!host) return;
+            if (!preview.parentElement) return;
+            const { width, height } = hostSize();
             const player = referencePlayerRect(state.layout.canvas);
-            view.x = (host.clientWidth || state.layout.canvas.width) / 2 - player.left - player.width / 2;
-            view.y = (host.clientHeight || state.layout.canvas.height) / 2 - player.top - player.height / 2;
+            view.x = width / 2 - (player.left + player.width / 2) * view.zoom;
+            view.y = height / 2 - (player.top + player.height / 2) * view.zoom;
             applyView();
         }
 
         function bindViewPanning() {
             const host = preview.parentElement;
             if (!host?.addEventListener) return;
+            // Ctrl/⌘ + wheel zooms the canvas around the pointer; plain wheel keeps
+            // its existing meaning (resizing the selected component).
+            host.addEventListener('wheel', event => {
+                if (event.target.closest?.('#live-monitor-canvas-tools')) return;
+                if (!(event.ctrlKey || event.metaKey)) return;
+                event.preventDefault();
+                const rect = host.getBoundingClientRect();
+                zoomBy(event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP, { x: event.clientX - rect.left, y: event.clientY - rect.top });
+            }, { passive: false });
             host.addEventListener('pointerdown', event => {
-                if (event.button !== 0 || event.isPrimary === false || event.target.closest('[data-lm-component]')) return;
+                if (event.button !== 0 || event.isPrimary === false || event.target.closest('[data-lm-component]') || event.target.closest?.('#live-monitor-canvas-tools')) return;
                 const rect = host.getBoundingClientRect();
                 // Leave the native viewport resize corner available.
                 if (event.clientX >= rect.right - 20 && event.clientY >= rect.bottom - 20) return;
@@ -454,6 +528,7 @@
             });
             host.addEventListener('pointermove', event => {
                 if (!panning || event.pointerId !== panning.pointerId) return;
+                autoFrame = false;
                 view.x = panning.x + event.clientX - panning.clientX;
                 view.y = panning.y + event.clientY - panning.clientY;
                 applyView();
@@ -505,7 +580,7 @@
             if (initialized) return api;
             initialized = true;
             if (globalThis.ResizeObserver && preview.parentElement) {
-                const viewObserver = new ResizeObserver(applyView);
+                const viewObserver = new ResizeObserver(() => (autoFrame ? frameView() : applyView()));
                 viewObserver.observe(preview.parentElement);
             }
             bindViewPanning();
@@ -525,7 +600,7 @@
             document.addEventListener('keydown', onKeyDown);
             render();
             onSelect(state.selected, componentFor(state.selected), state.selectedPart);
-            centerPlayer();
+            frameView();
             return api;
         }
 
@@ -540,12 +615,13 @@
             state.selectedPart = null;
             render();
             onSelect(null, null);
-            centerPlayer();
+            frameView();
         }
 
         const api = {
             state,
             toggleLock, setLocked, centerView,
+            setZoom, zoomBy, fitView, getZoom: () => view.zoom,
             init,
             render,
             select,

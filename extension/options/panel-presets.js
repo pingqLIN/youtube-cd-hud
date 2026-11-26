@@ -32,7 +32,7 @@
 
     // ── META ─────────────────────────────────────────────────────────────────
     const META = Object.freeze([
-        Object.freeze({ id: 'cdj-inspired', label: 'CDJ 風格', width: 448, height: 640, optIn: true,
+        Object.freeze({ id: 'cdj-inspired', label: '動態唱盤 · CDJ', width: 448, height: 640, optIn: true,
             description: '直式資訊螢幕與大型唱盤；僅使用來源、曲目、時間、跳曲與 scrub 既有功能' }),
         // tool / utility presets (v1.1.0 — id and behaviour frozen)
         Object.freeze({ id: 'full',     label: '全功能',   width: 640, height: 320, description: '唱片、播放控制與曲目清單' }),
@@ -1632,7 +1632,7 @@
         }
         // Built-in presets start from the schema, not the independently authored install default.
         const layout = composer.normalizeLayout({ version: 2, components: Object.keys(composer.registry).map(cid => ({ id: cid })) });
-        if (layout.components.filter(c => !['volume-control', 'agent-tools', 'system-status'].includes(c.id)).length !== IDS.length || IDS.some(key => !layout.components.some(c => c.id === key))) {
+        if (layout.components.filter(c => !['volume-control', 'agent-tools', 'system-status', 'db-menu'].includes(c.id)).length !== IDS.length || IDS.some(key => !layout.components.some(c => c.id === key))) {
             throw new TypeError('The composer component registry differs from this preset pack.');
         }
         layout.canvas = { width: 1280, height: 720, sizingMode: 'absolute',

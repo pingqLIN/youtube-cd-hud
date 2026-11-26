@@ -4,7 +4,7 @@
     'use strict';
     // Pure presentation contract. No DOM, storage, selectors, or executable CSS.
     const FORMAT = 'youtube-cd-hud-skin';
-    const EFFECTS = Object.freeze({ 'panel-base': ['shadow', 'accentRail'], disc: ['glow'], 'track-title': ['marquee'], 'time-readout': [], 'source-selector': ['statusLamp'], 'tracklist-toggle': [], 'transport-controls': [], 'close-control': [], 'text-size-control': [], 'tracklist-panel': ['shadow', 'accentRail'], 'volume-control': [], 'agent-tools': [], 'system-status': [] });
+    const EFFECTS = Object.freeze({ 'panel-base': ['shadow', 'accentRail'], disc: ['glow'], 'track-title': ['marquee'], 'time-readout': [], 'source-selector': ['statusLamp'], 'db-menu': ['shadow', 'accentRail'], 'tracklist-toggle': [], 'transport-controls': [], 'close-control': [], 'text-size-control': [], 'tracklist-panel': ['shadow', 'accentRail'], 'volume-control': [], 'agent-tools': [], 'system-status': [] });
     const color = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
     const range = (min, max) => v => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
     const bool = v => typeof v === 'boolean';
@@ -267,28 +267,38 @@
             minSize: { width: 80, height: 144 }, maxSize: { width: 520, height: 480 },
             supportedProperties: ['backgroundColor', 'opacity', 'size', 'volumeStyle'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .5, y: .5, width: 96, height: 192, z: 0 },
-            style: { opacity: 1, backgroundColor: '#202428', borderColor: PALETTE_DEFAULTS.secondaryColor, volumeStyle: 'fader' },
-            textStyle: { color: '#eef3f7', opacity: 1, font: 'Arial', fontSize: 14, fontWeight: 500, textAlign: 'center' },
+            style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor, volumeStyle: 'fader' },
+            textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 12, fontWeight: 600, textAlign: 'center' },
             flags: { supportsZAxis: true, defaultPresent: false },
         }),
         'agent-tools': definition('agent-tools', 'Agent 工具', {
             minSize: { width: 160, height: 64 }, maxSize: { width: 520, height: 480 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .5, y: .5, width: 192, height: 80, z: 0 },
-            style: { opacity: 1, backgroundColor: '#202428', borderColor: PALETTE_DEFAULTS.secondaryColor },
-            textStyle: { color: '#eef3f7', opacity: 1, font: 'Arial', fontSize: 14, fontWeight: 500, textAlign: 'center' },
+            style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor },
+            textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 12, fontWeight: 600, textAlign: 'center' },
             flags: { supportsZAxis: true, defaultPresent: false },
         }),
         'system-status': definition('system-status', '網路與快取狀態', {
             minSize: { width: 220, height: 96 }, maxSize: { width: 520, height: 480 },
             supportedProperties: ['backgroundColor', 'opacity', 'size'], supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
             geometry: { x: .5, y: .5, width: 280, height: 128, z: 0 },
-            style: { opacity: 1, backgroundColor: '#202428', borderColor: PALETTE_DEFAULTS.secondaryColor },
-            textStyle: { color: '#eef3f7', opacity: 1, font: 'Arial', fontSize: 14, fontWeight: 500, textAlign: 'center' },
+            style: { opacity: 1, backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor },
+            textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 12, fontWeight: 600, textAlign: 'center' },
+            flags: { supportsZAxis: true, defaultPresent: false },
+        }),
+        'db-menu': definition('db-menu', '線上資料庫選單 / DB Menu', {
+            minSize: { width: 200, height: 120 }, maxSize: { width: 520, height: 480 },
+            supportedProperties: ['backgroundColor', 'opacity', 'size'],
+            supportedTextProperties: ['color', 'opacity', 'font', 'fontSize', 'fontWeight', 'textAlign'],
+            geometry: { x: .5, y: .5, width: 260, height: 240, z: 0 },
+            style: { backgroundColor: PALETTE_DEFAULTS.primaryColor, borderColor: PALETTE_DEFAULTS.secondaryColor, opacity: .95 },
+            textStyle: { color: PALETTE_DEFAULTS.secondaryColor, opacity: 1, font: 'cascadia-mono', fontSize: 12, fontWeight: 500, textAlign: 'left' },
+            effects: { shadow: true, accentRail: false }, supportedEffects: ['shadow', 'accentRail'],
             flags: { supportsZAxis: true, defaultPresent: false },
         }),
     });
-    const optionalControlIds = Object.freeze(['volume-control', 'agent-tools', 'system-status']);
+    const optionalControlIds = Object.freeze(['volume-control', 'agent-tools', 'system-status', 'db-menu']);
     const requiredIds = Object.freeze(Object.keys(registry).filter(id => registry[id].required));
 
     function clamp(value, minimum, maximum, fallback) {
