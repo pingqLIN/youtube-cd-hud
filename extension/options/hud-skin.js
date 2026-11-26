@@ -2,7 +2,7 @@
     'use strict';
     // Pure presentation contract. No DOM, storage, selectors, or executable CSS.
     const FORMAT = 'youtube-cd-hud-skin';
-    const EFFECTS = Object.freeze({ 'panel-base': ['shadow', 'accentRail'], disc: ['glow'], 'track-title': ['marquee'], 'time-readout': [], 'source-selector': ['statusLamp'], 'tracklist-toggle': [], 'transport-controls': [], 'close-control': [], 'text-size-control': [], 'tracklist-panel': ['shadow', 'accentRail'], 'volume-control': [], 'agent-tools': [], 'system-status': [] });
+    const EFFECTS = Object.freeze({ 'panel-base': ['shadow', 'accentRail'], disc: ['glow'], 'track-title': ['marquee'], 'time-readout': [], 'source-selector': ['statusLamp'], 'db-menu': ['shadow', 'accentRail'], 'tracklist-toggle': [], 'transport-controls': [], 'close-control': [], 'text-size-control': [], 'tracklist-panel': ['shadow', 'accentRail'], 'volume-control': [], 'agent-tools': [], 'system-status': [] });
     const color = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
     const range = (min, max) => v => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
     const bool = v => typeof v === 'boolean';

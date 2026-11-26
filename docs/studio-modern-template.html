@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ja-JP" class="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YouTube CD HUD — Studio & Options (日系素肌·和紙明亮版)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500&family=JetBrains+Mono:wght@200;300;400;500&family=Noto+Sans+JP:wght@200;300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* 日系明亮·素肌與和紙基調 (Japanese Light Washi & Porcelain Palette) */
+      --bg-base: #f5f6f4;             /* 生成色 / 和紙基底 (Raw Washi Ecru) */
+      --bg-surface: #ffffff;          /* 白磁 (Pure Porcelain Surface) */
+      --bg-module: #ffffff;
+      --bg-module-hover: #ededeb;
+      --border-hairline: rgba(0, 0, 0, 0.08);
+      --border-hairline-strong: rgba(0, 0, 0, 0.16);
+      --text-main: #181b20;           /* 濃墨 (Dark Sumi Ink) */
+      --text-muted: #535a63;          /* 灰墨 (Medium Charcoal) */
+      --text-sub: #868e98;            /* 鼠色 (Subtle Cool Grey) */
+      --accent-sage: #53725a;         /* 青磁 / 淡竹 (Muted Celadon Green) */
+      --accent-sage-dim: rgba(83, 114, 90, 0.08);
+      --accent-sand: #8a7a63;         /* 砂色 / 胡桃 (Muted Earthy Sand) */
+      --accent-vermilion: #a8544c;    /* 緋色 / 弁柄 (Muted Soft Vermilion) */
+      --shadow-subtle: 0 4px 20px -2px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+    }
+
+    body {
+      font-family: 'Inter', 'Noto Sans JP', -apple-system, sans-serif;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+      background-color: var(--bg-base);
+      color: var(--text-main);
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 300;
+    }
+
+    /* 細線規整網格 (Precision Hairline Grid for Light Theme) */
+    .bg-hairline-grid {
+      background-size: 32px 32px;
+      background-image: 
+        linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+    }
+
+    /* 統一基本模組規範 (Unified Base Module DNA) */
+    .base-card {
+      background-color: var(--bg-module);
+      border: 1px solid var(--border-hairline);
+      border-radius: 8px;
+      box-shadow: var(--shadow-subtle);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .base-card:hover {
+      border-color: var(--border-hairline-strong);
+    }
+
+    .base-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      border: 1px solid var(--border-hairline);
+      border-radius: 4px;
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+    }
+    .base-chip:hover {
+      color: var(--text-main);
+      border-color: var(--border-hairline-strong);
+    }
+    .base-chip.active {
+      color: var(--text-main);
+      border-color: var(--accent-sage);
+      background: var(--accent-sage-dim);
+    }
+
+    .hairline-input {
+      background: #fafaf8;
+      border: 1px solid var(--border-hairline);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 300;
+      color: var(--text-main);
+      transition: border-color 0.15s ease;
+    }
+    .hairline-input:focus {
+      outline: none;
+      border-color: var(--accent-sage);
+      background: #ffffff;
+    }
+
+    /* 細緻自訂捲軸 (Light Theme) */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.14); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.25); }
+
+    /* ── YouTube 虛擬頁面半透明襯底 (與目前做法相同) ── */
+    .youtube-reference {
+      position: absolute;
+      inset: 0;
+      background: #181818;
+      color: #eee;
+      opacity: .35;
+      pointer-events: none;
+      font: 14px/1.5 Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      border-radius: inherit;
+      transition: opacity 0.2s ease;
+      z-index: 1;
+    }
+    .yt-ref-header {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: #242424;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .yt-ref-header b {
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+    }
+    .yt-ref-header b span {
+      color: #ff3434;
+    }
+    .yt-ref-header > div:not(.yt-ref-actions) {
+      width: 40%;
+      border: 1px solid #555;
+      background: #121212;
+      border-radius: 22px;
+      padding: 6px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #888;
+      font-size: 13px;
+    }
+    .yt-ref-actions {
+      display: flex;
+      gap: 16px;
+      color: #aaa;
+      font-size: 14px;
+    }
+    .yt-ref-player {
+      position: absolute;
+      left: var(--yt-ref-left, 24px);
+      top: 80px;
+      width: var(--yt-ref-width, 908px);
+      height: var(--yt-ref-height, 511px);
+      background: #050505;
+      border: 1px solid #444;
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .yt-ref-watermark {
+      position: absolute;
+      top: 45%;
+      left: 45%;
+      color: #777;
+      font-size: 16px;
+      letter-spacing: 0.15em;
+      font-weight: 500;
+    }
+    .yt-ref-controls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      border-top: 3px solid #ad2727;
+      background: linear-gradient(transparent, rgba(0,0,0,0.85));
+      padding: 10px 16px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .yt-ref-info {
+      position: absolute;
+      top: calc(96px + var(--yt-ref-height, 511px));
+      left: var(--yt-ref-left, 24px);
+      width: var(--yt-ref-width, 908px);
+    }
+    .yt-ref-info h2 {
+      font: 700 18px/1.3 Arial, -apple-system, sans-serif;
+      margin: 0 0 10px;
+      color: #ffffff;
+    }
+    .yt-ref-channel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: #ccc;
+    }
+    .yt-ref-info p {
+      padding: 12px 16px;
+      background: #272727;
+      border-radius: 8px;
+      color: #bbb;
+      font-size: 12px;
+      line-height: 1.6;
+      margin: 8px 0;
+    }
+    .yt-ref-recommendations {
+      position: absolute;
+      top: 80px;
+      left: calc(var(--yt-ref-left, 24px) + var(--yt-ref-width, 908px) + 24px);
+      width: 300px;
+    }
+    .yt-ref-recommendations > b {
+      display: block;
+      margin-bottom: 12px;
+      color: #ddd;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+    }
+    .yt-ref-recommendations > div {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      margin-top: 14px;
+      height: 90px;
+      background: #242424;
+      padding: 12px 14px;
+      border-radius: 8px;
+      color: #ddd;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-[#53725a]/15 selection:text-[#324b37]">
+
+  <!-- ── 1. 上方工作列 (Top Navigation: Fixed, Hairline, Washi Light) ── -->
+  <header class="sticky top-0 z-50 bg-[#f5f6f4]/90 backdrop-blur-md border-b border-black/[0.06] px-6 py-2.5">
+    <div class="max-w-[1720px] mx-auto flex items-center justify-between gap-6">
+      
+      <!-- Brand & Spec Index (標誌與細字型規格) -->
+      <div class="flex items-center gap-4">
+        <div class="w-6 h-6 border border-black/15 bg-white rounded flex items-center justify-center text-slate-700 shadow-sm">
+          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="12" cy="12" r="9"/>
+            <circle cx="12" cy="12" r="2.5"/>
+            <line x1="12" y1="3" x2="12" y2="6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-light tracking-[0.18em] text-slate-800 uppercase">YouTube CD HUD</span>
+            <span class="text-[10px] font-mono text-slate-500 font-extralight tracking-widest border-l border-black/10 pl-2">SPEC 5.14</span>
+          </div>
+          <p class="text-[11px] text-slate-500 font-extralight tracking-wider">音響視覺監聽 · 參數調整工作區</p>
+        </div>
+      </div>
+
+      <!-- Center: Segmented Navigation (基本模組衍生微型標籤) -->
+      <nav class="flex items-center gap-1.5 p-1 bg-black/[0.03] border border-black/[0.06] rounded-md">
+        <button id="tab-studio-btn" onclick="switchTab('studio')" class="base-chip active">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#53725a]"></span>
+          <span>STUDIO</span>
+          <span class="text-[10px] text-slate-500">面板排版</span>
+        </button>
+        <button id="tab-sources-btn" onclick="switchTab('sources')" class="base-chip">
+          <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+          <span>SOURCES</span>
+          <span class="text-[10px] text-slate-400">曲目來源</span>
+        </button>
+      </nav>
+
+      <!-- Right: Subdued Master & System Parameters -->
+      <div class="flex items-center gap-4">
+        
+        <!-- Font scale selector -->
+        <div class="flex items-center gap-1 text-[11px] font-mono font-light text-slate-600">
+          <button class="w-5 h-5 flex items-center justify-center bg-white border border-black/[0.08] rounded hover:border-black/20 transition shadow-sm">−</button>
+          <span class="px-1 text-slate-800 font-normal">100%</span>
+          <button class="w-5 h-5 flex items-center justify-center bg-white border border-black/[0.08] rounded hover:border-black/20 transition shadow-sm">+</button>
+        </div>
+
+        <div class="w-[1px] h-3.5 bg-black/[0.08]"></div>
+
+        <!-- Master Switch (低色度呼吸狀態條) -->
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#53725a]"></span>
+            <span class="text-[11px] font-light tracking-widest text-slate-600">HUD 作用中</span>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-7 h-4 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-3 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#53725a] shadow-inner"></div>
+          </label>
+        </div>
+
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ── 2. 主要工作區 (Main Stage: Washi Light Mood) ── -->
+  <main class="flex-1 max-w-[1720px] w-full mx-auto p-5 pb-24">
+
+    <!-- ══════════════════════════════════════════════════════
+         TAB 1: STUDIO (面板排版)
+    ══════════════════════════════════════════════════════════ -->
+    <div id="view-studio" class="space-y-4">
+
+      <!-- Top Module Bar: Preset Themes & Palette Config -->
+      <section class="base-card p-3 flex flex-wrap items-center justify-between gap-4">
+        
+        <!-- Module Presets (同型基本版組合) -->
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-[10px] font-mono tracking-[0.2em] uppercase text-slate-400 mr-2">PRESET / 樣式</span>
+          <button class="base-chip active">01 全功能 CDJ</button>
+          <button class="base-chip">02 極簡提示</button>
+          <button class="base-chip">03 隱形輪廓</button>
+          <button class="base-chip">04 素面白瓷</button>
+          <button class="base-chip">05 輕量工坊</button>
+        </div>
+
+        <!-- Cohesive Color Swatches (日系低彩度調色盤) -->
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="flex items-center gap-2 px-2.5 py-1 rounded bg-[#f7f8f6] border border-black/[0.06]">
+            <span class="text-[11px] text-slate-500 font-light">主色 (青磁)</span>
+            <span class="w-3.5 h-3.5 rounded-sm bg-[#53725a] border border-black/10"></span>
+            <span class="text-[10px] font-mono text-slate-600">#53725A</span>
+          </div>
+
+          <div class="flex items-center gap-2 px-2.5 py-1 rounded bg-[#f7f8f6] border border-black/[0.06]">
+            <span class="text-[11px] text-slate-500 font-light">輔色 (砂白)</span>
+            <span class="w-3.5 h-3.5 rounded-sm bg-[#8a7a63] border border-black/10"></span>
+            <span class="text-[10px] font-mono text-slate-600">#8A7A63</span>
+          </div>
+
+          <div class="flex items-center gap-2 px-2.5 py-1 rounded bg-[#f7f8f6] border border-black/[0.06]">
+            <span class="text-[11px] text-slate-500 font-light">字型</span>
+            <select class="bg-transparent text-[11px] font-mono text-slate-700 outline-none cursor-pointer">
+              <option class="bg-white">Inter Light</option>
+              <option class="bg-white">Noto Sans JP</option>
+              <option class="bg-white">JetBrains Mono</option>
+            </select>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ── 中央工作區 (Workbench: Canvas Stage + Floating Hairline Inspector) ── -->
+      <div id="workbench-container" class="relative w-full h-[650px] rounded-lg border border-black/[0.08] bg-[#ebeee9] overflow-hidden shadow-sm">
+        
+        <!-- Canvas Stage with Hairline Matrix Grid -->
+        <div id="canvas-stage" class="absolute inset-0 bg-hairline-grid flex items-center justify-center cursor-grab active:cursor-grabbing overflow-hidden">
+          
+          <!-- Virtual Reference Display (Scalable container) -->
+          <div id="virtual-canvas" class="relative w-[1280px] h-[720px] bg-[#ffffff] border border-black/[0.08] rounded shadow-xl transition-transform duration-75 origin-center flex flex-col justify-end p-8 overflow-hidden" style="transform: scale(0.72); --yt-ref-left: 24px; --yt-ref-width: 908px; --yt-ref-height: 511px;">
+            
+            <!-- ── YouTube 虛擬頁面半透明襯底 (與目前做法相同) ── -->
+            <div id="youtube-reference-backdrop" class="youtube-reference" aria-hidden="true">
+              <!-- Top YouTube Header Bar -->
+              <header class="yt-ref-header">
+                <b><span>▶</span> YouTube</b>
+                <div>
+                  <span>搜尋影片</span>
+                  <span>⌕</span>
+                </div>
+                <div class="yt-ref-actions">
+                  <span>＋</span>
+                  <span>♧</span>
+                  <span>●</span>
+                </div>
+              </header>
+
+              <!-- Main 16:9 Video Player -->
+              <div class="yt-ref-player">
+                <span class="yt-ref-watermark">影片預覽</span>
+                <div class="yt-ref-controls">
+                  <div class="flex items-center gap-3">
+                    <span>▶</span>
+                    <span>❯</span>
+                    <span>◖</span>
+                    <span class="font-mono">12:48 / 58:31</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span>字幕</span>
+                    <span>⚙</span>
+                    <span>▣</span>
+                    <span>□</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Video Metadata & Details -->
+              <section class="yt-ref-info">
+                <h2>Midnight Transit — Live DJ Set</h2>
+                <div class="yt-ref-channel">
+                  <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-slate-500 inline-block"></span>
+                    <span class="font-medium text-white/90">Music Channel</span>
+                    <span class="px-2 py-0.5 rounded-full bg-white/10 text-[11px] text-white/80">訂閱</span>
+                  </div>
+                  <div class="flex items-center gap-3 text-xs text-white/70">
+                    <span>讚 1.2萬</span>
+                    <span>分享</span>
+                    <span>下載</span>
+                    <span>⋯</span>
+                  </div>
+                </div>
+                <p>觀看次數：124,582 次 • 影片說明與曲目資訊</p>
+                <div class="mt-3 text-xs text-white/50">
+                  <span class="font-medium text-white/70 block mb-1">留言 (342)</span>
+                  <p class="py-1 px-3 bg-white/5 rounded text-[11px]">● 新增留言…</p>
+                </div>
+              </section>
+
+              <!-- Recommendations Sidebar -->
+              <aside class="yt-ref-recommendations">
+                <b>全部　音樂　相關影片</b>
+                <div>▶ <span>Recommended mix<br><small class="text-white/50">Music Channel</small></span></div>
+                <div>▶ <span>Live session<br><small class="text-white/50">Music Channel</small></span></div>
+                <div>▶ <span>Night drive selection<br><small class="text-white/50">Music Channel</small></span></div>
+                <div>▶ <span>Latest playlist<br><small class="text-white/50">Music Channel</small></span></div>
+              </aside>
+            </div>
+
+            <!-- ── Active HUD Layout Assembly (白瓷質感日系同版型元件組) ── -->
+            <div class="relative z-10 w-full max-w-[820px] mx-auto bg-white/95 backdrop-blur-md border border-black/[0.1] rounded-md p-3.5 shadow-xl shadow-black/[0.03] flex items-center justify-between gap-4">
+              
+              <!-- Disc Module (低色度唱盤/旋鈕) -->
+              <div onclick="selectComponent('disc', 'JOG WHEEL · 唱盤旋鈕', '82 × 82 px')" class="relative w-16 h-16 rounded-full bg-[#f4f5f2] border border-black/15 flex items-center justify-center cursor-pointer hover:border-[#53725a] transition group shadow-inner">
+                <div class="w-11 h-11 rounded-full border border-black/[0.08] flex items-center justify-center bg-white">
+                  <div class="w-5 h-5 rounded-full border border-[#53725a]/30 bg-[#53725a]/10 flex items-center justify-center">
+                    <span class="w-1 h-1 rounded-full bg-[#53725a]"></span>
+                  </div>
+                </div>
+                <span class="absolute -top-1 -right-1 text-[8px] font-mono px-1 rounded bg-white border border-black/10 text-slate-600 group-hover:text-slate-900 shadow-sm">01</span>
+              </div>
+
+              <!-- Track info module (細體字跑馬燈排版) -->
+              <div onclick="selectComponent('title', 'TITLE MARQUEE · 曲名元件', '460 × 36 px')" class="flex-1 cursor-pointer p-2 rounded border border-transparent hover:border-black/10 hover:bg-black/[0.01] transition group">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="w-1 h-1 rounded-full bg-[#53725a]"></span>
+                  <span class="text-[9px] font-mono uppercase tracking-[0.2em] text-slate-400">NOW PLAYING</span>
+                </div>
+                <div class="text-sm font-light tracking-wide text-slate-800 font-mono group-hover:text-[#53725a] transition truncate">
+                  Chihei Hatakeyama — Starlight and Quiet River (Master 2026)
+                </div>
+                <div class="text-[10px] font-mono text-slate-500 mt-0.5 flex items-center gap-3 font-extralight">
+                  <span>08:15 / 45:20</span>
+                  <span class="text-slate-500">118.0 BPM</span>
+                  <span class="text-slate-500">SRC: 1001TL</span>
+                </div>
+              </div>
+
+              <!-- Transport Controls (細線幾何方塊) -->
+              <div class="flex items-center gap-1.5">
+                <button onclick="selectComponent('transport', 'TRANSPORT · 跳曲控制', '68 × 32 px')" class="px-2.5 py-1.5 rounded bg-white border border-black/[0.08] hover:border-black/20 text-slate-700 text-[10px] font-mono tracking-wider transition shadow-sm">
+                  ◀ PREV
+                </button>
+                <button onclick="selectComponent('transport', 'TRANSPORT · 跳曲控制', '68 × 32 px')" class="px-2.5 py-1.5 rounded bg-white border border-black/[0.08] hover:border-black/20 text-slate-700 text-[10px] font-mono tracking-wider transition shadow-sm">
+                  NEXT ▶
+                </button>
+                <button onclick="selectComponent('tracklist', 'TRACKLIST · 清單開關', '32 × 32 px')" class="w-8 h-8 rounded bg-white border border-[#53725a]/30 text-[#53725a] flex items-center justify-center hover:bg-[#53725a]/10 transition shadow-sm">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>
+                  </svg>
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ── 常駐畫布邊緣工具塢 (Hairline Edge Dock: Light Porcelain) ── -->
+        <div class="absolute top-3.5 left-3.5 z-30 flex items-center gap-2 p-1.5 bg-white/95 backdrop-blur-md border border-black/[0.08] rounded shadow-md text-slate-700">
+          
+          <!-- Zoom Buttons (細線方塊) -->
+          <div class="flex items-center border border-black/[0.08] rounded bg-[#fafaf8]">
+            <button onclick="adjustZoom(-0.1)" class="w-6 h-6 flex items-center justify-center text-xs font-mono hover:bg-black/[0.04] transition">−</button>
+            <span id="zoom-readout" class="w-11 text-center text-[10px] font-mono text-slate-700 border-x border-black/[0.08]">72%</span>
+            <button onclick="adjustZoom(0.1)" class="w-6 h-6 flex items-center justify-center text-xs font-mono hover:bg-black/[0.04] transition">+</button>
+          </div>
+
+          <div class="flex items-center gap-1">
+            <button onclick="resetZoom()" class="px-2 py-1 text-[10px] font-mono border border-black/[0.08] rounded hover:border-black/20 transition bg-white shadow-sm">1:1</button>
+            <button onclick="fitZoom()" class="px-2 py-1 text-[10px] font-mono border border-black/[0.08] rounded hover:border-black/20 transition bg-white shadow-sm">適合</button>
+          </div>
+
+          <div class="w-[1px] h-3 bg-black/[0.08]"></div>
+
+          <!-- Canvas Size Preset -->
+          <div class="flex items-center gap-1.5 text-[10px] font-mono text-slate-500">
+            <span>畫布:</span>
+            <select class="bg-white text-[10px] font-mono text-slate-700 border border-black/[0.08] rounded px-1.5 py-0.5 outline-none cursor-pointer shadow-sm">
+              <option>1280 × 720 (HD)</option>
+              <option>1920 × 1080 (FHD)</option>
+              <option>3840 × 2160 (4K)</option>
+            </select>
+          </div>
+
+          <div class="w-[1px] h-3 bg-black/[0.08]"></div>
+
+          <!-- Center Canvas -->
+          <button onclick="centerCanvas()" class="px-2 py-1 text-[10px] font-mono border border-black/[0.08] rounded hover:border-black/20 text-slate-700 transition bg-white shadow-sm">
+            置中
+          </button>
+
+          <div class="w-[1px] h-3 bg-black/[0.08]"></div>
+
+          <!-- Backdrop Toggle Button (襯底開關) -->
+          <button id="backdrop-toggle-btn" onclick="toggleBackdrop()" class="px-2 py-1 text-[10px] font-mono border border-black/[0.08] rounded hover:border-black/20 text-slate-700 transition bg-white shadow-sm flex items-center gap-1.5" title="切換 YouTube 虛擬頁面襯底透明度 (35% / 65% / 關閉)">
+            <svg class="w-3.5 h-3.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span>襯底</span>
+            <span id="backdrop-opacity-badge" class="text-[9px] text-[#53725a] font-mono font-medium">35%</span>
+          </button>
+        </div>
+
+        <!-- ── 浮動屬性面板 (Floating Inspector: Light Modular Card) ── -->
+        <aside id="floating-inspector" class="absolute top-3.5 right-3.5 z-40 w-72 bg-white/95 backdrop-blur-xl border border-black/[0.1] rounded-md shadow-xl flex flex-col transition-all duration-200">
+          
+          <!-- Drag Header (微型手柄與折疊鈕) -->
+          <div id="inspector-header" class="flex items-center justify-between px-3.5 py-2.5 border-b border-black/[0.06] cursor-grab active:cursor-grabbing select-none bg-[#fbfcfb]">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400 font-mono text-xs">⋮⋮</span>
+              <span class="text-[11px] font-light tracking-[0.16em] uppercase text-slate-800">INSPECTOR · 屬性</span>
+            </div>
+            <button onclick="toggleInspector()" class="p-1 rounded text-slate-500 hover:text-slate-900 hover:bg-black/[0.04] transition" title="收合／展開">
+              <svg id="inspector-toggle-icon" class="w-3.5 h-3.5 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Inspector Body (模組化細線參數群) -->
+          <div id="inspector-body" class="p-3.5 space-y-3.5 max-h-[520px] overflow-y-auto">
+            
+            <!-- Current Target Module Banner -->
+            <div class="p-2.5 rounded bg-[#f7f8f6] border border-black/[0.06] flex items-center justify-between">
+              <div>
+                <span class="text-[9px] font-mono text-slate-400 uppercase tracking-widest block">SELECTED</span>
+                <span id="selected-label" class="text-xs font-normal text-slate-800">TITLE MARQUEE · 曲名元件</span>
+                <span id="selected-dim" class="text-[10px] font-mono text-slate-400 block">460 × 36 px</span>
+              </div>
+              <span class="text-[10px] font-mono text-[#53725a] border border-[#53725a]/40 bg-[#53725a]/10 px-1.5 py-0.5 rounded font-normal">UNLOCKED</span>
+            </div>
+
+            <!-- Precision Dimension Controls -->
+            <div class="space-y-1.5">
+              <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">GEOMETRY (PX)</span>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="flex items-center justify-between bg-[#fafaf8] border border-black/[0.06] rounded px-2 py-1">
+                  <span class="text-[10px] font-mono text-slate-400">WIDTH</span>
+                  <input type="text" value="460" class="w-14 bg-transparent text-right text-[11px] font-mono text-slate-800 outline-none">
+                </div>
+                <div class="flex items-center justify-between bg-[#fafaf8] border border-black/[0.06] rounded px-2 py-1">
+                  <span class="text-[10px] font-mono text-slate-400">HEIGHT</span>
+                  <input type="text" value="36" class="w-14 bg-transparent text-right text-[11px] font-mono text-slate-800 outline-none">
+                </div>
+              </div>
+            </div>
+
+            <!-- Typography & Font Weights (細體字級控制) -->
+            <div class="space-y-2 pt-2 border-t border-black/[0.06]">
+              <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">TYPOGRAPHY</span>
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-[11px] font-light">
+                  <span class="text-slate-600">字級 (Size)</span>
+                  <span class="font-mono text-slate-800">14 px</span>
+                </div>
+                <input type="range" min="8" max="48" value="14" class="w-full accent-[#53725a] h-1 bg-slate-200 rounded cursor-pointer">
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] pt-1">
+                <span class="text-slate-600">字重 (Weight)</span>
+                <div class="flex items-center gap-1 font-mono text-[10px]">
+                  <button class="px-1.5 py-0.5 rounded border border-[#53725a]/50 text-[#53725a] bg-[#53725a]/10">300</button>
+                  <button class="px-1.5 py-0.5 rounded border border-black/[0.08] text-slate-500 bg-white">400</button>
+                  <button class="px-1.5 py-0.5 rounded border border-black/[0.08] text-slate-500 bg-white">500</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Appearance & Effects (低色度效果開關) -->
+            <div class="space-y-2 pt-2 border-t border-black/[0.06]">
+              <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">APPEARANCE</span>
+              
+              <div class="space-y-1.5">
+                <label class="flex items-center justify-between p-1.5 rounded bg-[#fafaf8] border border-black/[0.04] text-[11px] text-slate-700 cursor-pointer">
+                  <span>文字跑馬燈 (Marquee)</span>
+                  <input type="checkbox" checked class="accent-[#53725a]">
+                </label>
+                <label class="flex items-center justify-between p-1.5 rounded bg-[#fafaf8] border border-black/[0.04] text-[11px] text-slate-700 cursor-pointer">
+                  <span>細線軌道光 (Accent Rail)</span>
+                  <input type="checkbox" checked class="accent-[#53725a]">
+                </label>
+                <label class="flex items-center justify-between p-1.5 rounded bg-[#fafaf8] border border-black/[0.04] text-[11px] text-slate-700 cursor-pointer">
+                  <span>柔和陰影 (Ambient Shadow)</span>
+                  <input type="checkbox" class="accent-[#53725a]">
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+        </aside>
+
+        <!-- Canvas Footer Note -->
+        <div class="absolute bottom-3 left-4 z-20 text-[10px] font-mono text-slate-400 tracking-wider">
+          平移: 空白拖曳 · 縮放: CTRL+滾輪 · 調整: 右下手柄
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         TAB 2: SOURCES (曲目來源設定)
+    ══════════════════════════════════════════════════════════ -->
+    <div id="view-sources" class="hidden space-y-5 max-w-4xl mx-auto">
+      
+      <!-- Providers Group (由同一個 base-card 衍生) -->
+      <section class="base-card p-5 space-y-4">
+        <div class="border-b border-black/[0.06] pb-3">
+          <span class="text-[9px] font-mono text-slate-400 uppercase tracking-widest">PROVIDERS</span>
+          <h2 class="text-sm font-light text-slate-800 tracking-wide mt-0.5">曲目資料來源管道</h2>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div class="p-3.5 rounded bg-[#fafaf8] border border-black/[0.06] flex items-start justify-between">
+            <div>
+              <div class="text-xs font-normal text-slate-800">YouTube 官方章節／作者留言</div>
+              <p class="text-[11px] text-slate-500 mt-0.5">時間戳自動解析與對齊</p>
+            </div>
+            <input type="checkbox" checked class="accent-[#53725a] mt-1">
+          </div>
+
+          <div class="p-3.5 rounded bg-[#fafaf8] border border-black/[0.06] flex items-start justify-between">
+            <div>
+              <div class="text-xs font-normal text-slate-800">1001Tracklists</div>
+              <p class="text-[11px] text-slate-500 mt-0.5">專業電音／DJ Set 精準曲目庫</p>
+            </div>
+            <input type="checkbox" checked class="accent-[#53725a] mt-1">
+          </div>
+
+          <div class="p-3.5 rounded bg-[#fafaf8] border border-black/[0.06] flex items-start justify-between">
+            <div>
+              <div class="text-xs font-normal text-slate-800">MixesDB</div>
+              <p class="text-[11px] text-slate-500 mt-0.5">維基結構 Live Mix 音訊資料</p>
+            </div>
+            <input type="checkbox" checked class="accent-[#53725a] mt-1">
+          </div>
+
+          <div class="p-3.5 rounded bg-[#fafaf8] border border-black/[0.06] flex items-start justify-between">
+            <div>
+              <div class="text-xs font-normal text-slate-800">TrackId.net</div>
+              <p class="text-[11px] text-slate-500 mt-0.5">社群自動辨識與指紋比對庫</p>
+            </div>
+            <input type="checkbox" checked class="accent-[#53725a] mt-1">
+          </div>
+        </div>
+      </section>
+
+      <!-- Music Service Jump (細線單選群) -->
+      <section class="base-card p-5 space-y-3">
+        <div class="border-b border-black/[0.06] pb-3">
+          <span class="text-[9px] font-mono text-slate-400 uppercase tracking-widest">EXTERNAL JUMP</span>
+          <h2 class="text-sm font-light text-slate-800 tracking-wide mt-0.5">單曲點擊跳轉服務</h2>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-2.5">
+          <label class="p-2.5 rounded bg-[#fafaf8] border border-[#53725a]/40 flex items-center gap-2.5 cursor-pointer">
+            <input type="radio" name="catalog" checked class="accent-[#53725a]">
+            <span class="text-xs text-slate-800 font-light">Beatport (DJ 專業庫)</span>
+          </label>
+          <label class="p-2.5 rounded bg-[#fafaf8] border border-black/[0.06] flex items-center gap-2.5 cursor-pointer">
+            <input type="radio" name="catalog" class="accent-[#53725a]">
+            <span class="text-xs text-slate-500 font-light">SoundCloud</span>
+          </label>
+          <label class="p-2.5 rounded bg-[#fafaf8] border border-black/[0.06] flex items-center gap-2.5 cursor-pointer">
+            <input type="radio" name="catalog" class="accent-[#53725a]">
+            <span class="text-xs text-slate-500 font-light">Spotify</span>
+          </label>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ── 3. 下方動作列 (Fixed Hairline Action Bar: Washi Light) ── -->
+  <footer class="fixed bottom-0 left-0 right-0 z-50 bg-[#f5f6f4]/95 backdrop-blur-md border-t border-black/[0.06] px-6 py-2.5 shadow-md">
+    <div class="max-w-[1720px] mx-auto flex items-center justify-between gap-4">
+      
+      <!-- Sync Status -->
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" checked class="accent-[#53725a]">
+          <span class="text-[11px] font-light text-slate-600">自動同步工作區面板</span>
+        </label>
+        <div class="w-[1px] h-3 bg-black/[0.08]"></div>
+        <div class="flex items-center gap-1.5 text-[11px] font-mono text-slate-500">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#53725a]"></span>
+          <span>工作區就緒 · 等待調整</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons (統一細線工藝按鈕) -->
+      <div class="flex items-center gap-2.5">
+        <button type="button" class="px-3.5 py-1.5 text-xs font-light rounded bg-white border border-black/[0.08] hover:border-black/20 text-slate-600 hover:text-slate-900 transition shadow-sm">
+          恢復預設
+        </button>
+        <button type="button" class="px-3.5 py-1.5 text-xs font-light rounded bg-white border border-black/[0.08] hover:border-black/20 text-slate-600 hover:text-slate-900 transition shadow-sm">
+          鎖定排版
+        </button>
+        <button type="button" class="px-4 py-1.5 text-xs font-normal tracking-widest rounded bg-[#53725a] border border-[#53725a] text-white hover:bg-[#47624d] transition shadow-sm">
+          儲存並套用
+        </button>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ── Interactive Simulation Script ── -->
+  <script>
+    function switchTab(tab) {
+      const studioView = document.getElementById('view-studio');
+      const sourcesView = document.getElementById('view-sources');
+      const studioBtn = document.getElementById('tab-studio-btn');
+      const sourcesBtn = document.getElementById('tab-sources-btn');
+
+      if (tab === 'studio') {
+        studioView.classList.remove('hidden');
+        sourcesView.classList.add('hidden');
+        studioBtn.classList.add('active');
+        sourcesBtn.classList.remove('active');
+      } else {
+        studioView.classList.add('hidden');
+        sourcesView.classList.remove('hidden');
+        sourcesBtn.classList.add('active');
+        studioBtn.classList.remove('active');
+      }
+    }
+
+    let currentZoom = 0.72;
+    function updateZoomDisplay() {
+      document.getElementById('zoom-readout').textContent = Math.round(currentZoom * 100) + '%';
+      document.getElementById('virtual-canvas').style.transform = `scale(${currentZoom})`;
+    }
+    function adjustZoom(delta) {
+      currentZoom = Math.min(2.0, Math.max(0.3, currentZoom + delta));
+      updateZoomDisplay();
+    }
+    function resetZoom() {
+      currentZoom = 1.0;
+      updateZoomDisplay();
+    }
+    function fitZoom() {
+      currentZoom = 0.72;
+      updateZoomDisplay();
+    }
+    function centerCanvas() {
+      const stage = document.getElementById('canvas-stage');
+      stage.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+    }
+
+    let inspectorCollapsed = false;
+    function toggleInspector() {
+      const body = document.getElementById('inspector-body');
+      const icon = document.getElementById('inspector-toggle-icon');
+      inspectorCollapsed = !inspectorCollapsed;
+      if (inspectorCollapsed) {
+        body.classList.add('hidden');
+        icon.style.transform = 'rotate(-90deg)';
+      } else {
+        body.classList.remove('hidden');
+        icon.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    function selectComponent(id, name, dim) {
+      document.getElementById('selected-label').textContent = name;
+      document.getElementById('selected-dim').textContent = dim;
+      if (inspectorCollapsed) toggleInspector();
+    }
+
+    let backdropOpacityLevel = 0.35;
+    function toggleBackdrop() {
+      const el = document.getElementById('youtube-reference-backdrop');
+      const badge = document.getElementById('backdrop-opacity-badge');
+      if (!el) return;
+      if (backdropOpacityLevel === 0.35) {
+        backdropOpacityLevel = 0.65;
+      } else if (backdropOpacityLevel === 0.65) {
+        backdropOpacityLevel = 0;
+      } else {
+        backdropOpacityLevel = 0.35;
+      }
+      el.style.opacity = backdropOpacityLevel;
+      if (badge) {
+        badge.textContent = backdropOpacityLevel === 0 ? 'OFF' : Math.round(backdropOpacityLevel * 100) + '%';
+        badge.style.color = backdropOpacityLevel === 0 ? '#868e98' : '#53725a';
+      }
+    }
+  </script>
+</body>
+</html>

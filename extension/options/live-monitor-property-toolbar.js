@@ -196,7 +196,22 @@
                 });
                 addLabel(dimension === 'width' ? '寬度 PX' : '高度 PX', input);
             }
+            // Keep the selected unit's essential actions and geometry together.
+            // The detailed controls remain mounted and fully expanded by default.
+            const basics = document.createElement('section');
+            basics.className = 'lm-property-basic';
+            basics.setAttribute('aria-label', '元件基本設定');
+            const basicsTitle = document.createElement('h3');
+            basicsTitle.className = 'lm-property-basic-title';
+            basicsTitle.textContent = '基本設定 · 顯示、鎖定、寬度與高度';
+            const basicsGrid = document.createElement('div');
+            basicsGrid.className = 'lm-property-basic-grid';
+            Array.from(toolbar.children).slice(1).forEach(node => basicsGrid.appendChild(node));
+            basics.append(basicsTitle, basicsGrid);
+            toolbar.appendChild(basics);
+
             const detailStart = toolbar.children.length;
+            addSectionLabel('GEOMETRY / LAYER');
             addSplitControl(rule, component);
             addLayerControls(rule, component);
 
@@ -322,7 +337,7 @@
             if (rule.supportedProperties.includes('texture')) {
                 const input = document.createElement('select');
                 input.dataset.lmProperty = 'texture';
-                const labels = { classic: '目前樣式', gold: '金色唱片', 'transparent-grooves': '透明同心刻痕' };
+                const labels = { classic: '目前樣式', gold: '金色唱片', 'transparent-grooves': '透明同心刻痕', jog: '動態唱盤 · CDJ' };
                 composer.DISC_TEXTURES.forEach(texture => {
                     const option = document.createElement('option');
                     option.value = texture;

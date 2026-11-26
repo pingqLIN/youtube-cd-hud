@@ -861,7 +861,74 @@
         return writeSlots({ ...await readSlots(), ...defaultSlots() });
     }
 
-    function createControls({ host, editor, onChange = () => {} }) {
+    function findEmptySlots(slotsMap) {
+        return SLOT_NAMES.filter(name => !slotsMap?.[name]);
+    }
+
+    function openSlotDialog({ title, message, emptySlots = [], actions = [] }) {
+        return new Promise(resolve => {
+            const backdrop = document.createElement('div');
+            backdrop.className = 'lm-slot-dialog-backdrop';
+            const dialog = document.createElement('div');
+            dialog.className = 'lm-slot-dialog';
+            dialog.setAttribute('role', 'dialog');
+            dialog.setAttribute('aria-modal', 'true');
+            const heading = document.createElement('h3');
+            heading.className = 'lm-slot-dialog-title';
+            heading.textContent = title;
+            const body = document.createElement('p');
+            body.className = 'lm-slot-dialog-message';
+            body.textContent = message;
+            dialog.append(heading, body);
+            let emptySelect = null;
+            if (emptySlots.length) {
+                const picker = document.createElement('label');
+                picker.className = 'lm-slot-dialog-empty';
+                const pickerLabel = document.createElement('span');
+                pickerLabel.textContent = '選擇空儲存槽';
+                emptySelect = document.createElement('select');
+                emptySlots.forEach(slotName => {
+                    const option = document.createElement('option');
+                    option.value = slotName;
+                    option.textContent = slotName + ' 號槽（空白）';
+                    emptySelect.appendChild(option);
+                });
+                picker.append(pickerLabel, emptySelect);
+                dialog.appendChild(picker);
+            }
+            const footer = document.createElement('div');
+            footer.className = 'lm-slot-dialog-actions';
+            const finish = action => {
+                document.removeEventListener('keydown', onKeydown);
+                backdrop.remove();
+                resolve({ action, emptySlot: emptySelect?.value || emptySlots[0] || null });
+            };
+            const onKeydown = event => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    finish('cancel');
+                }
+            };
+            actions.forEach(item => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'lm-slot-dialog-btn lm-slot-dialog-' + (item.variant || 'secondary');
+                btn.textContent = item.label;
+                btn.addEventListener('click', () => finish(item.id));
+                footer.appendChild(btn);
+            });
+            dialog.appendChild(footer);
+            backdrop.appendChild(dialog);
+            backdrop.addEventListener('click', event => {
+                if (event.target === backdrop) finish('cancel');
+            });
+            document.addEventListener('keydown', onKeydown);
+            document.body.appendChild(backdrop);
+            footer.querySelector('button')?.focus();
+        });
+    }
+
+    function createControls({ host, editor, onChange = () => {}, promptDialog = null }) {
         if (!host) throw new Error('Live Monitor layout controls host is required.');
         const shell = document.createElement('section');
         shell.className = 'lm-layout-controls';
@@ -894,6 +961,7 @@
         const primaryOpacity = paletteOpacity(primaryLabel, 'primaryOpacity');
         const secondaryOpacity = paletteOpacity(secondaryLabel, 'secondaryOpacity');
         const viewportLabel = document.createElement('label');
+        viewportLabel.className = 'lm-canvas-size';
         viewportLabel.innerHTML = '<span>畫布尺寸 · PX</span>';
         const viewport = document.createElement('select');
         viewport.dataset.lmCanvasPreset = 'true';
@@ -904,7 +972,7 @@
             viewport.appendChild(option);
         });
         viewportLabel.appendChild(viewport);
-        foundation.append(primaryLabel, secondaryLabel, viewportLabel);
+        foundation.append(primaryLabel, secondaryLabel);
         const mounted = document.createElement('select');
         mounted.setAttribute('aria-label', '選取面板元件');
         mounted.addEventListener('change', () => {
@@ -926,17 +994,19 @@
         align.type = 'button';
         align.className = 'lm-layout-align';
         align.textContent = 'AUTO ALIGN';
-        align.title = 'Snap moved and resized units to the hidden alignment grid';
+        align.title = '自動對齊：移動或縮放元件時吸附隱藏格線 / Snap moved and resized units to the hidden alignment grid';
         const slots = document.createElement('div');
         slots.className = 'lm-layout-slots';
         const actions = document.createElement('div');
         actions.className = 'lm-layout-slot-actions';
         const save = document.createElement('button');
         save.type = 'button';
-        save.textContent = 'SAVE';
+        save.textContent = '寫入';
+        save.title = '將目前編輯區寫入所選儲存槽（若已有資料會跳出提醒）';
         const load = document.createElement('button');
         load.type = 'button';
-        load.textContent = 'LOAD';
+        load.textContent = '讀取';
+        load.title = '讀取所選儲存槽（若編輯區尚未儲存會跳出提醒）';
         const resetBank = document.createElement('button');
         resetBank.type = 'button';
         resetBank.textContent = '重設 0–6';
@@ -947,21 +1017,9 @@
         status.className = 'lm-layout-slot-status';
         status.setAttribute('role', 'status');
         status.setAttribute('aria-live', 'polite');
-        status.textContent = '0 預設 · 1 全功能 · 2 精簡 · 3 隱形 · 4 靜謐背景 · 5 工作台 · 6 海報展示 · 7–9 自訂；選擇儲存槽後讀取或儲存。';
-        BUNDLED_PRESETS.filter(preset => preset.optIn).forEach(preset => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.textContent = preset.label;
-            button.dataset.lmPreset = preset.id;
-            button.title = '載入可選面板；依目前自動同步設定套用，不覆寫儲存槽。';
-            button.addEventListener('click', () => {
-                editor.setLayout(createBundledLayout(preset.id));
-                onChange(editor.state.layout, 'preset-load');
-                status.textContent = preset.label + ' 已載入；儲存槽保持不變。';
-                sync();
-            });
-            actions.appendChild(button);
-        });
+        const slotLegend = '0 預設 · 1 全功能 · 2 精簡 · 3 隱形 · 4 靜謐背景 · 5 工作台 · 6 海報展示 · 7–9 自訂；選擇儲存槽後寫入或讀取。';
+        bundled.title = slotLegend;
+        status.textContent = slotLegend;
         const pack = document.createElement('div');
         pack.className = 'lm-layout-pack';
         const scope = document.createElement('select');
@@ -1001,7 +1059,10 @@
             undoScale.disabled = false;
             status.textContent = result.layersAssigned?.length
                 ? '已自動分配 Z 軸並完成縮放；UNDO 可一併還原尺寸、位置與層級。'
-                : '已按比例縮放；自動對齊已關閉以保留位置。Scaled proportionally; auto align is off to preserve positions.';
+                : result.clampedIds?.length
+                    ? '已縮放其餘 ' + result.scaledIds.length + ' 個元件；'
+                        + result.clampedIds.length + ' 個元件已達尺寸下限，維持原尺寸與位置。UNDO 可還原。'
+                    : '已按比例縮放；自動對齊已關閉以保留位置。Scaled proportionally; auto align is off to preserve positions.';
             scale.value = '100';
             sync();
         });
@@ -1022,19 +1083,67 @@
         pack.append(scope, scale, applyScale, undoScale);
         const center = document.createElement('button');
         center.type = 'button'; center.textContent = '置中面板';
+        center.title = '將所有可見元件移到工作區中央（不改變排版）';
         center.addEventListener('click', () => editor.centerView());
         const extra = document.createElement('details'); extra.className = 'lm-layout-extra';
         const summary = document.createElement('summary'); summary.textContent = '尺寸工具';
         extra.append(summary, pack, reset);
-        shell.append(mounted, align, center, extra, status);
+        // Zoom changes only the editor view; it stays available while the panel is locked.
+        const zoom = document.createElement('div');
+        zoom.className = 'lm-canvas-zoom';
+        zoom.setAttribute('role', 'group');
+        zoom.setAttribute('aria-label', '畫布縮放');
+        const zoomButton = (text, title, action) => {
+            const button = document.createElement('button');
+            button.type = 'button'; button.textContent = text; button.title = title;
+            button.setAttribute('aria-label', title);
+            button.addEventListener('click', action);
+            return button;
+        };
+        const zoomOut = zoomButton('−', '縮小畫布（Ctrl＋滾輪）', () => editor.zoomBy?.(1 / 1.25));
+        const zoomOutput = document.createElement('output');
+        zoomOutput.className = 'lm-canvas-zoom-value';
+        zoomOutput.setAttribute('aria-live', 'polite');
+        zoomOutput.value = '100%';
+        const zoomIn = zoomButton('+', '放大畫布（Ctrl＋滾輪）', () => editor.zoomBy?.(1.25));
+        const zoomFit = zoomButton('適合', '縮放至完整顯示畫布', () => editor.fitView?.());
+        const zoomActual = zoomButton('1:1', '實際 CSS 像素（100%）', () => editor.setZoom?.(1));
+        zoom.append(zoomOut, zoomOutput, zoomIn, zoomFit, zoomActual);
+        const canvasTools = document.getElementById('live-monitor-canvas-tools');
+        if (canvasTools) {
+            canvasTools.append(zoom, viewportLabel, center, extra);
+            // Operation feedback (slots, scaling, alignment) sits under the canvas, visible from every panel.
+            const caption = document.getElementById('live-monitor-canvas-status');
+            shell.append(mounted, align);
+            if (caption) caption.after(status); else shell.append(status);
+        } else {
+            foundation.appendChild(viewportLabel);
+            shell.append(mounted, align, center, extra, status);
+        }
         const lockHost = document.getElementById('live-monitor-panel-lock');
         (lockHost || shell).appendChild(panelLock);
         const theme = document.getElementById('live-monitor-theme');
-        (theme || shell).append(bundled, foundation);
+        const bundledHost = document.getElementById('live-monitor-bundled') || theme;
+        (bundledHost || shell).append(bundled);
+        (theme || shell).append(foundation);
         host.appendChild(shell);
         globalThis.YtCdHudI18n?.localizeDocument(shell, document.documentElement.lang);
+        if (canvasTools) globalThis.YtCdHudI18n?.localizeDocument(canvasTools, document.documentElement.lang);
         let selectedSlot = '0';
         let storedSlots = {};
+        const dialogFn = typeof promptDialog === 'function' ? promptDialog : openSlotDialog;
+        const layoutSignature = () => JSON.stringify(composer.normalizeLayout(typeof editor.getLayout === 'function' ? editor.getLayout() : editor.state.layout));
+        let savedBaseline = layoutSignature();
+        const markSaved = () => { savedBaseline = layoutSignature(); };
+        const isEditorDirty = () => layoutSignature() !== savedBaseline;
+
+        function syncView(view = { zoom: editor.getZoom?.() ?? 1 }) {
+            const percent = Math.round(view.zoom * 100);
+            zoomOutput.value = percent + '%';
+            zoomOut.disabled = view.zoom <= .1;
+            zoomIn.disabled = view.zoom >= 4;
+            zoomActual.setAttribute('aria-pressed', String(percent === 100));
+        }
 
         function sync() {
             const layout = editor.state.layout;
@@ -1054,11 +1163,13 @@
             panelLock.dataset.lmLockState = String(layout.locked);
             [primary, secondary, viewport, align, applyScale, scope, scale].forEach(node => { node.disabled = layout.locked; });
             const studio = document.getElementById('panel-studio');
-            (studio?.querySelectorAll?.('#theme-font, #theme-custom-font, #theme-font-size') || []).forEach(node => { node.disabled = layout.locked; });
+            (studio?.querySelectorAll?.('#theme-font, #theme-custom-font') || []).forEach(node => { node.disabled = layout.locked; });
+            // Panel-wide text scaling is independent of geometry and individual-unit locks.
             viewport.value = composer.VIEWPORT_PRESETS.find(preset => preset.width === layout.canvas.width && preset.height === layout.canvas.height)?.id || 'hd';
             align.setAttribute('aria-pressed', layout.canvas.alignmentGrid.enabled ? 'true' : 'false');
             const caption = document.getElementById('live-monitor-canvas-status');
-            if (caption) caption.textContent = '拖曳空白處平移視野 · 右下角調整工作區';
+            if (caption) caption.textContent = '拖曳空白處平移視野 · Ctrl＋滾輪縮放';
+            syncView();
         }
 
         async function render() {
@@ -1079,7 +1190,7 @@
                 slots.appendChild(slot);
             });
             load.disabled = !storedSlots[selectedSlot];
-            save.textContent = storedSlots[selectedSlot] ? '覆寫儲存' : '儲存';
+            save.textContent = '寫入';
             load.textContent = '讀取';
             sync();
         }
@@ -1096,19 +1207,89 @@
             const snapshot = composer.normalizeLayout(editor.getLayout());
             try {
                 const current = await readSlots();
-                current[targetSlot] = snapshot;
+                let destSlot = targetSlot;
+                let actionLabel = '已寫入';
+                if (current[targetSlot]) {
+                    const emptySlots = findEmptySlots(current);
+                    const choice = await dialogFn({
+                        kind: 'write-conflict',
+                        targetSlot,
+                        emptySlots,
+                        title: `儲存槽 ${targetSlot} 已有資料`,
+                        message: emptySlots.length
+                            ? `儲存槽 ${targetSlot} 已有設定資料。您可以覆寫目前槽位，或改寫入其他空儲存槽。`
+                            : `儲存槽 ${targetSlot} 已有設定資料，且目前 0–9 皆無空儲存槽。確定要覆寫嗎？`,
+                        actions: [
+                            ...(emptySlots.length ? [{ id: 'write-empty', label: '寫入空儲存槽', variant: 'primary' }] : []),
+                            { id: 'overwrite', label: `覆寫 ${targetSlot} 號槽`, variant: 'danger' },
+                            { id: 'cancel', label: '取消', variant: 'secondary' },
+                        ],
+                    });
+                    if (!choice || choice.action === 'cancel') {
+                        status.textContent = '已取消寫入。';
+                        return;
+                    }
+                    if (choice.action === 'write-empty' && choice.emptySlot) {
+                        destSlot = choice.emptySlot;
+                        selectedSlot = destSlot;
+                        actionLabel = '已改寫入空槽';
+                    } else if (choice.action === 'overwrite') {
+                        actionLabel = '已覆寫寫入';
+                    } else {
+                        return;
+                    }
+                }
+                current[destSlot] = snapshot;
                 await writeSlots(current);
-                status.textContent = '已儲存至 ' + targetSlot + ' 號槽。';
+                markSaved();
+                status.textContent = `${actionLabel} ${destSlot} 號槽。`;
                 await render();
-            } catch (error) { status.textContent = '儲存失敗：' + error.message; }
+            } catch (error) { status.textContent = '寫入失敗：' + error.message; }
         });
-        load.addEventListener('click', () => {
-            const layout = storedSlots[selectedSlot];
+        load.addEventListener('click', async () => {
+            const targetSlot = selectedSlot;
+            const layout = storedSlots[targetSlot];
             if (!layout) return;
-            editor.setLayout(layout);
-            onChange(editor.state.layout, 'slot-load');
-            status.textContent = 'Style ' + selectedSlot + ' loaded.';
-            sync();
+            try {
+                if (isEditorDirty()) {
+                    const current = await readSlots();
+                    const emptySlots = findEmptySlots(current);
+                    const choice = await dialogFn({
+                        kind: 'load-dirty',
+                        targetSlot,
+                        emptySlots,
+                        title: '編輯區有尚未儲存的變更',
+                        message: emptySlots.length
+                            ? `讀取 ${targetSlot} 號槽將會覆蓋目前編輯區。您可以先將目前編輯區寫入空儲存槽再讀取，或直接放棄變更。`
+                            : `讀取 ${targetSlot} 號槽將會覆蓋目前編輯區（目前 0–9 無空儲存槽）。是否仍要直接讀取？`,
+                        actions: [
+                            ...(emptySlots.length ? [{ id: 'save-empty-and-load', label: '先寫入空槽再讀取', variant: 'primary' }] : []),
+                            { id: 'discard-and-load', label: '直接讀取（放棄變更）', variant: 'danger' },
+                            { id: 'cancel', label: '取消', variant: 'secondary' },
+                        ],
+                    });
+                    if (!choice || choice.action === 'cancel') {
+                        status.textContent = '已取消讀取，保留目前編輯區。';
+                        return;
+                    }
+                    if (choice.action === 'save-empty-and-load' && choice.emptySlot) {
+                        current[choice.emptySlot] = composer.normalizeLayout(editor.getLayout());
+                        await writeSlots(current);
+                        editor.setLayout(layout);
+                        onChange(editor.state.layout, 'slot-load');
+                        markSaved();
+                        status.textContent = `已先存至 ${choice.emptySlot} 號槽，並讀取 ${targetSlot} 號槽。`;
+                        await render();
+                        return;
+                    }
+                    if (choice.action !== 'discard-and-load') return;
+                }
+                editor.setLayout(layout);
+                onChange(editor.state.layout, 'slot-load');
+                markSaved();
+                status.textContent = `已讀取 ${targetSlot} 號槽。`;
+                sync();
+            } catch (error) { status.textContent = '讀取失敗：' + error.message; }
         });
 
         resetBank.addEventListener('click', async () => {
@@ -1136,8 +1317,8 @@
             console.warn('[CD HUD] Could not load temporary layout slots.', error);
             status.textContent = '儲存槽無法讀取，請重新開啟設定頁。';
         });
-        return Object.freeze({ element: shell, render, sync, readSlots });
+        return Object.freeze({ element: shell, render, sync, syncView, readSlots, markSaved, isEditorDirty });
     }
 
-    globalThis.YtCdHudLiveMonitorLayoutPresets = Object.freeze({ STORAGE_KEY, SLOT_NAMES, BUNDLED_PRESETS, createBundledLayout, readSlots, writeSlots, resetSlots, createControls });
+    globalThis.YtCdHudLiveMonitorLayoutPresets = Object.freeze({ STORAGE_KEY, SLOT_NAMES, BUNDLED_PRESETS, createBundledLayout, findEmptySlots, readSlots, writeSlots, resetSlots, createControls });
 })();

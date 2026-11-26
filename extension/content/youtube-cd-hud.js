@@ -5,7 +5,7 @@
     'use strict';
     // Pure presentation contract. No DOM, storage, selectors, or executable CSS.
     const FORMAT = 'youtube-cd-hud-skin';
-    const EFFECTS = Object.freeze({ 'panel-base': ['shadow', 'accentRail'], disc: ['glow'], 'track-title': ['marquee'], 'time-readout': [], 'source-selector': ['statusLamp'], 'tracklist-toggle': [], 'transport-controls': [], 'close-control': [], 'text-size-control': [], 'tracklist-panel': ['shadow', 'accentRail'], 'volume-control': [], 'agent-tools': [], 'system-status': [] });
+    const EFFECTS = Object.freeze({ 'panel-base': ['shadow', 'accentRail'], disc: ['glow'], 'track-title': ['marquee'], 'time-readout': [], 'source-selector': ['statusLamp'], 'db-menu': ['shadow', 'accentRail'], 'tracklist-toggle': [], 'transport-controls': [], 'close-control': [], 'text-size-control': [], 'tracklist-panel': ['shadow', 'accentRail'], 'volume-control': [], 'agent-tools': [], 'system-status': [] });
     const color = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
     const range = (min, max) => v => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
     const bool = v => typeof v === 'boolean';
@@ -227,6 +227,7 @@
             Object.freeze({id:'volume-control',type:'volume-control',present:false,geometry:Object.freeze({x:.5,y:.5,width:96,height:192,z:0}),layer:Object.freeze({enabled:false}),boundary:Object.freeze({state:'closed',shape:'rect',collision:true}),style:Object.freeze({backgroundColor:'#202428',borderColor:'#63b3ed',opacity:1,volumeStyle:'fader'}),textStyle:Object.freeze({color:'#eef3f7',opacity:1,font:'Arial',fontSize:14,fontWeight:500,textAlign:'center'}),effects:Object.freeze({})}),
             Object.freeze({id:'agent-tools',type:'agent-tools',present:false,geometry:Object.freeze({x:.5,y:.5,width:192,height:80,z:0}),layer:Object.freeze({enabled:false}),boundary:Object.freeze({state:'closed',shape:'rect',collision:true}),style:Object.freeze({backgroundColor:'#202428',borderColor:'#63b3ed',opacity:1}),textStyle:Object.freeze({color:'#eef3f7',opacity:1,font:'Arial',fontSize:14,fontWeight:500,textAlign:'center'}),effects:Object.freeze({})}),
             Object.freeze({id:'system-status',type:'system-status',present:false,geometry:Object.freeze({x:.5,y:.5,width:280,height:128,z:0}),layer:Object.freeze({enabled:false}),boundary:Object.freeze({state:'closed',shape:'rect',collision:true}),style:Object.freeze({backgroundColor:'#202428',borderColor:'#63b3ed',opacity:1}),textStyle:Object.freeze({color:'#eef3f7',opacity:1,font:'Arial',fontSize:14,fontWeight:500,textAlign:'center'}),effects:Object.freeze({})}),
+            Object.freeze({id:'db-menu',type:'db-menu',present:false,geometry:Object.freeze({x:.5,y:.5,width:260,height:240,z:0}),layer:Object.freeze({enabled:false}),boundary:Object.freeze({state:'closed',shape:'rect',collision:true}),style:Object.freeze({backgroundColor:'#1a202c',borderColor:'#63b3ed',opacity:.95}),textStyle:Object.freeze({color:'#63b3ed',opacity:1,font:'cascadia-mono',fontSize:12,fontWeight:500,textAlign:'left'}),effects:Object.freeze({shadow:true,accentRail:false})}),
         ]),
     });
     const RUNTIME_DEFAULTS = Object.freeze({
@@ -568,6 +569,7 @@
             'track-title': [180, 24, 720, 120],
             'time-readout': [90, 24, 320, 96],
             'source-selector': [180, 24, 520, 96],
+            'db-menu': [200, 120, 520, 480],
             'tracklist-toggle': [48, 24, 112, 96],
             'transport-controls': [128, 24, 360, 112],
             'close-control': [48, 24, 96, 96],
@@ -991,6 +993,39 @@
                     button.style.setProperty('--ytcd-unit-font-size', String((component.textStyle?.fontSize || 9) * projection.scale) + 'px');
                     button.style.setProperty('--ytcd-unit-font', HUD_FONT_STACKS[component.textStyle?.font] || HUD_FONT_STACKS[runtimeSettings.fontFamily]);
                     button.dataset.ytcdTextAlign = component.textStyle?.textAlign || 'center';
+                }
+            }
+        }
+        const dbMenuElement = oneThousandMenu || hud.querySelector('.hud-1001-menu');
+        if (dbMenuElement) {
+            const dbMenuComp = getHudLayoutComponent('db-menu');
+            const sourceComp = getHudLayoutComponent('source-selector');
+            const activeComp = dbMenuComp?.present ? dbMenuComp : sourceComp;
+            if (activeComp) {
+                const dbText = activeComp.textStyle || activeComp.style;
+                dbMenuElement.dataset.ytcdDbMenuCustom = dbMenuComp?.present ? 'true' : 'false';
+                dbMenuElement.classList.toggle('ytcd-effect-shadow', activeComp.effects?.shadow === true);
+                dbMenuElement.classList.toggle('ytcd-effect-accent-rail', activeComp.effects?.accentRail === true);
+                dbMenuElement.style.setProperty('--ytcd-unit-opacity', String(activeComp.style.opacity ?? 1));
+                dbMenuElement.style.setProperty('--ytcd-unit-shadow-alpha', String((activeComp.style.opacity ?? 1) * .35));
+                dbMenuElement.style.setProperty('--ytcd-unit-color', dbText.color || runtimeSettings.accentColor);
+                dbMenuElement.style.setProperty('--ytcd-unit-text-opacity', String(dbText.opacity ?? 1));
+                dbMenuElement.style.setProperty('--ytcd-unit-background-color', activeComp.style.backgroundEnabled === false ? 'transparent' : activeComp.style.backgroundColor || activeComp.style.color || '#1a202c');
+                dbMenuElement.style.setProperty('--ytcd-secondary-color', runtimeColorWithAlpha(runtimeLayout.palette.secondaryColor, activeComp.style.secondaryOpacity ?? 1));
+                dbMenuElement.style.setProperty('--ytcd-unit-border-width', activeComp.style.borderEnabled === false ? '0px' : '1px');
+                dbMenuElement.style.setProperty('--ytcd-unit-border-radius', activeComp.style.cornerEnabled
+                    ? String(activeComp.style.cornerRadiusLevel * 2 * projection.scale) + 'px'
+                    : '0px');
+                dbMenuElement.style.setProperty('--ytcd-unit-backdrop-filter', activeComp.style.backgroundBlurEnabled ? 'blur(8px) saturate(.86)' : 'none');
+                dbMenuElement.style.setProperty('--ytcd-unit-font-weight', String(dbText.fontWeight ?? 500));
+                dbMenuElement.style.setProperty('--ytcd-unit-font-size', String((dbText.fontSize || 12) * projection.scale) + 'px');
+                dbMenuElement.style.setProperty('--ytcd-unit-font', HUD_FONT_STACKS[dbText.font] || (/^[\p{L}\p{N} _-]{1,80}$/u.test(String(dbText.font || '')) ? '"' + dbText.font + '", Consolas, monospace' : HUD_FONT_STACKS[runtimeSettings.fontFamily]));
+                dbMenuElement.style.setProperty('--ytcd-unit-text-align', dbText.textAlign || 'left');
+                dbMenuElement.dataset.ytcdTextAlign = dbText.textAlign || 'left';
+                if (dbMenuComp?.present) {
+                    dbMenuElement.style.width = Math.round(dbMenuComp.geometry.width * projection.scale) + 'px';
+                } else {
+                    dbMenuElement.style.width = '';
                 }
             }
         }
@@ -3960,10 +3995,10 @@
                 transform: rotate(180deg);
             }
             .hud-1001-menu {
-                position: absolute;
-                top: calc(100% + 4px);
-                right: 0;
-                z-index: 5;
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 2147483647;
                 display: none;
                 grid-template-columns: 1fr;
                 gap: 3px;
@@ -3971,13 +4006,50 @@
                 width: max-content;
                 min-width: min(240px, calc(100vw - 24px));
                 max-width: calc(100vw - 24px);
+                max-height: calc(100vh - 24px);
+                overflow-y: auto;
                 padding: 5px;
                 border: 1px solid var(--hud-border);
                 background: rgba(17, 24, 39, .97);
                 box-shadow: var(--hud-shadow), inset 2px 0 0 var(--hud-focus);
+                touch-action: none;
             }
             .hud-1001-menu.expanded { display: grid; }
-            /* The popup belongs to the designed source selector, including its palette. */
+            .hud-1001-menu.ytcd-menu-dragging { cursor: grabbing; user-select: none; }
+            .hud-1001-menu-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 6px;
+                padding: 2px 4px 4px;
+                margin-bottom: 2px;
+                border-bottom: 1px solid color-mix(in srgb, var(--ytcd-secondary-color, var(--hud-border)) 35%, transparent);
+                cursor: grab;
+                user-select: none;
+            }
+            .hud-1001-menu.ytcd-menu-dragging .hud-1001-menu-header { cursor: grabbing; }
+            .hud-1001-menu-grip {
+                font: 600 10px/1 var(--ytcd-unit-font, var(--hud-font));
+                letter-spacing: .06em;
+                opacity: .8;
+                pointer-events: none;
+            }
+            .hud-1001-menu-close {
+                display: inline-grid;
+                place-items: center;
+                width: 20px;
+                height: 20px;
+                padding: 0;
+                border: 0;
+                border-radius: 3px;
+                background: transparent;
+                color: inherit;
+                font: 600 13px/1 var(--ytcd-unit-font, var(--hud-font));
+                cursor: pointer;
+                opacity: .75;
+            }
+            .hud-1001-menu-close:hover { opacity: 1; background: color-mix(in srgb, var(--ytcd-secondary-color, var(--hud-focus)) 18%, transparent); }
+            /* Independent db-menu styling (falls back to source-selector variables when uncustomized). */
             #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu {
                 color: color-mix(in srgb, var(--ytcd-unit-color) calc(var(--ytcd-unit-text-opacity, 1) * 100%), transparent);
                 background: color-mix(in srgb, var(--ytcd-unit-background-color) calc(var(--ytcd-unit-opacity, 1) * 100%), transparent);
@@ -3986,13 +4058,25 @@
                 backdrop-filter: var(--ytcd-unit-backdrop-filter, none);
                 box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha, .35));
             }
+            #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu.ytcd-effect-accent-rail {
+                box-shadow: 0 9px 30px rgba(0, 0, 0, var(--ytcd-unit-shadow-alpha, .35)), inset 2px 0 0 var(--ytcd-secondary-color);
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu[data-ytcd-db-menu-custom="true"]:not(.ytcd-effect-shadow) {
+                box-shadow: none;
+            }
+            #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu[data-ytcd-db-menu-custom="true"]:not(.ytcd-effect-shadow).ytcd-effect-accent-rail {
+                box-shadow: inset 2px 0 0 var(--ytcd-secondary-color);
+            }
             #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu .hud-control-button {
                 color: inherit;
                 background: transparent;
                 border: var(--ytcd-unit-border-width, 1px) solid var(--ytcd-secondary-color);
                 border-radius: var(--ytcd-unit-border-radius, 0px);
                 font: var(--ytcd-unit-font-weight, 500) var(--ytcd-unit-font-size, 12px)/1.4 var(--ytcd-unit-font);
+                text-align: var(--ytcd-unit-text-align, left);
             }
+            #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu[data-ytcd-text-align="center"] .hud-control-button { justify-content: center; }
+            #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu[data-ytcd-text-align="right"] .hud-control-button { justify-content: flex-end; }
             #yt-cd-hud.ytcd-layout-v2 .hud-1001-menu .hud-control-button:is(:hover, :active, .active) {
                 color: inherit;
                 background: color-mix(in srgb, var(--ytcd-secondary-color) 16%, transparent);
@@ -5328,17 +5412,149 @@
         button._ytCdStopHoverMarquee = stop;
     }
 
+    function computeDbMenuPosition({ anchorRect, menuSize, viewport, obstacles = [], margin = 12, gap = 6 }) {
+        const w = Math.max(1, Number(menuSize?.width) || 240);
+        const h = Math.max(1, Number(menuSize?.height) || 200);
+        const vw = Math.max(w + margin * 2, Number(viewport?.width) || 1280);
+        const vh = Math.max(h + margin * 2, Number(viewport?.height) || 720);
+        const maxLeft = Math.max(margin, vw - w - margin);
+        const maxTop = Math.max(margin, vh - h - margin);
+        const overlapArea = (a, b) => {
+            if (!b) return 0;
+            const ox = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+            const oy = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+            return ox * oy;
+        };
+        const candidates = [
+            { left: anchorRect.right - w, top: anchorRect.bottom + gap },
+            { left: anchorRect.left, top: anchorRect.bottom + gap },
+            { left: anchorRect.right + gap, top: anchorRect.top },
+            { left: anchorRect.left - w - gap, top: anchorRect.top },
+            { left: anchorRect.right - w, top: anchorRect.top - h - gap },
+            { left: anchorRect.left, top: anchorRect.top - h - gap },
+            { left: anchorRect.right + gap, top: anchorRect.bottom - h },
+            { left: anchorRect.left - w - gap, top: anchorRect.bottom - h },
+        ];
+        let best = null;
+        for (let i = 0; i < candidates.length; i++) {
+            const raw = candidates[i];
+            const left = clamp(raw.left, margin, maxLeft);
+            const top = clamp(raw.top, margin, maxTop);
+            const rect = { left, top, right: left + w, bottom: top + h };
+            const anchorOverlap = overlapArea(rect, anchorRect);
+            let obstacleOverlap = 0;
+            for (const ob of obstacles) obstacleOverlap += overlapArea(rect, ob);
+            const shiftPenalty = Math.abs(left - raw.left) + Math.abs(top - raw.top);
+            const score = anchorOverlap * 100 + obstacleOverlap * 10 + shiftPenalty * 0.5 + i * 0.01;
+            if (!best || score < best.score) best = { left: Math.round(left), top: Math.round(top), score };
+        }
+        return { left: best.left, top: best.top };
+    }
+
+    function position1001Menu() {
+        if (!oneThousandMenu || !statusBtn || !oneThousandMenu.classList.contains('expanded')) return;
+        const viewport = {
+            width: document.documentElement.clientWidth || window.innerWidth,
+            height: document.documentElement.clientHeight || window.innerHeight,
+        };
+        const menuRect = oneThousandMenu.getBoundingClientRect();
+        const menuSize = { width: menuRect.width || 240, height: menuRect.height || 200 };
+        if (oneThousandMenu.dataset.ytcdMenuDragged === 'true') {
+            const curLeft = parseFloat(oneThousandMenu.style.left) || 12;
+            const curTop = parseFloat(oneThousandMenu.style.top) || 12;
+            oneThousandMenu.style.left = clamp(curLeft, 12, Math.max(12, viewport.width - menuSize.width - 12)) + 'px';
+            oneThousandMenu.style.top = clamp(curTop, 12, Math.max(12, viewport.height - menuSize.height - 12)) + 'px';
+            return;
+        }
+        const anchorRect = statusBtn.getBoundingClientRect();
+        const hud = document.getElementById('yt-cd-hud');
+        const obstacles = [];
+        for (const sel of ['#yt-tracklist-panel', '.hud-chapter', '.hud-transport-controls', '.cd-disc-wrapper', '.hud-time']) {
+            const el = sel.startsWith('#') ? document.querySelector(sel) : hud?.querySelector(sel);
+            if (!el || el.classList.contains('ytcd-layout-unit-hidden')) continue;
+            const cs = getComputedStyle(el);
+            if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+            const r = el.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0) obstacles.push(r);
+        }
+        const pos = computeDbMenuPosition({ anchorRect, menuSize, viewport, obstacles });
+        oneThousandMenu.style.transform = '';
+        oneThousandMenu.style.left = pos.left + 'px';
+        oneThousandMenu.style.top = pos.top + 'px';
+    }
+
+    function bindDbMenuDragging(menu) {
+        if (!menu || menu._ytCdDragBound) return;
+        menu._ytCdDragBound = true;
+        let drag = null;
+        let suppressNextClick = false;
+        menu.addEventListener('pointerdown', event => {
+            if (event.button !== 0) return;
+            if (event.target.closest('.hud-1001-menu-close')) return;
+            const onHeader = Boolean(event.target.closest('.hud-1001-menu-header'));
+            const rect = menu.getBoundingClientRect();
+            drag = {
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                origLeft: rect.left,
+                origTop: rect.top,
+                width: rect.width,
+                height: rect.height,
+                threshold: onHeader ? 2 : 6,
+                moved: false,
+            };
+            if (onHeader) event.preventDefault();
+            menu.setPointerCapture?.(event.pointerId);
+        });
+        menu.addEventListener('pointermove', event => {
+            if (!drag || event.pointerId !== drag.pointerId) return;
+            const dx = event.clientX - drag.startX;
+            const dy = event.clientY - drag.startY;
+            if (!drag.moved) {
+                if (Math.hypot(dx, dy) < drag.threshold) return;
+                drag.moved = true;
+                menu.classList.add('ytcd-menu-dragging');
+                menu.dataset.ytcdMenuDragged = 'true';
+            }
+            const vw = document.documentElement.clientWidth || window.innerWidth;
+            const vh = document.documentElement.clientHeight || window.innerHeight;
+            const left = clamp(drag.origLeft + dx, 12, Math.max(12, vw - drag.width - 12));
+            const top = clamp(drag.origTop + dy, 12, Math.max(12, vh - drag.height - 12));
+            menu.style.left = Math.round(left) + 'px';
+            menu.style.top = Math.round(top) + 'px';
+        });
+        const finish = event => {
+            if (!drag || event.pointerId !== drag.pointerId) return;
+            const moved = drag.moved;
+            drag = null;
+            menu.classList.remove('ytcd-menu-dragging');
+            if (moved) {
+                suppressNextClick = true;
+                setTimeout(() => { suppressNextClick = false; }, 0);
+            }
+        };
+        menu.addEventListener('pointerup', finish);
+        menu.addEventListener('pointercancel', finish);
+        menu.addEventListener('click', event => {
+            if (suppressNextClick) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                suppressNextClick = false;
+            }
+        }, true);
+    }
+
     function set1001MenuExpanded(expanded) {
         if (!oneThousandMenu || !statusBtn) return;
         oneThousandMenu.classList.toggle('expanded', expanded);
-        oneThousandMenu.closest('.hud-source-selector')?.classList.toggle('ytcd-menu-open', expanded);
+        statusBtn.closest('.hud-source-selector')?.classList.toggle('ytcd-menu-open', expanded);
         statusBtn.setAttribute('aria-expanded', String(expanded));
         if (expanded) {
-            oneThousandMenu.style.transform = '';
-            const rect = oneThousandMenu.getBoundingClientRect();
-            const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
-            const shift = rect.left < 12 ? 12 - rect.left : Math.min(0, viewportWidth - 12 - rect.right);
-            oneThousandMenu.style.transform = 'translateX(' + shift + 'px)';
+            const hud = document.getElementById('yt-cd-hud');
+            if (hud && oneThousandMenu.parentNode !== hud) hud.appendChild(oneThousandMenu);
+            delete oneThousandMenu.dataset.ytcdMenuDragged;
+            position1001Menu();
         }
     }
 
@@ -5743,6 +5959,25 @@
 
             oneThousandMenu = document.createElement('div');
             oneThousandMenu.className = 'hud-1001-menu';
+            const dbMenuHeader = document.createElement('div');
+            dbMenuHeader.className = 'hud-1001-menu-header';
+            const dbMenuGrip = document.createElement('span');
+            dbMenuGrip.className = 'hud-1001-menu-grip';
+            dbMenuGrip.textContent = '⋮⋮ DB';
+            const dbMenuClose = document.createElement('button');
+            dbMenuClose.type = 'button';
+            dbMenuClose.className = 'hud-1001-menu-close';
+            dbMenuClose.setAttribute('aria-label', t('closeHud'));
+            dbMenuClose.textContent = '×';
+            dbMenuClose.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                set1001MenuExpanded(false);
+            });
+            dbMenuHeader.appendChild(dbMenuGrip);
+            dbMenuHeader.appendChild(dbMenuClose);
+            oneThousandMenu.appendChild(dbMenuHeader);
+            bindDbMenuDragging(oneThousandMenu);
             tracklistSource1001Btn = createControlButton(t('use1001'), t('use1001'), () => {
                 setActiveSource('1001', true);
                 set1001MenuExpanded(false);
@@ -6080,6 +6315,7 @@
             shouldRetry1001AfterVerificationReturn,
             createVolumeControl,
             getSystemStatusText,
+            computeDbMenuPosition,
         };
         return;
     }

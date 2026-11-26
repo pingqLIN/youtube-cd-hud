@@ -99,16 +99,32 @@
         scheduleWorkspaceSync();
     }
 
+    let typographyBaseline = null;
+    let typographyApplied = '';
+    let typographyUpdating = false;
+    const typographySlider = document.getElementById('theme-font-size');
+    const typographySignature = layout => JSON.stringify(layout.components.map(component =>
+        [component.id, component.textStyle?.fontSize]));
     function updateTypographyControl() {
-        const sizes = bootstrap.getLayout().components
+        const layout = bootstrap.getLayout();
+        const current = typographySignature(layout);
+        if (!typographyUpdating && typographyBaseline && current !== typographyApplied) {
+            typographyBaseline = null;
+            typographyApplied = '';
+            typographySlider.value = '100';
+        }
+        const sizes = layout.components
             .filter(component => component.present !== false && !component.hidden && component.textStyle)
             .map(component => component.textStyle.fontSize);
-        const size = sizes[0] || 14;
-        const mixed = sizes.some(value => value !== size);
-        const slider = document.getElementById('theme-font-size');
-        slider.value = composer.fontSizeToSlider(size);
-        slider.setAttribute?.('aria-valuetext', mixed ? '混合字級；調整後統一文字大小' : size + ' px');
-        document.getElementById('theme-font-size-output').value = mixed ? '混合字級' : size + ' px';
+        const minimum = sizes.length ? Math.round(Math.min(...sizes) * 10) / 10 : 0;
+        const maximum = sizes.length ? Math.round(Math.max(...sizes) * 10) / 10 : 0;
+        const percent = Number(typographySlider.value);
+        const display = sizes.length
+            ? (minimum === maximum ? minimum + ' px' : minimum + '–' + maximum + ' px（多種字級）') + ' · ' + percent + '%'
+            : '無文字元件';
+        typographySlider.disabled = false; // Global typography remains available while geometry is locked.
+        typographySlider.setAttribute?.('aria-valuetext', display);
+        document.getElementById('theme-font-size-output').value = display;
     }
 
     const outputFormatters = {
@@ -179,6 +195,7 @@
             populate(snapshot.settings);
             currentLayout = composer.normalizeLayout(snapshot.layout);
             bootstrap.init({ preview, layout: currentLayout, onChange: () => { setStatus('options.unsaved'); rememberDraft(); } });
+            bootstrap.instance?.presets?.markSaved?.();
             synchronizedLayout = JSON.stringify(workspacePayload());
             updateTypographyControl();
             setStatus('options.loaded');
@@ -227,6 +244,7 @@
             baseRevision = stored.snapshot.revision;
             currentLayout = composer.normalizeLayout(stored.snapshot.layout);
             bootstrap.setLayout(currentLayout, { record: false });
+            bootstrap.instance?.presets?.markSaved?.();
             synchronizedLayout = JSON.stringify(workspacePayload());
             agentConflict = false;
             populate(stored.snapshot.settings);
@@ -288,18 +306,48 @@
             rememberDraft();
         } catch (error) { codeStatus.textContent = '匯入失敗：' + error.message; }
     });
-    function applyTypography(font, fontSize) {
+    function applyTypography(font) {
         const layout = bootstrap.getLayout();
-        if (layout.locked && !fontSize) { codeStatus.textContent = '請先 UNLOCK 面板。'; return; }
+        if (layout.locked) { codeStatus.textContent = '請先 UNLOCK 面板。'; return; }
+        typographyBaseline = null;
+        typographyApplied = '';
+        typographySlider.value = '100';
         layout.components.forEach(component => {
-            if (!component.textStyle || (component.locked && !fontSize)) return;
-            if (font) component.textStyle.font = font;
-            if (fontSize) component.textStyle.fontSize = fontSize;
+            if (!component.textStyle || component.locked || !font) return;
+            component.textStyle.font = font;
             composer.ensureTextFits(component, layout.canvas);
         });
         bootstrap.setLayout(layout);
         setStatus('options.unsaved');
         rememberDraft();
+    }
+    function applyTypographyScale(percent) {
+        const layout = bootstrap.getLayout();
+        const before = typographySignature(layout);
+        if (!typographyBaseline || (typographyApplied && before !== typographyApplied)) {
+            typographyBaseline = new Map(layout.components.filter(component => component.textStyle)
+                .map(component => [component.id, component.textStyle.fontSize]));
+        }
+        const limits = composer.textSizeLimits(layout.canvas);
+        const factor = percent / 100;
+        let changed = false;
+        for (const component of layout.components) {
+            if (!component.textStyle || component.present === false) continue;
+            const baseline = typographyBaseline.get(component.id);
+            if (!Number.isFinite(baseline)) continue;
+            const value = Math.max(limits.minimum, Math.min(limits.maximum, Math.round(baseline * factor * 10) / 10));
+            if (value !== component.textStyle.fontSize) changed = true;
+            component.textStyle.fontSize = value;
+            composer.ensureTextFits(component, layout.canvas);
+        }
+        if (!changed) { updateTypographyControl(); return; }
+        typographyUpdating = true;
+        try {
+            bootstrap.setLayout(layout);
+            typographyApplied = typographySignature(bootstrap.getLayout());
+            setStatus('options.unsaved');
+            rememberDraft();
+        } finally { typographyUpdating = false; }
     }
     document.getElementById('theme-font').addEventListener('change', event => applyTypography(event.target.value));
     document.getElementById('theme-custom-font').addEventListener('change', event => {
@@ -309,11 +357,8 @@
         event.target.setCustomValidity('');
         applyTypography(value);
     });
-    document.getElementById('theme-font-size').addEventListener('input', event => {
-        const size = composer.fontSizeFromSlider(Number(event.target.value));
-        document.getElementById('theme-font-size-output').value = size + ' px';
-        event.target.setAttribute('aria-valuetext', size + ' px');
-        applyTypography(null, size);
+    typographySlider.addEventListener('input', event => {
+        applyTypographyScale(Number(event.target.value));
     });
     document.getElementById('clear-cache').addEventListener('click', async () => {
         const button = document.getElementById('clear-cache');

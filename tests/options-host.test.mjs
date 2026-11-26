@@ -65,9 +65,9 @@ test('settings text size updates locked panel text without unlocking the layout'
   x.getLayout().locked=true;
   const title=x.getLayout().components.find(component=>component.id==='track-title');
   title.locked=true;
-  await x.element('theme-font-size').handlers.input({target:{value:'500',setAttribute(){}}});
+  await x.element('theme-font-size').handlers.input({target:{value:'200',setAttribute(){}}});
   assert.equal(x.getLayout().locked,true);
-  assert.equal(x.getLayout().components.find(component=>component.id==='track-title').textStyle.fontSize,32);
+  assert.equal(x.getLayout().components.find(component=>component.id==='track-title').textStyle.fontSize,28);
   assert.equal(x.getLayout().components.find(component=>component.id==='track-title').locked,true);
 });
 
@@ -96,12 +96,12 @@ test('auto sync defaults on and sends only the latest workspace layout',async()=
   const x=await setup();
   assert.equal(x.element('auto-sync-workspace').checked,true);
   x.field.value='9';
-  await x.element('theme-font-size').handlers.input({target:{value:'500',setAttribute(){}}});
+  await x.element('theme-font-size').handlers.input({target:{value:'200',setAttribute(){}}});
   await x.flush();
   assert.equal(x.requests.length,1);
   assert.deepEqual(Object.keys(x.requests[0].payload),['layout']);
   assert.equal(x.field.value,'9');
-  assert.equal(x.requests[0].payload.layout.components.find(item=>item.id==='track-title').textStyle.fontSize,32);
+  assert.equal(x.requests[0].payload.layout.components.find(item=>item.id==='track-title').textStyle.fontSize,28);
   x.element('settings-form').handlers.input({target:x.field});
   await x.flush();
   assert.equal(x.requests.length,1,'unchanged layout must not create a sync loop');
@@ -109,7 +109,7 @@ test('auto sync defaults on and sends only the latest workspace layout',async()=
 
 test('disabling auto sync cancels scheduled workspace writes',async()=>{
   const x=await setup();
-  await x.element('theme-font-size').handlers.input({target:{value:'500',setAttribute(){}}});
+  await x.element('theme-font-size').handlers.input({target:{value:'200',setAttribute(){}}});
   x.element('auto-sync-workspace').checked=false;
   x.element('auto-sync-workspace').handlers.change();
   await x.flush();
@@ -119,7 +119,7 @@ test('disabling auto sync cancels scheduled workspace writes',async()=>{
 test('disabling auto sync during an in-flight read prevents apply',async()=>{
   const x=await setup(); let finish;
   x.setReadHook(()=>new Promise(resolve=>{finish=resolve;}));
-  x.element('theme-font-size').handlers.input({target:{value:'500',setAttribute(){}}});
+  x.element('theme-font-size').handlers.input({target:{value:'200',setAttribute(){}}});
   await x.flush();
   x.element('auto-sync-workspace').checked=false;
   x.element('auto-sync-workspace').handlers.change();
@@ -130,14 +130,14 @@ test('disabling auto sync during an in-flight read prevents apply',async()=>{
 test('edits made during an in-flight sync eventually persist the newest layout',async()=>{
   const x=await setup(); let finish;
   x.setReadHook(()=>new Promise(resolve=>{finish=resolve;}));
-  x.element('theme-font-size').handlers.input({target:{value:'400',setAttribute(){}}});
+  x.element('theme-font-size').handlers.input({target:{value:'150',setAttribute(){}}});
   await x.flush();
-  x.element('theme-font-size').handlers.input({target:{value:'500',setAttribute(){}}});
+  x.element('theme-font-size').handlers.input({target:{value:'200',setAttribute(){}}});
   x.setReadHook(null); finish(); await new Promise(resolve=>setImmediate(resolve));
   await x.flush();
   assert.equal(x.requests.length,2);
-  assert.equal(x.requests.at(-1).payload.layout.components.find(item=>item.id==='track-title').textStyle.fontSize,32);
-  assert.equal(x.getLayout().components.find(item=>item.id==='track-title').textStyle.fontSize,32);
+  assert.equal(x.requests.at(-1).payload.layout.components.find(item=>item.id==='track-title').textStyle.fontSize,28);
+  assert.equal(x.getLayout().components.find(item=>item.id==='track-title').textStyle.fontSize,28);
 });
 
 test('settings page exposes source-first navigation and requested controls',()=>{
@@ -168,10 +168,10 @@ test('reenabling sync force-writes the workspace even when its fingerprint did n
 test('reload with sync enabled writes workspace and preserves pending source edits',async()=>{
   const x=await setup();
   x.field.value='9';
-  x.element('theme-font-size').handlers.input({target:{value:'500',setAttribute(){}}});
+  x.element('theme-font-size').handlers.input({target:{value:'200',setAttribute(){}}});
   await x.element('reload-settings').handlers.click();
   assert.equal(x.requests.length,1);
-  assert.equal(x.requests[0].payload.layout.components.find(item=>item.id==='track-title').textStyle.fontSize,32);
+  assert.equal(x.requests[0].payload.layout.components.find(item=>item.id==='track-title').textStyle.fontSize,28);
   assert.equal(x.field.value,'9');
 });
 

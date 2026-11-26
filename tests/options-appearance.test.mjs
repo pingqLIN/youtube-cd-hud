@@ -58,7 +58,7 @@ test('settings font scale persists separately from HUD font controls', () => {
     assert.equal(stored.has('ytCdHudSettings'), false);
 });
 
-test('quick-settings merges into header with pre-folded drawer for secondary options', () => {
+test('quick-settings unifies controls, language, layout slots, and system meta in quick-settings-bar', () => {
     const html = read('extension/options/options.html');
     const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
     const main = html.slice(html.indexOf('<main'), html.indexOf('</main>'));
@@ -79,17 +79,17 @@ test('quick-settings merges into header with pre-folded drawer for secondary opt
     assert.match(header, /id="interface-theme"/);
     assert.match(header, /class="theme-toggle-btn"/);
 
-    // Pre-folded drawer uses native details without open attribute by default
-    assert.match(header, /<details\s+class="quick-drawer"\s+id="quick-drawer">/);
-    assert.doesNotMatch(header, /<details[^>]*\bopen\b[^>]*id="quick-drawer"/);
+    // Language and metadata are unified inside quick-settings-bar
+    assert.match(header, /class="language-strip"/);
+    assert.match(header, /id="language"/);
+    assert.match(header, /class="drawer-meta-card"/);
+    assert.match(header, /class="header-readout"/);
 
-    // Drawer houses secondary options (language and metadata)
-    const drawer = header.slice(header.indexOf('<details'), header.indexOf('</details>'));
-    assert.match(drawer, /class="language-strip"/);
-    assert.match(drawer, /id="language"/);
+    // Layout slots container is in header bar
+    assert.match(header, /id="live-monitor-bundled"/);
 
-    // nav.page-tabs is arranged inside quick-settings-bar between brand and actions (red box area)
-    const bar = header.slice(header.indexOf('class="quick-settings-bar"'), header.indexOf('class="quick-drawer"'));
+    // nav.page-tabs is arranged inside quick-settings-bar
+    const bar = header.slice(header.indexOf('class="quick-settings-bar"'));
     assert.match(bar, /class="header-brand"/);
     assert.match(bar, /class="page-tabs"/);
     assert.match(bar, /class="quick-settings-actions"/);

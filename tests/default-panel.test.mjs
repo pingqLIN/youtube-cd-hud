@@ -7,7 +7,7 @@ import { webcrypto } from 'node:crypto';
 const read = file => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 const exported = JSON.parse(read('tests/fixtures/authored-default-panel.json'));
 const legacy = JSON.parse(read('tests/fixtures/legacy-panel-layout.json'));
-const legacyProjection = value => { const result=JSON.parse(JSON.stringify(value)); for(const role of ['volume-control','agent-tools','system-status']) { const c=result.components?.find(x=>x.id===role); if(c) assert.equal(c.present,false,role+' must remain absent'); } if(result.components) result.components=result.components.filter(x=>!['volume-control','agent-tools','system-status'].includes(x.id)); return result; };
+const legacyProjection = value => { const result=JSON.parse(JSON.stringify(value)); for(const role of ['volume-control','agent-tools','system-status','db-menu']) { const c=result.components?.find(x=>x.id===role); if(c) assert.equal(c.present,false,role+' must remain absent'); } if(result.components) result.components=result.components.filter(x=>!['volume-control','agent-tools','system-status','db-menu'].includes(x.id)); return result; };
 const plain = legacyProjection;
 
 function composerContext() {

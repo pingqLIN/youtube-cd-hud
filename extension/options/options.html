@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title data-i18n="options.title">YouTube CD HUD 控制台</title>
     <link rel="stylesheet" href="options.css">
+    <link rel="stylesheet" href="studio-window-manager.css">
     <script src="options-appearance.js"></script>
 </head>
 <body>
@@ -17,78 +18,37 @@
         <header class="console-header">
             <div class="quick-settings">
                 <div class="quick-settings-bar">
-                    <div class="header-brand">
-                        <p class="eyebrow">YOUTUBE CD HUD / SETTINGS</p>
-                        <p class="header-summary" data-i18n="options.settings">擴充功能與顯示設定</p>
-                    </div>
-
-                    <!-- ── Tab 導覽列：置入頂部操作列（紅框位置），保留分頁意象 ── -->
-                    <nav class="page-tabs" role="tablist" aria-label="設定分頁">
-                        <label class="tab-label" for="tab-sources" role="tab" aria-controls="panel-sources">
-                            <span class="tab-icon" aria-hidden="true">⬡</span>
-                            <span class="tab-text">SOURCES</span>
-                            <span class="tab-sub">資料來源</span>
-                        </label>
-                        <label class="tab-label" for="tab-studio" role="tab" aria-controls="panel-studio">
-                            <span class="tab-icon" aria-hidden="true">▣</span>
-                            <span class="tab-text">STUDIO</span>
-                            <span class="tab-sub">面板排版</span>
-                        </label>
-                    </nav>
-
-                    <div class="quick-settings-actions">
-                        <!-- 方塊位置：A+/A- 字級縮放兩顆按鈕 -->
-                        <div class="persistent-font-controls" role="group" aria-label="設定頁字級調整">
-                            <button id="settings-font-decrease" type="button" class="font-scale-btn" title="縮小字級 (A-)" aria-label="縮小字級">A−</button>
-                            <output id="settings-font-size-output" class="font-scale-output">100%</output>
-                            <button id="settings-font-increase" type="button" class="font-scale-btn" title="放大字級 (A+)" aria-label="放大字級">A+</button>
-                            <input id="settings-font-size" type="range" min="80" max="150" step="5" value="100" hidden>
+                    <!-- ── 頂部操作列：品牌識別、分頁導覽與常駐控制項 ── -->
+                    <div class="quick-settings-primary">
+                        <div class="header-brand">
+                            <p class="eyebrow">YOUTUBE CD HUD / SETTINGS</p>
+                            <p class="header-summary" data-i18n="options.settings">擴充功能與顯示設定</p>
                         </div>
 
-                        <!-- 圓圈位置：太陽/月亮 ICON 單顆按鈕切換主題 -->
-                        <button id="interface-theme" class="theme-toggle-btn" type="button" aria-label="切換介面主題" title="切換介面主題">
-                            <span class="theme-icon" aria-hidden="true">☀</span>
-                        </button>
-
-                        <section class="master-strip" aria-labelledby="master-title">
-                            <div class="master-meta">
-                                <p class="section-index" data-i18n="options.masterIndex">總開關</p>
-                                <h2 id="master-title" data-i18n="options.masterTitle">擴充總開關</h2>
-                            </div>
-                            <label class="power-switch">
-                                <input id="enabled" name="enabled" type="checkbox">
-                                <span aria-hidden="true"></span>
-                                <b data-i18n="options.enabled">HUD 開啟</b>
+                        <!-- ── Tab 導覽列 ── -->
+                        <nav class="page-tabs" role="tablist" aria-label="設定分頁">
+                            <label class="tab-label" for="tab-sources" role="tab" aria-controls="panel-sources">
+                                <span class="tab-icon" aria-hidden="true">⬡</span>
+                                <span class="tab-text">SOURCES</span>
+                                <span class="tab-sub">資料來源</span>
                             </label>
-                        </section>
-                    </div>
-                </div>
+                            <label class="tab-label" for="tab-studio" role="tab" aria-controls="panel-studio">
+                                <span class="tab-icon" aria-hidden="true">▣</span>
+                                <span class="tab-text">STUDIO</span>
+                                <span class="tab-sub">面板排版</span>
+                            </label>
+                        </nav>
 
-                <!-- ── 預先收納設計：控制台偏好與語言設定抽屜 ──────── -->
-                <details class="quick-drawer" id="quick-drawer">
-                    <summary class="quick-drawer-toggle">
-                        <span class="drawer-toggle-main">
-                            <span class="drawer-toggle-icon" aria-hidden="true">⚙</span>
-                            <span class="drawer-toggle-text">控制台偏好與介面語言</span>
-                        </span>
-                        <span class="drawer-toggle-aside">
-                            <span class="drawer-toggle-state" aria-hidden="true">選項</span>
-                            <span class="drawer-toggle-arrow" aria-hidden="true">▾</span>
-                        </span>
-                    </summary>
-
-                    <div class="quick-drawer-panel" id="quick-drawer-panel">
-                        <div class="quick-drawer-grid">
+                        <div class="quick-settings-actions">
                             <!-- 語言設定 -->
                             <section class="language-strip" aria-labelledby="language-title">
-                                <div>
+                                <div class="language-meta">
                                     <p class="section-index" data-i18n="options.languageIndex">語言</p>
-                                    <h2 id="language-title" data-i18n="options.languageTitle">介面語言</h2>
-                                    <p data-i18n="options.languageDescription">自動會依系統語言切換；未支援的系統語言會使用繁體中文。</p>
+                                    <h2 id="language-title" class="sr-only" data-i18n="options.languageTitle">介面語言</h2>
                                 </div>
                                 <label class="language-select">
                                     <span class="sr-only" data-i18n="options.languageTitle">介面語言</span>
-                                    <select id="language" name="language">
+                                    <select id="language" name="language" title="自動會依系統語言切換；未支援的系統語言會使用繁體中文。" data-i18n-title="options.languageDescription">
                                         <option value="auto" data-i18n="options.languageAuto">自動（系統語言）</option>
                                         <option value="zh-TW">繁體中文</option>
                                         <option value="en">English</option>
@@ -97,21 +57,60 @@
                                 </label>
                             </section>
 
-                            <!-- 系統資訊與連結 -->
-                            <div class="drawer-meta-card">
-                                <p class="section-index">系統資訊</p>
-                                <div class="header-readout" aria-label="擴充版本資訊" data-i18n-aria-label="options.versionInfo">
-                                    <span>BUILD</span>
-                                    <strong>5.14.0</strong>
-                                    <span>MODE</span>
-                                    <strong>LOCAL</strong>
+                            <!-- 字級縮放控制項 -->
+                            <div class="persistent-font-controls" role="group" aria-label="設定頁字級調整">
+                                <button id="settings-font-decrease" type="button" class="font-scale-btn" title="縮小字級 (A-)" aria-label="縮小字級">A−</button>
+                                <output id="settings-font-size-output" class="font-scale-output">100%</output>
+                                <button id="settings-font-increase" type="button" class="font-scale-btn" title="放大字級 (A+)" aria-label="放大字級">A+</button>
+                                <input id="settings-font-size" type="range" min="80" max="150" step="5" value="100" hidden>
+                            </div>
+
+                            <!-- 介面主題切換按鈕 -->
+                            <button id="interface-theme" class="theme-toggle-btn" type="button" aria-label="切換介面主題" title="切換介面主題">
+                                <span class="theme-icon" aria-hidden="true">☀</span>
+                            </button>
+
+                            <!-- 擴充總開關 -->
+                            <section class="master-strip" aria-labelledby="master-title">
+                                <div class="master-meta">
+                                    <p class="section-index" data-i18n="options.masterIndex">總開關</p>
+                                    <h2 id="master-title" data-i18n="options.masterTitle">擴充總開關</h2>
                                 </div>
+                                <label class="power-switch">
+                                    <input id="enabled" name="enabled" type="checkbox">
+                                    <span aria-hidden="true"></span>
+                                    <b data-i18n="options.enabled">HUD 開啟</b>
+                                </label>
+                            </section>
+                        </div>
+                    </div>
+
+                    <!-- ── 次級操作與資訊列：排版主題儲存槽與系統資訊 ── -->
+                    <div class="quick-settings-subbar">
+                        <!-- 儲存主題槽（排版快選與讀寫按鈕） -->
+                        <div class="header-theme-strip" aria-label="排版儲存槽與快選">
+                            <div class="header-theme-meta">
+                                <p class="section-index">儲存槽</p>
+                                <h3 class="header-theme-title">面板排版快選</h3>
+                            </div>
+                            <div id="live-monitor-bundled" class="header-bundled-host"></div>
+                        </div>
+
+                        <!-- 系統資訊與連結 -->
+                        <div class="drawer-meta-card">
+                            <div class="header-readout" aria-label="擴充版本資訊" data-i18n-aria-label="options.versionInfo">
+                                <span>BUILD</span>
+                                <strong>5.14.0</strong>
+                                <span>MODE</span>
+                                <strong>LOCAL</strong>
+                            </div>
+                            <div class="header-meta-details">
                                 <p class="master-note" data-i18n="options.masterDescription">所有設定只保存在這個 Chrome 使用者資料中。</p>
                                 <a class="project-link" href="https://github.com/pingqLIN/youtube-cd-hud" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
                             </div>
                         </div>
                     </div>
-                </details>
+                </div>
             </div>
         </header>
 
@@ -129,12 +128,12 @@
                         <h2 id="theme-strip-title" class="sr-only">主題方向</h2>
                     </div>
                     <div id="live-monitor-theme"></div>
-            <label class="persistent-font" for="theme-font-size">
-                <span data-i18n="options.textSize">面板整體字級</span>
-                <output id="theme-font-size-output" for="theme-font-size">14 px</output>
-                <input id="theme-font-size" type="range" min="0" max="1000" step="1" value="125" aria-describedby="persistent-font-help">
-                <small id="persistent-font-help" class="sr-only" data-i18n="options.textSizeHelp">套用至所有文字元件，並保留面板鎖定狀態。</small>
-            </label>
+                    <label class="persistent-font" for="theme-font-size">
+                        <span>面板文字比例 / Panel text size</span>
+                        <output id="theme-font-size-output" for="theme-font-size">100%</output>
+                        <input id="theme-font-size" type="range" min="50" max="200" step="1" value="100" aria-describedby="persistent-font-help">
+                        <small id="persistent-font-help">依比例調整所有可見文字元件；保留字級差異及上下限。文字縮放與元件位置鎖定分開控制。</small>
+                    </label>
                     <details class="studio-detail">
                         <summary>文字與顯示 · 詳細設定</summary>
                         <div class="theme-type-grid">
@@ -170,6 +169,8 @@
 
                 <!-- 工作台：預覽畫布 + 屬性欄 -->
                 <div class="preview-workbench">
+                    <div class="studio-canvas-column">
+                    <div id="live-monitor-canvas-tools" class="preview-canvas-tools" aria-label="畫布尺寸與視野工具"></div>
                     <div class="preview-stage">
                         <div id="hud-preview" class="hud-preview" aria-label="HUD component canvas">
                             <div class="youtube-reference" aria-hidden="true">
@@ -191,17 +192,42 @@
                             <button class="preview-tracklist-toggle" data-lm-component="tracklist-toggle" type="button" aria-label="Select tracklist toggle">≡</button>
                             <div class="preview-transport" data-lm-component="transport-controls" tabindex="0" role="group" aria-label="Select track controls"><b data-lm-part="previous" tabindex="0" role="button" aria-label="Select previous track position">◀ PREV</b><b data-lm-part="next" tabindex="0" role="button" aria-label="Select next track position">NEXT ▶</b></div>
                             <button class="preview-tool preview-close" data-lm-component="close-control" type="button" aria-label="Select close control">×</button>
-                            <div class="preview-optional-control preview-volume" data-lm-component="volume-control" tabindex="0" role="button" aria-label="音量元件（模擬預覽）"><span>VOLUME</span><span class="volume-dial" aria-hidden="true"></span><input type="range" min="0" max="100" value="60" disabled aria-label="模擬音量"><output>60% · 模擬</output></div>
-                            <div class="preview-optional-control" data-lm-component="agent-tools" tabindex="0" role="button" aria-label="Agent工具（模擬預覽）">Agent 工具<br><small>已停用 · 模擬</small></div>
-                            <div class="preview-optional-control" data-lm-component="system-status" tabindex="0" role="button" aria-label="網路與快取狀態（模擬預覽）">ⓘ 狀態<br><small>網路／快取：未知 · 模擬</small></div>
+                            <section class="preview-optional-control preview-volume" data-lm-component="volume-control" tabindex="0" role="button" aria-label="音量元件 · 僅供 Studio 版面預覽">
+                                <strong class="optional-unit-heading">VOLUME / 音量</strong>
+                                <span class="volume-dial" aria-hidden="true"></span>
+                                <input type="range" min="0" max="100" value="60" disabled aria-label="示意音量 60%，預覽不控制 YouTube">
+                                <output>60% · 示意</output>
+                                <button type="button" disabled aria-label="靜音僅在 YouTube 播放時可操作">靜音</button>
+                            </section>
+                            <section class="preview-optional-control preview-agent" data-lm-component="agent-tools" tabindex="0" role="button" aria-label="Agent 工具元件 · 僅供 Studio 版面預覽">
+                                <strong class="optional-unit-heading">AGENT / TOOLS</strong>
+                                <span class="optional-unit-state">尚未連線</span>
+                                <small>需 Agent 及 WebMCP 授權</small>
+                            </section>
+                            <section class="preview-optional-control preview-status" data-lm-component="system-status" tabindex="0" role="button" aria-label="網路與快取狀態元件 · 僅供 Studio 版面預覽">
+                                <strong class="optional-unit-heading">SYSTEM / STATUS</strong>
+                                <span class="optional-unit-state">網路：未驗證</span>
+                                <small>查詢：未知 · 快取：未知</small>
+                            </section>
+                            <section class="preview-db-menu" data-lm-component="db-menu" tabindex="0" role="button" aria-label="線上資料庫選單 · 可獨立設計外觀與尺寸">
+                                <header class="preview-db-menu-header"><span>⋮⋮ DB 線上資料庫</span><i>×</i></header>
+                                <div class="preview-db-menu-list">
+                                    <span class="active">使用 1001Tracklists 曲目</span>
+                                    <span>使用 MixesDB 曲目</span>
+                                    <span>重新搜尋 1001Tracklists</span>
+                                    <span>搜尋 MixesDB</span>
+                                    <span>搜尋 TrackId.net 既有曲目</span>
+                                </div>
+                            </section>
                             <section class="preview-tracklist-panel" data-lm-component="tracklist-panel" tabindex="0" role="button" aria-label="Select persistent tracklist panel">
                                 <header><strong>TRACKLIST</strong><span>YOUTUBE</span></header>
                                 <ol><li><time>00:00</time><span>Midnight Transit</span></li><li><time>04:18</time><span>Blue Hour</span></li><li><time>09:42</time><span>Last Platform</span></li></ol>
                             </section>
                         </div>
-                        <p id="live-monitor-canvas-status" class="preview-caption">拖曳空白處平移視野 · 右下角調整工作區</p>
                     </div>
-                    <div id="live-monitor-properties" class="preview-properties"><p class="property-empty">點選畫布元件，或從上方選單選取，即可調整尺寸、文字與效果。</p></div>
+                    <p id="live-monitor-canvas-status" class="preview-caption">拖曳空白處平移視野 · Ctrl＋滾輪縮放</p>
+                    </div>
+                    <div id="live-monitor-properties" class="preview-properties"><p class="property-empty">尚未選取元件。點選畫布上的元件，或在「排版工具」的元件選單中選取，即可調整尺寸、文字與效果。</p></div>
                 </div>
 
                 <!-- 面板程式碼：匯入與匯出 -->
@@ -212,13 +238,6 @@
                     <div class="panel-code-actions"><button id="panel-code-export" type="button">顯示目前面板程式碼</button><button id="panel-code-import" type="button">從程式碼產生面板</button></div>
                     <p id="panel-code-status" role="status" aria-live="polite"></p>
                 </details>
-
-                <!-- 資料標籤（儲存/權限/遠端查詢） -->
-                <dl class="scope-list">
-                    <div><dt data-i18n="options.storage">資料儲存</dt><dd data-i18n="options.storageValue">Chrome 本機</dd></div>
-                    <div><dt data-i18n="options.permissions">頁面權限</dt><dd data-i18n="options.permissionValue">YouTube</dd></div>
-                    <div><dt data-i18n="options.remoteRequests">遠端查詢</dt><dd>1001Tracklists / MixesDB / TrackId.net</dd></div>
-                </dl>
 
             </section>
 
@@ -282,6 +301,13 @@
                         <p id="cache-status" role="status" aria-live="polite"></p>
                     </div>
                 </section>
+
+                <!-- 資料標籤（儲存/權限/遠端查詢） -->
+                <dl class="scope-list">
+                    <div><dt data-i18n="options.storage">資料儲存</dt><dd data-i18n="options.storageValue">Chrome 本機</dd></div>
+                    <div><dt data-i18n="options.permissions">頁面權限</dt><dd data-i18n="options.permissionValue">YouTube</dd></div>
+                    <div><dt data-i18n="options.remoteRequests">遠端查詢</dt><dd>1001Tracklists / MixesDB / TrackId.net</dd></div>
+                </dl>
             </section>
 
             <!-- ── 底部動作列 ──────────────────────────────────────── -->
@@ -305,6 +331,7 @@
     <script src="../shared/i18n.js"></script>
     <script src="../shared/settings-client.js"></script>
     <script src="options-host.js"></script>
+    <script src="studio-window-manager.js"></script>
     <script src="live-monitor-loader.js?v=2"></script>
 </body>
 </html>

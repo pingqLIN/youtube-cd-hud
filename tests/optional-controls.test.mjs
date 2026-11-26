@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 function context(){const c={navigator:{languages:['en'],language:'en'},__YT_CD_HUD_TEST_MODE__:true,console,setTimeout,clearTimeout,setInterval,clearInterval,URL,URLSearchParams};c.window=c;c.globalThis=c;vm.createContext(c);vm.runInContext(read('extension/options/live-monitor-composer.js'),c);vm.runInContext(read('src/youtube-cd-hud.user.js'),c);return c;}
-const roles=['volume-control','agent-tools','system-status'];
+const roles=['volume-control','agent-tools','system-status','db-menu'];
 test('old complete ten-role panels migrate with three absent roles and unchanged original values',()=>{
  const c=context(),api=c.YtCdHudLiveMonitorComposer;
  const legacy=JSON.parse(fs.readFileSync(new URL('./fixtures/legacy-cdj-panel.json',import.meta.url),'utf8'));
@@ -70,4 +70,19 @@ test('knob drag clamps the same volume and leaves native keyboard range semantic
  ui.range.handlers.pointermove({pointerId:1,clientY:-200});assert.equal(v.volume,1);ui.range.handlers.pointerup({pointerId:1});
  ui.range.handlers.pointermove({pointerId:1,clientY:200});assert.equal(v.volume,1);assert.equal(prevented,1);
  let stopped=0;ui.root.handlers.keydown({key:'Home',stopPropagation(){stopped++;},preventDefault(){assert.fail('native range keyboard must remain active');}});assert.equal(stopped,1);
+});
+
+test('disc texture selector labels every supported option including CDJ jog', () => {
+ const c=context(),doc=studioDocument();c.document=doc;
+ vm.runInContext(read('extension/options/live-monitor-property-toolbar.js'),c);
+ const composer=c.YtCdHudLiveMonitorComposer,layout=composer.createDefaultLayout();
+ const disc=composer.getComponent(layout,'disc');
+ const editor={state:{layout},render(){},recordHistory(){}};
+ const toolbar=c.YtCdHudLiveMonitorPropertyToolbar.createToolbar({host:doc.createElement('div'),editor});
+ toolbar.update('disc',disc);
+ const select=toolbar.element.querySelectorAll('*').find(element=>element.dataset.lmProperty==='texture');
+ assert.ok(select,'disc texture selector must exist');
+ const labels=Object.fromEntries(select.children.map(option=>[option.value,option.textContent]));
+ for(const texture of composer.DISC_TEXTURES) assert.ok(labels[texture]?.trim(),texture+' needs a visible label');
+ assert.equal(labels.jog,'動態唱盤 · CDJ');
 });
