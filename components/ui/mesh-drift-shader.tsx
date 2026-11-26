@@ -359,10 +359,10 @@ export interface ShaderBackgroundProps {
   cursorEnabled?: boolean
 }
 
-export function ShaderBackground({ 
-  className, 
+export function ShaderBackground({
+  className,
   preset = "optionA",
-  cursorEnabled 
+  cursorEnabled
 }: ShaderBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const currentPreset = preset === "default" ? PRESET_DEFAULT : PRESET_OPTION_A

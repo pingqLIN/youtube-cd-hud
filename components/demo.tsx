@@ -11,9 +11,9 @@ export default function ShaderBackgroundDemo() {
   return (
     <div className="relative h-screen w-full overflow-hidden select-none bg-slate-950 font-sans">
       {/* Dynamic Mesh Drift WebGL Shader Background */}
-      <ShaderBackground 
-        className="absolute inset-0 h-full w-full" 
-        preset={preset} 
+      <ShaderBackground
+        className="absolute inset-0 h-full w-full"
+        preset={preset}
         cursorEnabled={true}
       />
 

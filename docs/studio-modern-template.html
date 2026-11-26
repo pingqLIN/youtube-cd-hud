@@ -43,7 +43,7 @@
     /* 細線規整網格 (Precision Hairline Grid for Light Theme) */
     .bg-hairline-grid {
       background-size: 32px 32px;
-      background-image: 
+      background-image:
         linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
     }
@@ -259,7 +259,7 @@
   <!-- ── 1. 上方工作列 (Top Navigation: Fixed, Hairline, Washi Light) ── -->
   <header class="sticky top-0 z-50 bg-[#f5f6f4]/90 backdrop-blur-md border-b border-black/[0.06] px-6 py-2.5">
     <div class="max-w-[1720px] mx-auto flex items-center justify-between gap-6">
-      
+
       <!-- Brand & Spec Index (標誌與細字型規格) -->
       <div class="flex items-center gap-4">
         <div class="w-6 h-6 border border-black/15 bg-white rounded flex items-center justify-center text-slate-700 shadow-sm">
@@ -294,7 +294,7 @@
 
       <!-- Right: Subdued Master & System Parameters -->
       <div class="flex items-center gap-4">
-        
+
         <!-- Font scale selector -->
         <div class="flex items-center gap-1 text-[11px] font-mono font-light text-slate-600">
           <button class="w-5 h-5 flex items-center justify-center bg-white border border-black/[0.08] rounded hover:border-black/20 transition shadow-sm">−</button>
@@ -331,7 +331,7 @@
 
       <!-- Top Module Bar: Preset Themes & Palette Config -->
       <section class="base-card p-3 flex flex-wrap items-center justify-between gap-4">
-        
+
         <!-- Module Presets (同型基本版組合) -->
         <div class="flex items-center gap-1.5 flex-wrap">
           <span class="text-[10px] font-mono tracking-[0.2em] uppercase text-slate-400 mr-2">PRESET / 樣式</span>
@@ -370,13 +370,13 @@
 
       <!-- ── 中央工作區 (Workbench: Canvas Stage + Floating Hairline Inspector) ── -->
       <div id="workbench-container" class="relative w-full h-[650px] rounded-lg border border-black/[0.08] bg-[#ebeee9] overflow-hidden shadow-sm">
-        
+
         <!-- Canvas Stage with Hairline Matrix Grid -->
         <div id="canvas-stage" class="absolute inset-0 bg-hairline-grid flex items-center justify-center cursor-grab active:cursor-grabbing overflow-hidden">
-          
+
           <!-- Virtual Reference Display (Scalable container) -->
           <div id="virtual-canvas" class="relative w-[1280px] h-[720px] bg-[#ffffff] border border-black/[0.08] rounded shadow-xl transition-transform duration-75 origin-center flex flex-col justify-end p-8 overflow-hidden" style="transform: scale(0.72); --yt-ref-left: 24px; --yt-ref-width: 908px; --yt-ref-height: 511px;">
-            
+
             <!-- ── YouTube 虛擬頁面半透明襯底 (與目前做法相同) ── -->
             <div id="youtube-reference-backdrop" class="youtube-reference" aria-hidden="true">
               <!-- Top YouTube Header Bar -->
@@ -447,7 +447,7 @@
 
             <!-- ── Active HUD Layout Assembly (白瓷質感日系同版型元件組) ── -->
             <div class="relative z-10 w-full max-w-[820px] mx-auto bg-white/95 backdrop-blur-md border border-black/[0.1] rounded-md p-3.5 shadow-xl shadow-black/[0.03] flex items-center justify-between gap-4">
-              
+
               <!-- Disc Module (低色度唱盤/旋鈕) -->
               <div onclick="selectComponent('disc', 'JOG WHEEL · 唱盤旋鈕', '82 × 82 px')" class="relative w-16 h-16 rounded-full bg-[#f4f5f2] border border-black/15 flex items-center justify-center cursor-pointer hover:border-[#53725a] transition group shadow-inner">
                 <div class="w-11 h-11 rounded-full border border-black/[0.08] flex items-center justify-center bg-white">
@@ -497,7 +497,7 @@
 
         <!-- ── 常駐畫布邊緣工具塢 (Hairline Edge Dock: Light Porcelain) ── -->
         <div class="absolute top-3.5 left-3.5 z-30 flex items-center gap-2 p-1.5 bg-white/95 backdrop-blur-md border border-black/[0.08] rounded shadow-md text-slate-700">
-          
+
           <!-- Zoom Buttons (細線方塊) -->
           <div class="flex items-center border border-black/[0.08] rounded bg-[#fafaf8]">
             <button onclick="adjustZoom(-0.1)" class="w-6 h-6 flex items-center justify-center text-xs font-mono hover:bg-black/[0.04] transition">−</button>
@@ -545,7 +545,7 @@
 
         <!-- ── 浮動屬性面板 (Floating Inspector: Light Modular Card) ── -->
         <aside id="floating-inspector" class="absolute top-3.5 right-3.5 z-40 w-72 bg-white/95 backdrop-blur-xl border border-black/[0.1] rounded-md shadow-xl flex flex-col transition-all duration-200">
-          
+
           <!-- Drag Header (微型手柄與折疊鈕) -->
           <div id="inspector-header" class="flex items-center justify-between px-3.5 py-2.5 border-b border-black/[0.06] cursor-grab active:cursor-grabbing select-none bg-[#fbfcfb]">
             <div class="flex items-center gap-2">
@@ -561,7 +561,7 @@
 
           <!-- Inspector Body (模組化細線參數群) -->
           <div id="inspector-body" class="p-3.5 space-y-3.5 max-h-[520px] overflow-y-auto">
-            
+
             <!-- Current Target Module Banner -->
             <div class="p-2.5 rounded bg-[#f7f8f6] border border-black/[0.06] flex items-center justify-between">
               <div>
@@ -611,7 +611,7 @@
             <!-- Appearance & Effects (低色度效果開關) -->
             <div class="space-y-2 pt-2 border-t border-black/[0.06]">
               <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">APPEARANCE</span>
-              
+
               <div class="space-y-1.5">
                 <label class="flex items-center justify-between p-1.5 rounded bg-[#fafaf8] border border-black/[0.04] text-[11px] text-slate-700 cursor-pointer">
                   <span>文字跑馬燈 (Marquee)</span>
@@ -645,7 +645,7 @@
          TAB 2: SOURCES (曲目來源設定)
     ══════════════════════════════════════════════════════════ -->
     <div id="view-sources" class="hidden space-y-5 max-w-4xl mx-auto">
-      
+
       <!-- Providers Group (由同一個 base-card 衍生) -->
       <section class="base-card p-5 space-y-4">
         <div class="border-b border-black/[0.06] pb-3">
@@ -717,7 +717,7 @@
   <!-- ── 3. 下方動作列 (Fixed Hairline Action Bar: Washi Light) ── -->
   <footer class="fixed bottom-0 left-0 right-0 z-50 bg-[#f5f6f4]/95 backdrop-blur-md border-t border-black/[0.06] px-6 py-2.5 shadow-md">
     <div class="max-w-[1720px] mx-auto flex items-center justify-between gap-4">
-      
+
       <!-- Sync Status -->
       <div class="flex items-center gap-3">
         <label class="flex items-center gap-2 cursor-pointer select-none">
