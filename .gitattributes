@@ -1,4 +1,5 @@
 # Keep the shared HUD source/build chain deterministic across platforms.
+* text=auto eol=lf
 src/youtube-cd-hud.user.js text eol=lf
 scripts/build-extension.mjs text eol=lf
 extension/content/youtube-cd-hud.js text eol=lf
